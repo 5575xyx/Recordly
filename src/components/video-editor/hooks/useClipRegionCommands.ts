@@ -11,7 +11,7 @@ import type {
 	SpeedRegion,
 	ZoomRegion,
 } from "../types";
-import { getClipSourceStartMs } from "../types";
+import { getClipSourceEndMs, getClipSourceStartMs } from "../types";
 
 type Translator = (
 	key: string,
@@ -230,8 +230,14 @@ export function useClipRegionCommands({
 				setClipRegions(closeGap);
 				setZoomRegions(closeGap);
 				setAnnotationRegions(closeGap);
-				setSpeedRegions(closeGap);
 				setAudioRegions(closeGap);
+				setSpeedRegions((current) =>
+					current.filter(
+						(region) =>
+							region.endMs <= getClipSourceStartMs(deletedClip) ||
+							region.startMs >= getClipSourceEndMs(deletedClip),
+					),
+				);
 			}
 			if (selectedClipId === id) setSelectedClipId(null);
 		},

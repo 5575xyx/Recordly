@@ -8,7 +8,7 @@ import {
 	getMediaSyncPlaybackRate,
 	resolvePreviewMediaDuration,
 } from "@/lib/mediaTiming";
-import type { AudioRegion, SpeedRegion } from "../types";
+import type { AudioRegion } from "../types";
 import {
 	getAudioResourceVersionKey,
 	getVersionedAudioResourceUrl,
@@ -25,7 +25,7 @@ interface UseAudioPreviewSyncParams {
 	currentTime: number;
 	timelineTime: number;
 	duration: number;
-	effectiveSpeedRegions: SpeedRegion[];
+	sourcePlaybackRate: number;
 	previewSourceAudioFallbackPaths: string[];
 	sourceAudioFallbackStartDelayMsByPath: Record<string, number>;
 	sourceAudioResourceVersion: number;
@@ -41,7 +41,7 @@ export function useAudioPreviewSync({
 	currentTime,
 	timelineTime,
 	duration,
-	effectiveSpeedRegions,
+	sourcePlaybackRate,
 	previewSourceAudioFallbackPaths,
 	sourceAudioFallbackStartDelayMsByPath,
 	sourceAudioResourceVersion,
@@ -344,10 +344,6 @@ export function useAudioPreviewSync({
 
 	useEffect(() => {
 		const currentTimeMs = timelineTime * 1000;
-		const activeSpeedRegion = effectiveSpeedRegions.find(
-			(region) => currentTimeMs >= region.startMs && currentTimeMs < region.endMs,
-		);
-		const targetPlaybackRate = activeSpeedRegion ? activeSpeedRegion.speed : 1;
 
 		for (const track of resolvedUserTracks) {
 			const audio = audioElementsRef.current.get(track.id);
@@ -364,7 +360,7 @@ export function useAudioPreviewSync({
 					audio.currentTime = audioOffset;
 				}
 				const syncedPlaybackRate = getMediaSyncPlaybackRate({
-					basePlaybackRate: targetPlaybackRate,
+					basePlaybackRate: 1,
 					currentTime: audio.currentTime,
 					targetTime: audioOffset,
 				});
@@ -378,7 +374,7 @@ export function useAudioPreviewSync({
 				audio.pause();
 			}
 		}
-	}, [effectiveSpeedRegions, isPlaying, resolvedUserTracks, timelineTime]);
+	}, [isPlaying, resolvedUserTracks, timelineTime]);
 
 	useEffect(() => {
 		if (resolvedSourceTracks.length === 0) {
@@ -386,10 +382,6 @@ export function useAudioPreviewSync({
 			return;
 		}
 
-		const activeSpeedRegion = effectiveSpeedRegions.find(
-			(region) => currentTime * 1000 >= region.startMs && currentTime * 1000 < region.endMs,
-		);
-		const targetPlaybackRate = activeSpeedRegion ? activeSpeedRegion.speed : 1;
 		const previousTimelineTime = lastSourceAudioSyncTimeRef.current;
 		const timelineJumped =
 			previousTimelineTime === null || Math.abs(currentTime - previousTimelineTime) > 0.25;
@@ -450,13 +442,13 @@ export function useAudioPreviewSync({
 
 			// KISS for companion source tracks: fixed playback rate avoids audible flutter/stutter
 			// from continuous micro-corrections on system audio.
-			const syncedPlaybackRate = targetPlaybackRate;
+			const syncedPlaybackRate = sourcePlaybackRate;
 			if (Math.abs(audio.playbackRate - syncedPlaybackRate) > 0.001) {
 				audio.playbackRate = syncedPlaybackRate;
 			}
 
 			const atEnd = audioDuration !== null && targetTime >= audioDuration;
-			if (isPlaying && !beforeAudioStart && !atEnd) {
+			if (isPlaying && !isCurrentClipMuted && !beforeAudioStart && !atEnd) {
 				void ensureSourceAudioRunning().then(() => {
 					audio.play().catch(() => undefined);
 				});
@@ -469,7 +461,7 @@ export function useAudioPreviewSync({
 	}, [
 		currentTime,
 		duration,
-		effectiveSpeedRegions,
+		sourcePlaybackRate,
 		getSourceTrackPreviewGain,
 		isCurrentClipMuted,
 		isPlaying,

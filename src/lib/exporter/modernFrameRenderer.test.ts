@@ -202,6 +202,29 @@ function createRenderer() {
 	});
 }
 
+it("hides source layers in gaps while rendering timeline annotations at the output time", async () => {
+	const renderer = createRenderer();
+	const camera = { visible: true };
+	const webcam = { visible: true };
+	const captions = { visible: true };
+	const annotations = vi.fn();
+	const renderOutput = vi.fn(async () => {});
+	Object.assign(renderer, {
+		app: {},
+		videoContainer: {},
+		videoMaskGraphics: {},
+		cameraContainer: camera,
+		webcamRootContainer: webcam,
+		captionContainer: captions,
+		updateAnnotationLayer: annotations,
+		renderOutput,
+	});
+	await renderer.renderFrame(null, 0, 0, 33333, 1500000);
+	for (const layer of [camera, webcam, captions]) expect(layer.visible).toBe(false);
+	expect(annotations).toHaveBeenCalledWith(1500);
+	expect(renderOutput).toHaveBeenCalledWith(1500);
+});
+
 describe("ModernFrameRenderer Pixi lifecycle", () => {
 	it("continues to the next backend when failed-init cleanup would throw", async () => {
 		pixiApplicationInstancesMock.length = 0;

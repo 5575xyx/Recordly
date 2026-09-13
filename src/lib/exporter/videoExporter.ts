@@ -1,3 +1,4 @@
+import { requiresClipTimelineRendering } from "./clipTimeline";
 import type {
 	AnnotationRegion,
 	AudioRegion,
@@ -206,7 +207,9 @@ export class VideoExporter {
 			const shouldUseFfmpegAudioFallback =
 				!useNativeEncoder &&
 				audioPlan.audioMode !== "none" &&
-				(shouldUsePitchPreservingFfmpegAudio || !(await isAacAudioEncodingSupported()));
+				(requiresClipTimelineRendering(this.config.clipRegions) ||
+					shouldUsePitchPreservingFfmpegAudio ||
+					!(await isAacAudioEncodingSupported()));
 
 			if (!useNativeEncoder) {
 				await this.initializeEncoder();
@@ -214,6 +217,7 @@ export class VideoExporter {
 
 			// Initialize frame renderer
 			this.renderer = new FrameRenderer({
+				timelineEffects: this.config.clipRegions !== undefined,
 				width: this.config.width,
 				height: this.config.height,
 				preferredRenderBackend: undefined,
@@ -281,6 +285,7 @@ export class VideoExporter {
 			const effectiveDuration = this.streamingDecoder.getEffectiveDuration(
 				this.config.trimRegions,
 				this.config.speedRegions,
+				this.config.clipRegions,
 			);
 			this.effectiveDurationSec = effectiveDuration;
 			const totalFrames = Math.ceil(effectiveDuration * this.config.frameRate);
@@ -326,6 +331,7 @@ export class VideoExporter {
 					this.processedFrameCount = frameIndex;
 					this.reportProgress(frameIndex, totalFrames);
 				},
+				this.config.clipRegions,
 			);
 
 			if (this.cancelled) {
@@ -571,6 +577,7 @@ export class VideoExporter {
 		}
 
 		if (
+			requiresClipTimelineRendering(this.config.clipRegions) ||
 			speedRegions.length > 0 ||
 			audioRegions.length > 0 ||
 			sourceAudioFallbackPaths.length > 1 ||
@@ -589,6 +596,7 @@ export class VideoExporter {
 			);
 			const trimRegions = this.config.trimRegions ?? [];
 			const canUsePrimaryAudioFiltergraph =
+				!requiresClipTimelineRendering(this.config.clipRegions) &&
 				Boolean(primaryAudioSourcePath) &&
 				!hasTimedSourceAudioFallback &&
 				(usesEmbeddedPrimaryAudio ||

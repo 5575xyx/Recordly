@@ -287,6 +287,20 @@ function createRenderer() {
 }
 
 describe("FrameRenderer webcam export path", () => {
+	it("draws the background without the screen or webcam during a timeline gap", async () => {
+		const renderer = createRenderer();
+		const camera = { visible: true };
+		const composite = vi.fn();
+		Object.assign(renderer, {
+			app: { stage: {}, renderer: { render: vi.fn() } },
+			cameraContainer: camera,
+			videoContainer: {},
+			compositeWithShadows: composite,
+		});
+		await renderer.renderFrame(null, 0, 0, 33333, 1500000);
+		expect(camera.visible).toBe(false);
+		expect(composite).toHaveBeenCalledWith(false);
+	});
 	const createdCanvases: ReturnType<typeof createMockCanvas>[] = [];
 
 	beforeEach(() => {

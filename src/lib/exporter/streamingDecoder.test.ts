@@ -202,6 +202,65 @@ describe("StreamingVideoDecoder decode failures", () => {
 		expect(onFrame).not.toHaveBeenCalled();
 		expect(frame.close).toHaveBeenCalledTimes(1);
 	});
+
+	it.each([
+		false,
+		true,
+	])("emits real gap frames on the output clock (reordered: %s)", async (reordered) => {
+		mockDemuxerRead.mockImplementation(
+			() =>
+				new ReadableStream({
+					start(controller) {
+						for (let i = 0; i < 120; i++)
+							controller.enqueue({ timestamp: (i * 1_000_000) / 30 });
+						controller.close();
+					},
+				}),
+		);
+		class TestDecoder {
+			state = "unconfigured";
+			decodeQueueSize = 0;
+			constructor(private callbacks: { output: (frame: VideoFrame) => void }) {}
+			configure() {
+				this.state = "configured";
+			}
+			decode(chunk: EncodedVideoChunk) {
+				this.callbacks.output({
+					timestamp: chunk.timestamp,
+					close: vi.fn(),
+				} as unknown as VideoFrame);
+			}
+			async flush() {}
+			close() {
+				this.state = "closed";
+			}
+		}
+		vi.stubGlobal("VideoDecoder", TestDecoder);
+		const decoder = new StreamingVideoDecoder();
+		await decoder.loadMetadata("/tmp/clip-timeline.mp4");
+		const clips = [
+			{ id: "a", startMs: 0, endMs: 400, sourceStartMs: reordered ? 2400 : 0, speed: 3 },
+			{ id: "b", startMs: 800, endMs: 1200, sourceStartMs: reordered ? 0 : 2400, speed: 3 },
+		];
+		const frames: Array<{ gap: boolean; timestamp: number; source: number }> = [];
+		await decoder.decodeAll(
+			30,
+			undefined,
+			undefined,
+			async (frame, timestamp, source) => {
+				frames.push({ gap: frame === null, timestamp, source });
+			},
+			clips,
+		);
+		expect(frames).toHaveLength(36);
+		expect(frames.filter((f) => f.gap)).toHaveLength(12);
+		for (let i = 0; i < frames.length; i++) {
+			expect(frames[i].timestamp).toBeCloseTo((i * 1_000_000) / 30, 5);
+			expect(frames[i].gap).toBe(i >= 12 && i < 24);
+		}
+		expect(frames[24].source).toBeCloseTo(reordered ? 0 : 2400);
+		expect(decoder.getEffectiveDuration(undefined, undefined, clips)).toBe(1.2);
+	});
 });
 
 describe("StreamingVideoDecoder local media loading", () => {

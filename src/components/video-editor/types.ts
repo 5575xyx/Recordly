@@ -337,11 +337,8 @@ export function mapSourceTimeToTimelineTime(timeMs: number, clips: ClipRegion[])
 }
 
 export function findClipAtTimelineTime(timeMs: number, clips: ClipRegion[]): ClipRegion | null {
-	const roundedTimeMs = Math.round(timeMs);
 	return (
-		sortClipRegions(clips).find(
-			(clip) => roundedTimeMs >= clip.startMs && roundedTimeMs < clip.endMs,
-		) ?? null
+		sortClipRegions(clips).find((clip) => timeMs >= clip.startMs && timeMs < clip.endMs) ?? null
 	);
 }
 

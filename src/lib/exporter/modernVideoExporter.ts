@@ -1,3 +1,4 @@
+import { requiresClipTimelineRendering } from "./clipTimeline";
 import type {
 	AnnotationRegion,
 	AudioRegion,
@@ -545,10 +546,14 @@ export class ModernVideoExporter {
 				const shouldUseFfmpegAudioFallback =
 					!useNativeEncoder &&
 					nativeAudioPlan.audioMode !== "none" &&
-					(shouldUsePitchPreservingFfmpegAudio || !(await isAacAudioEncodingSupported()));
+					// The PCM/FFmpeg path preserves AAC priming; WebCodecs AAC can shift clip cuts.
+					(requiresClipTimelineRendering(this.config.clipRegions) ||
+						shouldUsePitchPreservingFfmpegAudio ||
+						!(await isAacAudioEncodingSupported()));
 				const effectiveDuration = this.streamingDecoder.getEffectiveDuration(
 					this.config.trimRegions,
 					this.config.speedRegions,
+					this.config.clipRegions,
 				);
 				this.effectiveDurationSec = effectiveDuration;
 				const totalFrames = Math.ceil(effectiveDuration * this.config.frameRate);
@@ -597,6 +602,7 @@ export class ModernVideoExporter {
 
 				stageStartedAt = this.getNowMs();
 				this.renderer = new ModernFrameRenderer({
+					timelineEffects: this.config.clipRegions !== undefined,
 					width: this.config.width,
 					height: this.config.height,
 					preferredRenderBackend: undefined,
@@ -731,6 +737,7 @@ export class ModernVideoExporter {
 						this.processedFrameCount = frameIndex;
 						this.reportProgress(frameIndex, totalFrames, "extracting");
 					},
+					this.config.clipRegions,
 				);
 				this.decodeLoopTimeMs = this.getNowMs() - decodeLoopStartedAt;
 
@@ -1464,6 +1471,7 @@ export class ModernVideoExporter {
 		}
 
 		if (
+			requiresClipTimelineRendering(this.config.clipRegions) ||
 			speedRegions.length > 0 ||
 			audioRegions.length > 0 ||
 			sourceAudioFallbackPaths.length > 1 ||
@@ -1490,6 +1498,7 @@ export class ModernVideoExporter {
 				Number.isFinite(primaryAudioSourceSampleRate) &&
 				primaryAudioSourceSampleRate > 0;
 			const requiresRenderedEditedTrack =
+				requiresClipTimelineRendering(this.config.clipRegions) ||
 				hasNonDefaultSourceTrackSettings(this.config.sourceAudioTrackSettings) ||
 				(this.config.clipRegions ?? []).some((clip) => Boolean(clip.muted));
 			const strategy =
@@ -1670,6 +1679,8 @@ export class ModernVideoExporter {
 		effectiveDurationSec: number,
 	): string[] {
 		const reasons: string[] = [];
+		if (requiresClipTimelineRendering(this.config.clipRegions))
+			reasons.push("explicit-clip-timeline");
 		if (
 			typeof window === "undefined" ||
 			!window.electronAPI?.nativeStaticLayoutExport ||

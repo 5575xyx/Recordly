@@ -33,6 +33,7 @@ export function buildExportRenderOptions({
 	onProgress,
 }: BuildExportRenderOptionsInput) {
 	return {
+		clipRegions: timeline.clipRegions,
 		wallpaper: appearance.wallpaper,
 		trimRegions: timeline.trimRegions,
 		speedRegions: effectiveSpeedRegions,

@@ -5,7 +5,12 @@ import { toFileUrl } from "../projectPersistence";
 import type { useAppearanceState } from "../state/useAppearanceState";
 import type { useProjectState } from "../state/useProjectState";
 import type { useTimelineState } from "../state/useTimelineState";
-import { getClipSourceEndMs, getClipSourceStartMs, type SpeedRegion } from "../types";
+import {
+	findClipAtTimelineTime,
+	getClipSourceEndMs,
+	getClipSourceStartMs,
+	type SpeedRegion,
+} from "../types";
 import type { VideoPlaybackRef } from "../VideoPlayback";
 
 type Input = {
@@ -140,8 +145,12 @@ export function useProjectLibraryController({
 			let frameRenderer: FrameRenderer | null = null;
 
 			try {
-				videoFrame = new VideoFrame(previewVideo, { timestamp: frameTimestampUs });
+				const sourceTimestampUs = previewVideo.currentTime * 1_000_000;
+				if (findClipAtTimelineTime(frameTimestampUs / 1000, clipRegions)) {
+					videoFrame = new VideoFrame(previewVideo, { timestamp: sourceTimestampUs });
+				}
 				frameRenderer = new FrameRenderer({
+					timelineEffects: true,
 					width: targetWidth,
 					height: targetHeight,
 					wallpaper,
@@ -222,7 +231,13 @@ export function useProjectLibraryController({
 					cursorSway,
 				});
 				await frameRenderer.initialize();
-				await frameRenderer.renderFrame(videoFrame, frameTimestampUs);
+				await frameRenderer.renderFrame(
+					videoFrame,
+					sourceTimestampUs,
+					sourceTimestampUs,
+					undefined,
+					frameTimestampUs,
+				);
 				return frameRenderer.getCanvas().toDataURL("image/png");
 			} catch (thumbnailRenderError) {
 				console.warn(

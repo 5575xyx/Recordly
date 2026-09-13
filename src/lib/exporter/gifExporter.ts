@@ -30,6 +30,7 @@ const GIF_WORKER_URL = new URL("gif.js/dist/gif.worker.js", import.meta.url).toS
 const PROGRESS_SAMPLE_WINDOW_MS = 1_000;
 
 interface GifExporterConfig {
+	clipRegions?: import("@/components/video-editor/types").ClipRegion[];
 	videoUrl: string;
 	width: number;
 	height: number;
@@ -139,6 +140,7 @@ export function buildGifFrameRendererConfig(
 ) {
 	return {
 		width: config.width,
+		timelineEffects: config.clipRegions !== undefined,
 		height: config.height,
 		wallpaper: config.wallpaper,
 		zoomRegions: config.zoomRegions,
@@ -254,6 +256,7 @@ export class GifExporter {
 			const effectiveDuration = this.streamingDecoder.getEffectiveDuration(
 				this.config.trimRegions,
 				this.config.speedRegions,
+				this.config.clipRegions,
 			);
 			const totalFrames = Math.ceil(effectiveDuration * this.config.frameRate);
 
@@ -295,6 +298,7 @@ export class GifExporter {
 					frameIndex++;
 					this.reportProgress(frameIndex, totalFrames);
 				},
+				this.config.clipRegions,
 			);
 
 			if (this.cancelled) {

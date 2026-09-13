@@ -77,8 +77,6 @@ import {
 	DEFAULT_ZOOM_OUT_EASING,
 	getDefaultCaptionFontFamily,
 	type Padding,
-	type SpeedRegion,
-	type TrimRegion,
 	type WebcamOverlaySettings,
 	type ZoomDepth,
 	type ZoomFocus,
@@ -118,7 +116,8 @@ import {
 	resolveSceneZoomTarget,
 	shouldComposePreviewFrame,
 } from "./videoPlayback/sceneMotion";
-import { createVideoEventHandlers } from "./videoPlayback/videoEventHandlers";
+import { createClipPlayback } from "./videoPlayback/clipPlayback";
+import { type ClipRegion, findClipAtTimelineTime, mapTimelineTimeToSourceTime } from "./types";
 import {
 	getWebcamMediaTargetTimeSeconds,
 	isWebcamMediaSynchronized,
@@ -232,6 +231,7 @@ function getEffectiveNativeAspectRatio(
 }
 
 interface VideoPlaybackProps {
+	clipRegions: ClipRegion[];
 	videoPath: string;
 	onDurationChange: (duration: number) => void;
 	onPreviewReadyChange?: (ready: boolean) => void;
@@ -262,8 +262,6 @@ interface VideoPlaybackProps {
 	cropRegion?: import("./types").CropRegion;
 	webcam?: WebcamOverlaySettings;
 	webcamVideoPath?: string | null;
-	trimRegions?: TrimRegion[];
-	speedRegions?: SpeedRegion[];
 	aspectRatio: AspectRatio;
 	annotationRegions?: AnnotationRegion[];
 	autoCaptions?: CaptionCue[];
@@ -302,6 +300,8 @@ interface VideoPlaybackProps {
 }
 
 export interface VideoPlaybackRef {
+	readonly isPlaying: boolean;
+	seekTimeline: (time: number) => void;
 	video: HTMLVideoElement | null;
 	app: Application | null;
 	videoSprite: Sprite | null;
@@ -320,7 +320,8 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 			onDurationChange,
 			onPreviewReadyChange,
 			onTimeUpdate,
-			currentTime,
+			currentTime: timelineTime,
+			clipRegions,
 			onPlayStateChange,
 			onError,
 			wallpaper,
@@ -346,8 +347,6 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 			cropRegion,
 			webcam,
 			webcamVideoPath,
-			trimRegions = [],
-			speedRegions = [],
 			aspectRatio,
 			annotationRegions = [],
 			autoCaptions = [],
@@ -404,7 +403,6 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 		const zoomBlurFilterRef = useRef<ZoomBlurFilter | null>(null);
 		const motionBlurFilterRef = useRef<MotionBlurFilter | null>(null);
 		const cameraContainerRef = useRef<Container | null>(null);
-		const timeUpdateAnimationRef = useRef<number | null>(null);
 		const [pixiReady, setPixiReady] = useState(false);
 		const [videoReady, setVideoReady] = useState(false);
 		const [pixiRendererError, setPixiRendererError] = useState<string | null>(null);
@@ -445,7 +443,19 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 		const [captionEditSession, setCaptionEditSession] = useState<CaptionEditSession | null>(
 			null,
 		);
+		const currentTime = mapTimelineTimeToSourceTime(timelineTime * 1000, clipRegions) / 1000;
+		const isGap = !findClipAtTimelineTime(timelineTime * 1000, clipRegions);
+		const clipRegionsRef = useRef(clipRegions);
+		const clipPlaybackRef = useRef<ReturnType<typeof createClipPlayback> | null>(null);
+		const onPlaybackErrorRef = useRef(onError);
+		onPlaybackErrorRef.current = onError;
+		const timelineTimeRef = useRef(timelineTime);
+		timelineTimeRef.current = timelineTime;
 		const currentTimeRef = useRef(0);
+		useEffect(() => {
+			clipRegionsRef.current = clipRegions;
+			clipPlaybackRef.current?.refresh();
+		}, [clipRegions]);
 		const zoomRegionsRef = useRef<ZoomRegion[]>([]);
 		const selectedZoomIdRef = useRef<string | null>(null);
 		const animationStateRef = useRef<PlaybackAnimationState>(createPlaybackAnimationState());
@@ -474,14 +484,11 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 		const suspendRenderingRef = useRef(suspendRendering);
 		const isSeekingRef = useRef(false);
 		const shouldSnapPausedFrameRef = useRef(false);
-		const allowPlaybackRef = useRef(false);
 		const lockedVideoDimensionsRef = useRef<{
 			width: number;
 			height: number;
 		} | null>(null);
 		const layoutVideoContentRef = useRef<(() => void) | null>(null);
-		const trimRegionsRef = useRef<TrimRegion[]>([]);
-		const speedRegionsRef = useRef<SpeedRegion[]>([]);
 		const lastWebcamSyncTimeRef = useRef<number | null>(null);
 		const lastBackgroundSyncTimeRef = useRef<number | null>(null);
 		const bgVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -702,15 +709,14 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 				return;
 			}
 
-			videoRef.current?.pause();
-			onPlayStateChange(false);
+			clipPlaybackRef.current?.pause();
 			const nextSession = {
 				target: activeCaptionLayout.editTarget,
 				draft: activeCaptionLayout.editTarget.text,
 			};
 			captionEditSessionRef.current = nextSession;
 			setCaptionEditSession(nextSession);
-		}, [activeCaptionLayout, onEditAutoCaption, onPlayStateChange]);
+		}, [activeCaptionLayout, onEditAutoCaption]);
 
 		const commitCaptionEdit = useCallback(() => {
 			const session = captionEditSessionRef.current;
@@ -1120,29 +1126,20 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 		}, [zoomRegions, selectedZoomId]);
 
 		useImperativeHandle(ref, () => ({
+			get isPlaying() {
+				return clipPlaybackRef.current?.isPlaying ?? false;
+			},
+			seekTimeline: (time) => clipPlaybackRef.current?.seek(time),
 			video: videoRef.current,
 			app: appRef.current,
 			videoSprite: videoSpriteRef.current,
 			videoContainer: videoContainerRef.current,
 			containerRef,
 			play: async () => {
-				const vid = videoRef.current;
-				if (!vid) return;
-				try {
-					allowPlaybackRef.current = true;
-					await vid.play();
-				} catch (error) {
-					allowPlaybackRef.current = false;
-					throw error;
-				}
+				await clipPlaybackRef.current?.play();
 			},
 			pause: () => {
-				const video = videoRef.current;
-				allowPlaybackRef.current = false;
-				if (!video) {
-					return;
-				}
-				video.pause();
+				clipPlaybackRef.current?.pause();
 			},
 			cancelCaptionEdit,
 			refreshFrame: async () => {
@@ -1274,12 +1271,12 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 				shouldClearSelectedAnnotation(
 					annotationRegions ?? [],
 					selectedAnnotationId,
-					Math.round(currentTime * 1000),
+					Math.round(timelineTime * 1000),
 				)
 			) {
 				onSelectAnnotation(null);
 			}
-		}, [annotationRegions, currentTime, onSelectAnnotation, selectedAnnotationId]);
+		}, [annotationRegions, timelineTime, onSelectAnnotation, selectedAnnotationId]);
 
 		useEffect(() => {
 			isPlayingRef.current = isPlaying;
@@ -1343,26 +1340,21 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 			}
 		}, [pixiReady, suspendRendering]);
 
-		// Keep video wallpapers locked to the same source timestamp as the main clip.
+		// Backgrounds run on the output timeline, including empty clip intervals.
 		useEffect(() => {
 			const bgVideo = bgVideoRef.current;
 			if (!bgVideo) return;
 
-			const clipTimelineTime = currentTime;
+			const clipTimelineTime = timelineTime;
 			const videoDuration =
 				Number.isFinite(bgVideo.duration) && bgVideo.duration > 0 ? bgVideo.duration : null;
 			const targetTime = videoDuration
 				? clipTimelineTime % videoDuration
 				: clampMediaTimeToDuration(clipTimelineTime, videoDuration);
 
-			const activeSpeedRegion = speedRegionsRef.current.find(
-				(region) =>
-					currentTime * 1000 >= region.startMs && currentTime * 1000 < region.endMs,
-			);
-			const targetPlaybackRate = activeSpeedRegion ? activeSpeedRegion.speed : 1;
 			enablePitchPreservingPlayback(bgVideo);
 			const syncedPlaybackRate = getMediaSyncPlaybackRate({
-				basePlaybackRate: targetPlaybackRate,
+				basePlaybackRate: 1,
 				currentTime: bgVideo.currentTime,
 				targetTime,
 				toleranceSeconds: 0.02,
@@ -1396,15 +1388,7 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 			}
 
 			lastBackgroundSyncTimeRef.current = clipTimelineTime;
-		}, [currentTime, isPlaying]);
-
-		useEffect(() => {
-			trimRegionsRef.current = trimRegions;
-		}, [trimRegions]);
-
-		useEffect(() => {
-			speedRegionsRef.current = speedRegions;
-		}, [speedRegions]);
+		}, [timelineTime, isPlaying]);
 
 		useEffect(() => {
 			if (!pixiReady) return;
@@ -1729,11 +1713,8 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 				lastWebcamSyncTimeRef.current = targetTime;
 			}
 
-			const timelineTimeMs = currentTime * 1000;
-			const activeSpeedRegion = speedRegionsRef.current.find(
-				(region) => timelineTimeMs >= region.startMs && timelineTimeMs < region.endMs,
-			);
-			const targetPlaybackRate = activeSpeedRegion ? activeSpeedRegion.speed : 1;
+			const targetPlaybackRate =
+				findClipAtTimelineTime(timelineTime * 1000, clipRegions)?.speed ?? 1;
 			enablePitchPreservingPlayback(webcamVideo);
 			if (Math.abs(webcamVideo.playbackRate - targetPlaybackRate) > 0.001) {
 				webcamVideo.playbackRate = targetPlaybackRate;
@@ -1767,7 +1748,14 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 			}
 
 			lastWebcamSyncTimeRef.current = targetTime;
-		}, [currentTime, isPlaying, webcamEnabled, webcamTimeOffsetMs, webcamVideoPath]);
+		}, [
+			timelineTime,
+			clipRegions,
+			isPlaying,
+			webcamEnabled,
+			webcamTimeOffsetMs,
+			webcamVideoPath,
+		]);
 
 		const handleWebcamMediaReady = useCallback(
 			(event: React.SyntheticEvent<HTMLVideoElement>) => {
@@ -1953,7 +1941,6 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 			if (!video) return;
 			video.pause();
 			video.currentTime = 0;
-			allowPlaybackRef.current = false;
 			lastRenderedContentTimeRef.current = null;
 			shouldSnapPausedFrameRef.current = true;
 			lockedVideoDimensionsRef.current = null;
@@ -2009,34 +1996,39 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 			layoutVideoContentRef.current?.();
 			video.pause();
 
-			const { handlePlay, handlePause, handleSeeked, handleSeeking, dispose } =
-				createVideoEventHandlers({
-					video,
-					isSeekingRef,
-					shouldSnapPausedFrameRef,
-					isPlayingRef,
-					allowPlaybackRef,
-					currentTimeRef,
-					timeUpdateAnimationRef,
-					onPlayStateChange,
-					onTimeUpdate,
-					trimRegionsRef,
-					speedRegionsRef,
-				});
-
-			video.addEventListener("play", handlePlay);
-			video.addEventListener("pause", handlePause);
-			video.addEventListener("ended", handlePause);
+			const transport = createClipPlayback({
+				video,
+				getClips: () => clipRegionsRef.current,
+				onTime: (time, source) => {
+					if (source !== null) currentTimeRef.current = source * 1000;
+					onTimeUpdate(time);
+				},
+				onPlaying: (playing) => {
+					isPlayingRef.current = playing;
+					onPlayStateChange(playing);
+				},
+				onError: (error) =>
+					onPlaybackErrorRef.current(
+						error instanceof Error ? error.message : String(error),
+					),
+			});
+			clipPlaybackRef.current = transport;
+			transport.seek(timelineTimeRef.current);
+			const handleSeeked = () => {
+				isSeekingRef.current = false;
+			};
+			const handleSeeking = () => {
+				isSeekingRef.current = true;
+				shouldSnapPausedFrameRef.current = true;
+			};
 			video.addEventListener("seeked", handleSeeked);
 			video.addEventListener("seeking", handleSeeking);
 
 			return () => {
-				video.removeEventListener("play", handlePlay);
-				video.removeEventListener("pause", handlePause);
-				video.removeEventListener("ended", handlePause);
 				video.removeEventListener("seeked", handleSeeked);
 				video.removeEventListener("seeking", handleSeeking);
-				dispose();
+				transport.dispose();
+				clipPlaybackRef.current = null;
 
 				videoEffectsContainer.mask = null;
 				videoContainer.mask = null;
@@ -2083,7 +2075,7 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 					motionBlurTuning: zoomMotionBlurTuningRef.current,
 					transformOverride: transform,
 					motionBlurState: motionBlurStateRef.current,
-					frameTimeMs: currentTimeRef.current,
+					frameTimeMs: timelineTimeRef.current * 1000,
 				});
 
 				state.x = appliedTransform.x;
@@ -2114,7 +2106,7 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 				// The export compositor advances exactly once for each output timestamp.
 				// Do the same here: repeated Pixi ticks at one media timestamp must not
 				// advance cursor springs or clear the blur calculated for that frame.
-				const contentTimeMs = currentTimeRef.current;
+				const contentTimeMs = timelineTimeRef.current * 1000;
 				const previousContentTimeMs = lastRenderedContentTimeRef.current;
 				const deltaMs =
 					previousContentTimeMs !== null
@@ -2141,7 +2133,8 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 
 				const target = resolveSceneZoomTarget({
 					zoomRegions: zoomRegionsRef.current,
-					timeMs: currentTimeRef.current,
+					timeMs: timelineTimeRef.current * 1000,
+					cursorTimeMs: currentTimeRef.current,
 					connectZooms: connectZoomsRef.current,
 					zoomInDurationMs: zoomInDurationMsRef.current,
 					zoomOutDurationMs: zoomOutDurationMsRef.current,
@@ -2316,7 +2309,6 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 			);
 			video.currentTime = targetTime;
 			video.pause();
-			allowPlaybackRef.current = false;
 			currentTimeRef.current = targetTime * 1000;
 
 			if (videoReadyRafRef.current) {
@@ -2524,6 +2516,7 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 					className="absolute inset-0"
 					style={{
 						filter: sceneEffects.shadowFilter,
+						visibility: isGap ? "hidden" : "visible",
 					}}
 				/>
 				{hasRendererFallback && (
@@ -2557,7 +2550,7 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 								ref={webcamBubbleRef}
 								className="absolute"
 								style={{
-									display: webcam.enabled ? "block" : "none",
+									display: webcam.enabled && !isGap ? "block" : "none",
 									pointerEvents: "none",
 								}}
 							>
@@ -2597,7 +2590,7 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 								</div>
 							</div>
 						) : null}
-						{activeCaptionLayout && autoCaptionSettings ? (
+						{!isGap && activeCaptionLayout && autoCaptionSettings ? (
 							<div
 								className="absolute inset-x-0 flex justify-center"
 								style={{
@@ -2845,7 +2838,7 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 								}}
 							>
 								{(() => {
-									const timeMs = Math.round(currentTime * 1000);
+									const timeMs = Math.round(timelineTime * 1000);
 									const filtered = (annotationRegions || []).filter(
 										(annotation) =>
 											isAnnotationActiveAtTime(annotation, timeMs),

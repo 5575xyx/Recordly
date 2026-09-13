@@ -10,7 +10,7 @@ import type { useZoomRegionCommands } from "../hooks/useZoomRegionCommands";
 import { SettingsPanel } from "../SettingsPanel";
 import type { useAppearanceState } from "../state/useAppearanceState";
 import type { useTimelineState } from "../state/useTimelineState";
-import type { EditorEffectSection } from "../types";
+import { type EditorEffectSection, mapTimelineTimeToSourceTime } from "../types";
 
 type Input = {
 	activeEffectSection: EditorEffectSection;
@@ -180,7 +180,8 @@ export function useEditorSettingsPanelProps(input: Input): ComponentProps<typeof
 		onBorderRadiusChange: appearance.setBorderRadius,
 		webcam: appearance.webcam,
 		webcamPreviewSrc: appearance.webcam.sourcePath ? appearance.resolvedWebcamVideoUrl : null,
-		webcamPreviewCurrentTime: currentTime,
+		webcamPreviewCurrentTime:
+			mapTimelineTimeToSourceTime(currentTime * 1000, timeline.clipRegions) / 1000,
 		webcamPreviewPlaying: isPlaying,
 		onWebcamChange: appearance.setWebcam,
 		onUploadWebcam: handleUploadWebcam,
@@ -205,7 +206,7 @@ export function useEditorSettingsPanelProps(input: Input): ComponentProps<typeof
 		onPickWhisperModel: autoCaptionController.handlePickWhisperModel,
 		onGenerateAutoCaptions: autoCaptionController.handleGenerateAutoCaptions,
 		onClearAutoCaptions: captionCommands.handleClearAutoCaptions,
-		captionCurrentTimeMs: Math.round(currentTime * 1000),
+		captionCurrentTimeMs: mapTimelineTimeToSourceTime(currentTime * 1000, timeline.clipRegions),
 		selectedCaptionId: timeline.selectedCaptionId,
 		onBeginCaptionEdit: captionCommands.handleBeginCaptionEdit,
 		onCaptionTextEdit: captionCommands.handleCaptionTextEdit,

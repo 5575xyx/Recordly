@@ -80,6 +80,7 @@ import { buildTemporalSamplePlanUs, getTemporalMotionBlurConfig } from "./tempor
 const TEMPORAL_ZOOM_MOTION_BLUR_ENABLED = false;
 
 interface FrameRenderConfig {
+	timelineEffects?: boolean;
 	width: number;
 	height: number;
 	preferredRenderBackend?: "webgl" | "webgpu";
@@ -1403,7 +1404,7 @@ export class FrameRenderer {
 	}
 
 	async renderFrame(
-		videoFrame: VideoFrame,
+		videoFrame: VideoFrame | null,
 		timestamp: number,
 		cursorTimestamp = timestamp,
 		frameDurationUs?: number,
@@ -1414,6 +1415,27 @@ export class FrameRenderer {
 		}
 
 		this.currentVideoTime = timestamp / 1000000;
+		this.cameraContainer.visible = videoFrame !== null;
+		if (!videoFrame) {
+			if (this.backgroundForwardFrameSource || this.backgroundVideoElement) {
+				await this.syncBackgroundFrame(backgroundTimelineTimestamp / 1_000_000);
+			}
+			this.app.renderer.render(this.app.stage);
+			this.compositeWithShadows(false);
+			if (this.compositeCtx && this.config.annotationRegions) {
+				await renderAnnotations(
+					this.compositeCtx,
+					this.config.annotationRegions,
+					this.config.width,
+					this.config.height,
+					backgroundTimelineTimestamp / 1000,
+					(this.config.width / BASE_PREVIEW_WIDTH +
+						this.config.height / BASE_PREVIEW_HEIGHT) /
+						2,
+				);
+			}
+			return;
+		}
 
 		// Create or update video sprite from VideoFrame
 		if (!this.videoSprite) {
@@ -1487,7 +1509,7 @@ export class FrameRenderer {
 					this.config.autoCaptionSettings,
 					this.config.width,
 					this.config.height,
-					temporalSnapshot.timeMs,
+					timestamp / 1000,
 				);
 			}
 
@@ -1504,7 +1526,9 @@ export class FrameRenderer {
 			await this.syncBackgroundFrame(Math.max(0, backgroundTimelineTimestamp / 1_000_000));
 		}
 
-		const timeMs = this.currentVideoTime * 1000;
+		const timeMs = this.config.timelineEffects
+			? backgroundTimelineTimestamp / 1000
+			: timestamp / 1000;
 		const cursorTimeMs = cursorTimestamp / 1000;
 
 		if (this.cursorOverlay) {
@@ -1520,7 +1544,7 @@ export class FrameRenderer {
 		const TICKS_PER_FRAME = 1;
 
 		for (let i = 0; i < TICKS_PER_FRAME; i++) {
-			this.updateAnimationState(timeMs);
+			this.updateAnimationState(timeMs, cursorTimeMs);
 		}
 
 		applyZoomTransform({
@@ -1593,7 +1617,7 @@ export class FrameRenderer {
 				this.config.autoCaptionSettings,
 				this.config.width,
 				this.config.height,
-				timeMs,
+				timestamp / 1000,
 			);
 		}
 	}
@@ -1662,12 +1686,13 @@ export class FrameRenderer {
 	}
 
 	/** Advance the export camera from the shared scene target at this media time. */
-	private updateAnimationState(timeMs: number): number {
+	private updateAnimationState(timeMs: number, cursorTimeMs = timeMs): number {
 		if (!this.cameraContainer || !this.layoutCache) return 0;
 
 		const target = resolveSceneZoomTarget({
 			zoomRegions: this.config.zoomRegions,
 			timeMs,
+			cursorTimeMs,
 			connectZooms: this.config.connectZooms,
 			zoomInDurationMs: this.config.zoomInDurationMs,
 			zoomOutDurationMs: this.config.zoomOutDurationMs,
@@ -1764,7 +1789,9 @@ export class FrameRenderer {
 			await this.syncBackgroundFrame(Math.max(0, backgroundTimelineTimestamp / 1_000_000));
 		}
 
-		const timeMs = this.currentVideoTime * 1000;
+		const timeMs = this.config.timelineEffects
+			? backgroundTimelineTimestamp / 1000
+			: timestamp / 1000;
 		const cursorTimeMs = cursorTimestamp / 1000;
 
 		if (this.cursorOverlay) {
@@ -1777,7 +1804,7 @@ export class FrameRenderer {
 			);
 		}
 
-		this.updateAnimationState(timeMs);
+		this.updateAnimationState(timeMs, cursorTimeMs);
 
 		applyZoomTransform({
 			cameraContainer: this.cameraContainer,
@@ -1871,7 +1898,7 @@ export class FrameRenderer {
 		return centerSnapshot ?? lastSnapshot;
 	}
 
-	private compositeWithShadows(): void {
+	private compositeWithShadows(includeWebcam = true): void {
 		if (!this.compositeCanvas || !this.compositeCtx || !this.app) return;
 
 		const videoCanvas = this.app.canvas as HTMLCanvasElement;
@@ -1927,7 +1954,7 @@ export class FrameRenderer {
 			ctx.drawImage(videoCanvas, 0, 0, w, h);
 		}
 
-		this.drawWebcamOverlay(ctx, w, h);
+		if (includeWebcam) this.drawWebcamOverlay(ctx, w, h);
 	}
 
 	private drawWebcamOverlay(ctx: CanvasRenderingContext2D, width: number, height: number): void {

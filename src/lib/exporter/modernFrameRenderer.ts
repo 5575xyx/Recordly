@@ -101,6 +101,7 @@ const TEMPORAL_ZOOM_MOTION_BLUR_ENABLED = false;
 import type { ExportRenderBackend } from "./types";
 
 interface FrameRenderConfig {
+	timelineEffects?: boolean;
 	width: number;
 	height: number;
 	preferredRenderBackend?: ExportRenderBackend;
@@ -2930,7 +2931,9 @@ export class FrameRenderer {
 			await this.syncBackgroundFrame(Math.max(0, backgroundTimelineTimestamp / 1_000_000));
 		}
 
-		const timeMs = this.currentVideoTime * 1000;
+		const timeMs = this.config.timelineEffects
+			? backgroundTimelineTimestamp / 1000
+			: timestamp / 1000;
 		const cursorTimeMs = cursorTimestamp / 1000;
 
 		if (this.cursorOverlay) {
@@ -2943,7 +2946,7 @@ export class FrameRenderer {
 			);
 		}
 
-		this.updateAnimationState(timeMs);
+		this.updateAnimationState(timeMs, cursorTimeMs);
 
 		applyZoomTransform({
 			cameraContainer: this.cameraContainer,
@@ -2969,7 +2972,7 @@ export class FrameRenderer {
 
 		if (includeOverlayLayers) {
 			this.updateAnnotationLayer(timeMs);
-			this.updateCaptionLayer(timeMs);
+			this.updateCaptionLayer(timestamp / 1000);
 		}
 		this.updateWebcamOverlay(webcamRenderTimeSeconds);
 
@@ -3083,7 +3086,7 @@ export class FrameRenderer {
 			return null;
 		}
 
-		this.updateCaptionLayer(resolvedSnapshot.timeMs);
+		this.updateCaptionLayer(timestamp / 1000);
 
 		const hasOverlayCanvasWork =
 			(this.config.annotationRegions?.length ?? 0) > 0 ||
@@ -3102,7 +3105,7 @@ export class FrameRenderer {
 	}
 
 	async renderFrame(
-		videoFrame: VideoFrame,
+		videoFrame: VideoFrame | null,
 		timestamp: number,
 		cursorTimestamp = timestamp,
 		frameDurationUs?: number,
@@ -3113,6 +3116,18 @@ export class FrameRenderer {
 		}
 
 		this.currentVideoTime = timestamp / 1_000_000;
+		this.cameraContainer.visible = videoFrame !== null;
+		if (!videoFrame) {
+			if (this.backgroundForwardFrameSource || this.backgroundVideoElement) {
+				await this.syncBackgroundFrame(backgroundTimelineTimestamp / 1_000_000);
+			}
+			if (this.webcamRootContainer) this.webcamRootContainer.visible = false;
+			if (this.captionContainer) this.captionContainer.visible = false;
+			this.updateAnnotationLayer(backgroundTimelineTimestamp / 1000);
+			await this.renderOutput(backgroundTimelineTimestamp / 1000);
+			return;
+		}
+		if (this.captionContainer) this.captionContainer.visible = true;
 
 		const resolvedVideoSource = await this.resolveDetachedVideoFrameSource(
 			videoFrame,
@@ -3173,7 +3188,9 @@ export class FrameRenderer {
 			await this.syncBackgroundFrame(Math.max(0, backgroundTimelineTimestamp / 1_000_000));
 		}
 
-		const timeMs = this.currentVideoTime * 1000;
+		const timeMs = this.config.timelineEffects
+			? backgroundTimelineTimestamp / 1000
+			: timestamp / 1000;
 		const cursorTimeMs = cursorTimestamp / 1000;
 
 		if (this.cursorOverlay) {
@@ -3186,7 +3203,7 @@ export class FrameRenderer {
 			);
 		}
 
-		this.updateAnimationState(timeMs);
+		this.updateAnimationState(timeMs, cursorTimeMs);
 
 		applyZoomTransform({
 			cameraContainer: this.cameraContainer,
@@ -3211,9 +3228,12 @@ export class FrameRenderer {
 		});
 
 		this.updateAnnotationLayer(timeMs);
-		this.updateCaptionLayer(timeMs);
+		this.updateCaptionLayer(timestamp / 1000);
 		this.updateWebcamOverlay();
+		await this.renderOutput(timeMs);
+	}
 
+	private async renderOutput(timeMs: number): Promise<void> {
 		if (this.hasActiveBlurAnnotations(timeMs)) {
 			const annotationContainerVisible = this.annotationContainer?.visible ?? true;
 			const captionContainerVisible = this.captionContainer?.visible ?? true;
@@ -3225,7 +3245,7 @@ export class FrameRenderer {
 				this.captionContainer.visible = false;
 			}
 
-			this.app.render();
+			this.app!.render();
 
 			if (this.annotationContainer) {
 				this.annotationContainer.visible = annotationContainerVisible;
@@ -3239,7 +3259,7 @@ export class FrameRenderer {
 		}
 
 		this.outputCanvasOverride = null;
-		this.app.render();
+		this.app!.render();
 	}
 
 	private updateLayout(): void {
@@ -3344,7 +3364,7 @@ export class FrameRenderer {
 	}
 
 	/** Advance the export camera from the shared scene target at this media time. */
-	private updateAnimationState(timeMs: number): number {
+	private updateAnimationState(timeMs: number, cursorTimeMs = timeMs): number {
 		if (!this.cameraContainer || !this.layoutCache) {
 			return 0;
 		}
@@ -3352,6 +3372,7 @@ export class FrameRenderer {
 		const target = resolveSceneZoomTarget({
 			zoomRegions: this.config.zoomRegions,
 			timeMs,
+			cursorTimeMs,
 			connectZooms: this.config.connectZooms,
 			zoomInDurationMs: this.config.zoomInDurationMs,
 			zoomOutDurationMs: this.config.zoomOutDurationMs,

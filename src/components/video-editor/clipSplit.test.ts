@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { planClipSplit, removeSpanAndCloseGap } from "./clipSplit";
+import { planClipSplit } from "./clipSplit";
 import {
 	type ClipRegion,
 	clipsToTrims,
@@ -129,19 +129,19 @@ describe("planClipSplit", () => {
 		expect(getClipSourceEndMs(kept[1])).toBe(sourceDurationMs);
 	});
 
-	it("closes the timeline gap after deleting the middle of a 3x clip", () => {
+	it("preserves the gap and source positions after deleting the middle of a 3x clip", () => {
 		const sourceDurationMs = 120_000;
 		const clip: ClipRegion = { id: "clip-1", startMs: 0, endMs: 40_000, speed: 3 };
 		const { kept, deleted } = splitAndDeleteMiddle(clip, 10_000, 10_000);
-		const closed = removeSpanAndCloseGap([...kept, deleted], deleted);
+		const remaining = [...kept, deleted].filter(({ id }) => id !== deleted.id);
 
-		expect(closed).toEqual([
+		expect(remaining).toEqual([
 			expect.objectContaining({ startMs: 0, endMs: 10_000 }),
-			expect.objectContaining({ startMs: 10_000, endMs: 30_000, sourceStartMs: 60_000 }),
+			expect.objectContaining({ startMs: 20_000, endMs: 40_000, sourceStartMs: 60_000 }),
 		]);
-		expect(mapSourceTimeToTimelineTime(30_000, closed)).toBe(10_000);
-		expect(mapSourceTimeToTimelineTime(60_000, closed)).toBe(10_000);
-		expect(getTimelineDurationMs(closed, sourceDurationMs)).toBe(30_000);
+		expect(mapSourceTimeToTimelineTime(30_000, remaining)).toBe(10_000);
+		expect(mapSourceTimeToTimelineTime(60_000, remaining)).toBe(20_000);
+		expect(getTimelineDurationMs(remaining, sourceDurationMs)).toBe(40_000);
 	});
 
 	it("removes the source range the user cut out at 1x", () => {

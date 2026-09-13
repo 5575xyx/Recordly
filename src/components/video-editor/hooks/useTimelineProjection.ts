@@ -89,15 +89,7 @@ export function useTimelineProjection({
 		(timeMs: number) => mapSourceTimeToTimelineTime(timeMs, clipRegions),
 		[clipRegions],
 	);
-	const effectiveZoomRegions = useMemo<ZoomRegion[]>(
-		() =>
-			zoomRegions.map((region) => ({
-				...region,
-				startMs: toSourceTime(region.startMs),
-				endMs: toSourceTime(region.endMs),
-			})),
-		[zoomRegions, toSourceTime],
-	);
+	const effectiveZoomRegions: ZoomRegion[] = zoomRegions;
 	const effectiveCaptionRegions = useMemo<CaptionCue[]>(
 		() =>
 			autoCaptions.map((cue) => ({
@@ -107,10 +99,7 @@ export function useTimelineProjection({
 			})),
 		[autoCaptions, toTimelineTime],
 	);
-	const timelinePlayheadTime = useMemo(
-		() => toTimelineTime(currentTime * 1000) / 1000,
-		[currentTime, toTimelineTime],
-	);
+	const timelinePlayheadTime = currentTime;
 	const timelineDuration = useMemo(
 		() => getTimelineDurationMs(clipRegions, duration * 1000) / 1000,
 		[clipRegions, duration],

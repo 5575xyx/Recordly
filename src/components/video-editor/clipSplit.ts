@@ -6,6 +6,20 @@ export interface ClipSplitPlan {
 	right: ClipRegion;
 }
 
+export function removeSpanAndCloseGap<T extends { startMs: number; endMs: number }>(
+	spans: T[],
+	deleted: { startMs: number; endMs: number },
+): T[] {
+	const durationMs = deleted.endMs - deleted.startMs;
+	return spans
+		.filter((span) => span.endMs <= deleted.startMs || span.startMs >= deleted.endMs)
+		.map((span) =>
+			span.startMs >= deleted.endMs
+				? { ...span, startMs: span.startMs - durationMs, endMs: span.endMs - durationMs }
+				: span,
+		);
+}
+
 /**
  * Split the clip under the playhead into two clips.
  *

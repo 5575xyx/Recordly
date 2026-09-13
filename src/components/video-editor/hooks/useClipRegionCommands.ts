@@ -2,7 +2,7 @@ import type { Span } from "dnd-timeline";
 import { type Dispatch, type MutableRefObject, type SetStateAction, useCallback } from "react";
 import { toast } from "sonner";
 import { planClipSpeedChange } from "../clipSpeedChange";
-import { planClipSplit } from "../clipSplit";
+import { planClipSplit, removeSpanAndCloseGap } from "../clipSplit";
 import type {
 	AnnotationRegion,
 	AudioRegion,
@@ -224,14 +224,14 @@ export function useClipRegionCommands({
 	const handleClipDelete = useCallback(
 		(id: string) => {
 			const deletedClip = clipRegions.find((clip) => clip.id === id);
-			setClipRegions((current) => current.filter((clip) => clip.id !== id));
 			if (deletedClip) {
-				const outsideDeletedClip = (region: { startMs: number; endMs: number }) =>
-					region.endMs <= deletedClip.startMs || region.startMs >= deletedClip.endMs;
-				setZoomRegions((current) => current.filter(outsideDeletedClip));
-				setAnnotationRegions((current) => current.filter(outsideDeletedClip));
-				setSpeedRegions((current) => current.filter(outsideDeletedClip));
-				setAudioRegions((current) => current.filter(outsideDeletedClip));
+				const closeGap = <T extends { startMs: number; endMs: number }>(regions: T[]) =>
+					removeSpanAndCloseGap(regions, deletedClip);
+				setClipRegions(closeGap);
+				setZoomRegions(closeGap);
+				setAnnotationRegions(closeGap);
+				setSpeedRegions(closeGap);
+				setAudioRegions(closeGap);
 			}
 			if (selectedClipId === id) setSelectedClipId(null);
 		},

@@ -142,6 +142,16 @@ describe("clip timeline mapping", () => {
 		expect(mapSourceTimeToTimelineTime(5_900, clips)).toBe(6_000);
 	});
 
+	it("maps gaps between different source and timeline positions", () => {
+		const movedClips = [
+			{ id: "clip-1", startMs: 0, endMs: 4_000, sourceStartMs: 0, speed: 1 },
+			{ id: "clip-2", startMs: 6_000, endMs: 8_000, sourceStartMs: 10_000, speed: 1 },
+		];
+
+		expect(mapTimelineTimeToSourceTime(5_900, movedClips)).toBe(10_000);
+		expect(mapSourceTimeToTimelineTime(9_900, movedClips)).toBe(6_000);
+	});
+
 	it("finds clips only inside visible kept spans", () => {
 		expect(findClipAtTimelineTime(500, clips)?.id).toBe("clip-1");
 		expect(findClipAtTimelineTime(5_000, clips)).toBeNull();
@@ -176,10 +186,10 @@ describe("getTimelineDurationMs", () => {
 		).toBe(20_000);
 	});
 
-	it("keeps the source duration when speed edits make clips shorter", () => {
+	it("shortens the timeline when speed edits make clips shorter", () => {
 		expect(
 			getTimelineDurationMs([{ id: "clip-1", startMs: 0, endMs: 5_000, speed: 2 }], 10_000),
-		).toBe(10_000);
+		).toBe(5_000);
 	});
 });
 

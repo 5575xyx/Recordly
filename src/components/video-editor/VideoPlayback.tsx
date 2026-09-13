@@ -46,6 +46,7 @@ import {
 	type AnnotationRegion,
 	type AutoCaptionSettings,
 	type CaptionCue,
+	type ClipRegion,
 	type CursorClickEffectStyle,
 	type CursorStyle,
 	DEFAULT_CONNECTED_ZOOM_DURATION_MS,
@@ -75,7 +76,9 @@ import {
 	DEFAULT_ZOOM_MOTION_BLUR_TUNING,
 	DEFAULT_ZOOM_OUT_DURATION_MS,
 	DEFAULT_ZOOM_OUT_EASING,
+	findClipAtTimelineTime,
 	getDefaultCaptionFontFamily,
+	mapTimelineTimeToSourceTime,
 	type Padding,
 	type WebcamOverlaySettings,
 	type ZoomDepth,
@@ -88,6 +91,7 @@ import {
 	isAnnotationActiveAtTime,
 	shouldClearSelectedAnnotation,
 } from "./videoPlayback/annotationVisibility";
+import { createClipPlayback } from "./videoPlayback/clipPlayback";
 import { DEFAULT_FOCUS } from "./videoPlayback/constants";
 import {
 	type CursorFollowCameraState,
@@ -116,8 +120,6 @@ import {
 	resolveSceneZoomTarget,
 	shouldComposePreviewFrame,
 } from "./videoPlayback/sceneMotion";
-import { createClipPlayback } from "./videoPlayback/clipPlayback";
-import { type ClipRegion, findClipAtTimelineTime, mapTimelineTimeToSourceTime } from "./types";
 import {
 	getWebcamMediaTargetTimeSeconds,
 	isWebcamMediaSynchronized,
@@ -2474,6 +2476,7 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 				style={{
 					width: "100%",
 					aspectRatio: formatAspectRatioForCSS(aspectRatio, nativeAspectRatio),
+					backgroundColor: "#000000",
 					borderRadius: 0,
 					clipPath: "none",
 				}}
@@ -2489,6 +2492,7 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 						loop
 						playsInline
 						style={{
+							visibility: isGap ? "hidden" : "visible",
 							filter:
 								sceneEffects.backgroundBlurPx > 0
 									? `blur(${sceneEffects.backgroundBlurPx}px)`
@@ -2503,6 +2507,7 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 						className="absolute inset-0 bg-cover bg-center"
 						style={{
 							...backgroundStyle,
+							visibility: isGap ? "hidden" : "visible",
 							filter:
 								sceneEffects.backgroundBlurPx > 0
 									? `blur(${sceneEffects.backgroundBlurPx}px)`
@@ -2519,7 +2524,7 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 						visibility: isGap ? "hidden" : "visible",
 					}}
 				/>
-				{hasRendererFallback && (
+				{hasRendererFallback && !isGap && (
 					<div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 p-2 text-center">
 						<div className="rounded-md bg-black/70 px-3 py-1.5 text-xs text-white">
 							{`Pixi renderer unavailable on this environment (${pixiRendererBackend ?? "unknown"}).`}
@@ -2534,7 +2539,10 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 					<div
 						ref={overlayRef}
 						className="absolute inset-0 select-none"
-						style={{ pointerEvents: "none" }}
+						style={{
+							pointerEvents: "none",
+							visibility: isGap ? "hidden" : "visible",
+						}}
 						onPointerDown={handleOverlayPointerDown}
 						onPointerMove={handleOverlayPointerMove}
 						onPointerUp={handleOverlayPointerUp}
@@ -2916,6 +2924,7 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 					ref={attachVideo}
 					src={videoPath}
 					className={fallbackVideoClassName}
+					style={{ visibility: isGap ? "hidden" : "visible" }}
 					preload="metadata"
 					playsInline
 					aria-hidden="true"

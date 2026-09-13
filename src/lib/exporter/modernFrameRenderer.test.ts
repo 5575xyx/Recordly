@@ -202,11 +202,12 @@ function createRenderer() {
 	});
 }
 
-it("hides source layers in gaps while rendering timeline annotations at the output time", async () => {
+it("renders a timeline gap as solid black", async () => {
 	const renderer = createRenderer();
 	const camera = { visible: true };
-	const webcam = { visible: true };
-	const captions = { visible: true };
+	const output = createMockCanvas();
+	output.width = 1920;
+	output.height = 1080;
 	const annotations = vi.fn();
 	const renderOutput = vi.fn(async () => {});
 	Object.assign(renderer, {
@@ -214,15 +215,17 @@ it("hides source layers in gaps while rendering timeline annotations at the outp
 		videoContainer: {},
 		videoMaskGraphics: {},
 		cameraContainer: camera,
-		webcamRootContainer: webcam,
-		captionContainer: captions,
+		ensureExportCompositeCanvas: () => ({ canvas: output, context: output.context }),
 		updateAnnotationLayer: annotations,
 		renderOutput,
 	});
 	await renderer.renderFrame(null, 0, 0, 33333, 1500000);
-	for (const layer of [camera, webcam, captions]) expect(layer.visible).toBe(false);
-	expect(annotations).toHaveBeenCalledWith(1500);
-	expect(renderOutput).toHaveBeenCalledWith(1500);
+	expect(camera.visible).toBe(false);
+	expect(output.context.fillStyle).toBe("#000000");
+	expect(output.context.fillRect).toHaveBeenCalledWith(0, 0, 1920, 1080);
+	expect(annotations).not.toHaveBeenCalled();
+	expect(renderOutput).not.toHaveBeenCalled();
+	expect(renderer.getCanvas()).toBe(output);
 });
 
 describe("ModernFrameRenderer Pixi lifecycle", () => {

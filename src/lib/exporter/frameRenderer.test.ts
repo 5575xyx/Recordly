@@ -112,6 +112,7 @@ type MockContext = {
 	scale: MockFunction;
 	clearRect: MockFunction;
 	filter: string;
+	fillStyle: string;
 };
 type MockCanvas = ReturnType<typeof createMockCanvas>;
 type FrameRendererTestAccess = {
@@ -251,6 +252,7 @@ function createMockContext() {
 		scale: vi.fn(),
 		clearRect: vi.fn(),
 		filter: "",
+		fillStyle: "",
 	};
 }
 
@@ -287,19 +289,22 @@ function createRenderer() {
 }
 
 describe("FrameRenderer webcam export path", () => {
-	it("draws the background without the screen or webcam during a timeline gap", async () => {
+	it("renders a timeline gap as solid black", async () => {
 		const renderer = createRenderer();
 		const camera = { visible: true };
-		const composite = vi.fn();
+		const context = createMockContext();
+		const app = { stage: {}, renderer: { render: vi.fn() } };
 		Object.assign(renderer, {
-			app: { stage: {}, renderer: { render: vi.fn() } },
+			app,
 			cameraContainer: camera,
 			videoContainer: {},
-			compositeWithShadows: composite,
+			compositeCtx: context,
 		});
 		await renderer.renderFrame(null, 0, 0, 33333, 1500000);
 		expect(camera.visible).toBe(false);
-		expect(composite).toHaveBeenCalledWith(false);
+		expect(context.fillStyle).toBe("#000000");
+		expect(context.fillRect).toHaveBeenCalledWith(0, 0, 1920, 1080);
+		expect(app.renderer.render).not.toHaveBeenCalled();
 	});
 	const createdCanvases: ReturnType<typeof createMockCanvas>[] = [];
 

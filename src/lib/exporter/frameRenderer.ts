@@ -1410,30 +1410,15 @@ export class FrameRenderer {
 		frameDurationUs?: number,
 		backgroundTimelineTimestamp = timestamp,
 	): Promise<void> {
-		if (!this.app || !this.videoContainer || !this.cameraContainer) {
+		if (!this.app || !this.videoContainer || !this.cameraContainer || !this.compositeCtx) {
 			throw new Error("Renderer not initialized");
 		}
 
 		this.currentVideoTime = timestamp / 1000000;
 		this.cameraContainer.visible = videoFrame !== null;
 		if (!videoFrame) {
-			if (this.backgroundForwardFrameSource || this.backgroundVideoElement) {
-				await this.syncBackgroundFrame(backgroundTimelineTimestamp / 1_000_000);
-			}
-			this.app.renderer.render(this.app.stage);
-			this.compositeWithShadows(false);
-			if (this.compositeCtx && this.config.annotationRegions) {
-				await renderAnnotations(
-					this.compositeCtx,
-					this.config.annotationRegions,
-					this.config.width,
-					this.config.height,
-					backgroundTimelineTimestamp / 1000,
-					(this.config.width / BASE_PREVIEW_WIDTH +
-						this.config.height / BASE_PREVIEW_HEIGHT) /
-						2,
-				);
-			}
+			this.compositeCtx.fillStyle = "#000000";
+			this.compositeCtx.fillRect(0, 0, this.config.width, this.config.height);
 			return;
 		}
 

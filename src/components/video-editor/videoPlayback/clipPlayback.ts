@@ -15,7 +15,7 @@ export function findPreviewClipAtTimelineTime(
 	const active = findClipAtTimelineTime(timeMs, clips);
 	if (active) return active;
 	const last = sortClipRegions(clips)[clips.length - 1];
-	return last && timeMs === last.endMs ? last : null;
+	return last && Math.abs(timeMs - last.endMs) < 1e-7 ? last : null;
 }
 
 /** Timeline time advances at 1x; only the source media uses the clip's speed. */
@@ -71,7 +71,21 @@ export function createClipPlayback({
 				onError(error);
 				return;
 			}
-			if (seek || clip !== activeClip) video.currentTime = sourceMs / 1000;
+			if (seek || clip !== activeClip) {
+				// Clip out-points are exclusive. At the final timeline endpoint,
+				// request a frame inside the clip, not EOF or the following footage.
+				const atEnd = timeMs >= clip.endMs - 1e-7;
+				const targetMs = atEnd
+					? Math.max(getClipSourceStartMs(clip), sourceMs - 0.001)
+					: sourceMs;
+				const target = Math.max(0, Math.min(
+					Number.isFinite(video.duration) ? Math.max(0, video.duration - 0.000001) : Infinity,
+					targetMs / 1000,
+				));
+				// Assigning currentTime even to its current value starts another
+				// asynchronous seek in Chromium (especially disruptive at zero).
+				if (Math.abs(video.currentTime - target) > 1e-8) video.currentTime = target;
+			}
 			if (playing && (seek || clip !== activeClip)) playSource();
 		} else {
 			playRequest++;
@@ -91,9 +105,12 @@ export function createClipPlayback({
 				? activeClip.endMs
 				: Math.min(
 						activeClip.endMs,
-						activeClip.startMs +
-							(video.currentTime * 1000 - getClipSourceStartMs(activeClip)) /
-								activeClip.speed,
+						Math.max(
+							activeClip.startMs,
+							activeClip.startMs +
+								(video.currentTime * 1000 - getClipSourceStartMs(activeClip)) /
+									activeClip.speed,
+						),
 					);
 		}
 		timeMs = Math.min(duration(), timeMs);

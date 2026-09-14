@@ -169,11 +169,49 @@ describe("clip timeline playback", () => {
 		const { playback, video, onTime } = setup();
 		playback.seek(4);
 		expect(onTime).toHaveBeenLastCalledWith(4, 12);
-		expect(video.currentTime).toBe(12);
+		expect(video.currentTime).toBeCloseTo(11.999999, 8);
 		expect(video.play).not.toHaveBeenCalled();
 		await playback.play();
 		expect(onTime).toHaveBeenLastCalledWith(0, 0);
 	});
+	it("does not bounce back into a gap when the decoder lands just before a clip in-point", async () => {
+		const { playback, video, onTime } = setup();
+		playback.seek(2);
+		await playback.play();
+		video.currentTime = 5.999999;
+		advance(16);
+		expect(onTime).toHaveBeenLastCalledWith(2, 6);
+		expect(playback.isPlaying).toBe(true);
+	});
+
+	it("does not restart decoder seeks when repeatedly selecting the start", () => {
+		const { playback, video } = setup();
+		let currentTime = 0;
+		const setTime = vi.fn((value: number) => { currentTime = value; });
+		Object.defineProperty(video, "currentTime", {
+			get: () => currentTime,
+			set: setTime,
+		});
+		playback.seek(0);
+		playback.refresh();
+		expect(setTime).not.toHaveBeenCalled();
+		playback.seek(0.5);
+		playback.seek(0);
+		playback.seek(0);
+		expect(setTime.mock.calls).toEqual([[1.5], [0]]);
+	});
+	it("holds footage inside a trimmed final out-point and selects the next in-point at a cut", () => {
+		const { playback, video } = setup([
+			{ id: "a", startMs: 0, endMs: 1000, sourceStartMs: 0, speed: 1 },
+			{ id: "b", startMs: 1000, endMs: 2000, sourceStartMs: 6000, speed: 1 },
+		]);
+		playback.seek(1);
+		expect(video.currentTime).toBe(6);
+		playback.seek(2);
+		expect(video.currentTime).toBeLessThan(7);
+		expect(video.currentTime).toBeGreaterThan(6.999);
+	});
+
 	it("keeps real gaps black, chooses the next clip at cuts, and holds only the final endpoint", () => {
 		const clips = [
 			{ id: "a", startMs: 0, endMs: 1000, speed: 1 },

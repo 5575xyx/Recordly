@@ -115,6 +115,7 @@ import {
 import { updateOverlayIndicator } from "./videoPlayback/overlayUtils";
 import { supportsPreviewPlaybackRate } from "./videoPlayback/playbackRate";
 import { PreviewVideoSource } from "./videoPlayback/previewVideoSource";
+import { usePreviewVideoReady } from "./videoPlayback/usePreviewVideoReady";
 import { getSceneEffectMetrics } from "./videoPlayback/sceneEffects";
 import {
 	resolvePreviewMotionMode,
@@ -188,24 +189,8 @@ type PixiRendererAttempt = {
 };
 const PIXI_RENDERER_INIT_TIMEOUT_MS = 8_000;
 
-function isCanvasRenderer(application: Application): boolean {
-	const rendererName = application?.renderer?.constructor?.name?.toLowerCase();
-	return Boolean(
-		rendererName &&
-			(rendererName.includes("canvasrenderer") || rendererName.includes("canvas")),
-	);
-}
-
 function toRendererErrorMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error ?? "Unknown renderer init error");
-}
-
-function isRendererUnavailableError(error: unknown): boolean {
-	const message = toRendererErrorMessage(error).toLowerCase();
-	return (
-		message.includes("canvasrenderer is not yet implemented") ||
-		message.includes("no available renderer")
-	);
 }
 
 function summarizeRendererAttempts(attempts: readonly PixiRendererAttempt[]): string {
@@ -407,11 +392,8 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 		const motionBlurFilterRef = useRef<MotionBlurFilter | null>(null);
 		const cameraContainerRef = useRef<Container | null>(null);
 		const [pixiReady, setPixiReady] = useState(false);
-		const [videoReady, setVideoReady] = useState(false);
-		const [pixiRendererError, setPixiRendererError] = useState<string | null>(null);
-		const [pixiRendererBackend, setPixiRendererBackend] = useState<PixiPreviewBackend | null>(
-			null,
-		);
+		const videoReady = usePreviewVideoReady(videoRef, videoPath);
+
 		const [previewViewportWidth, setPreviewViewportWidth] = useState(640);
 		const [annotationSceneTransform, setAnnotationSceneTransform] =
 			useState<SceneTransformState>({
@@ -506,7 +488,6 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 		const zoomInEasingRef = useRef(zoomInEasing);
 		const zoomOutEasingRef = useRef(zoomOutEasing);
 		const connectedZoomEasingRef = useRef(connectedZoomEasing);
-		const videoReadyRafRef = useRef<number | null>(null);
 		const cursorOverlayRef = useRef<PixiCursorOverlay | null>(null);
 		const cursorTelemetryRef = useRef<CursorTelemetryPoint[]>([]);
 		const showCursorRef = useRef(showCursor);
@@ -551,10 +532,7 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 		const initializePixiRenderer = useCallback(
 			async (
 				container: HTMLDivElement,
-			): Promise<{
-				app: Application;
-				backend: PixiPreviewBackend;
-			}> => {
+			): Promise<Application> => {
 				const backendOrder: PixiPreviewBackend[] = ["webgl", "webgpu"];
 				const attempts: PixiRendererAttempt[] = [];
 
@@ -571,8 +549,7 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 					}
 
 					const rendererApp = new Application();
-					const initStarted =
-						typeof performance === "undefined" ? Date.now() : performance.now();
+					const initStarted = performance.now();
 					try {
 						await initializePixiApplicationWithTimeout(
 							rendererApp,
@@ -591,32 +568,14 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 							PIXI_RENDERER_INIT_TIMEOUT_MS,
 							backend,
 						);
-						const elapsed = Math.round(
-							(typeof performance === "undefined" ? Date.now() : performance.now()) -
-								initStarted,
-						);
-						if (isCanvasRenderer(rendererApp)) {
-							throw new Error(
-								`Renderer initialized with unsupported fallback backend after ${elapsed}ms: ${rendererApp.renderer.constructor?.name ?? "unknown"}`,
-							);
-						}
-						return { app: rendererApp, backend };
+						return rendererApp;
 					} catch (error) {
-						const elapsed = Math.round(
-							(typeof performance === "undefined" ? Date.now() : performance.now()) -
-								initStarted,
-						);
+						const elapsed = Math.round(performance.now() - initStarted);
 						attempts.push({
 							backend,
 							message: `${toRendererErrorMessage(error)} (after ${elapsed}ms)`,
 						});
-						const statusMessage = isRendererUnavailableError(error)
-							? "renderer backend unavailable in this runtime"
-							: "renderer init failed";
-						console.warn(
-							`[VideoPlayback] Failed to init ${backend} renderer (${statusMessage}) after ${elapsed}ms; trying fallback.`,
-							error,
-						);
+
 						destroyPixiApplication(
 							rendererApp,
 							`${backend} preview renderer initialization`,
@@ -1576,68 +1535,12 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 		useEffect(() => {
 			if (!pixiReady || !videoReady) return;
 
-			const app = appRef.current;
-			const cameraContainer = cameraContainerRef.current;
-			const video = videoRef.current;
-
-			if (!app || !cameraContainer || !video) return;
-
-			const tickerWasStarted = app.ticker?.started || false;
-			if (tickerWasStarted && app.ticker) {
-				app.ticker.stop();
-			}
-
-			const wasPlaying = !video.paused;
-			if (wasPlaying) {
-				video.pause();
-			}
-
 			animationStateRef.current = createPlaybackAnimationState();
 			cursorOverlayRef.current?.reset();
 			motionBlurStateRef.current = createMotionBlurState();
-
-			requestAnimationFrame(() => {
-				const container = cameraContainerRef.current;
-				const videoStage = videoContainerRef.current;
-				const sprite = videoSpriteRef.current;
-				const currentApp = appRef.current;
-				if (!container || !videoStage || !sprite || !currentApp) {
-					return;
-				}
-
-				container.scale.set(1);
-				container.position.set(0, 0);
-				videoStage.scale.set(1);
-				videoStage.position.set(0, 0);
-				sprite.scale.set(1);
-				sprite.position.set(0, 0);
-
-				layoutVideoContent();
-
-				applyZoomTransform({
-					cameraContainer: container,
-					zoomBlurFilter: zoomBlurFilterRef.current,
-					motionBlurFilter: motionBlurFilterRef.current,
-					stageSize: stageSizeRef.current,
-					baseMask: baseMaskRef.current,
-					zoomScale: 1,
-					focusX: DEFAULT_FOCUS.cx,
-					focusY: DEFAULT_FOCUS.cy,
-					isPlaying: false,
-					motionBlurAmount: 0,
-					motionBlurState: motionBlurStateRef.current,
-				});
-
-				requestAnimationFrame(() => {
-					const finalApp = appRef.current;
-					if (wasPlaying && video) {
-						video.play().catch(() => undefined);
-					}
-					if (tickerWasStarted && finalApp?.ticker) {
-						finalApp.ticker.start();
-					}
-				});
-			});
+			layoutVideoContent();
+			// The next ticker frame applies the current zoom; layout must never stop playback.
+			shouldSnapPausedFrameRef.current = true;
 		}, [pixiReady, videoReady, layoutVideoContent]);
 
 		useEffect(() => {
@@ -1827,12 +1730,8 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 						error,
 					);
 				}
-				setPixiRendererError(null);
-				setPixiRendererBackend(null);
 
-				const result = await initializePixiRenderer(container);
-				app = result.app;
-				setPixiRendererBackend(result.backend);
+				app = await initializePixiRenderer(container);
 
 				app.ticker.maxFPS = 60;
 
@@ -1905,24 +1804,14 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 
 				setPixiReady(true);
 			})().catch((error) => {
-				const errorMessage =
-					error instanceof Error
-						? error.message
-						: "Failed to initialize preview renderer";
+				if (!mounted) return;
 				console.error("Failed to initialize preview renderer:", error);
-				setPixiRendererError(errorMessage);
-				onError(
-					error instanceof Error
-						? error.message
-						: "Failed to initialize preview renderer",
-				);
+				onError(toRendererErrorMessage(error));
 			});
 
 			return () => {
 				mounted = false;
 				setPixiReady(false);
-				setPixiRendererError(null);
-				setPixiRendererBackend(null);
 				if (cursorOverlayRef.current) {
 					cursorOverlayRef.current.destroy();
 					cursorOverlayRef.current = null;
@@ -1953,11 +1842,6 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 			lastRenderedContentTimeRef.current = null;
 			shouldSnapPausedFrameRef.current = true;
 			lockedVideoDimensionsRef.current = null;
-			setVideoReady(false);
-			if (videoReadyRafRef.current) {
-				cancelAnimationFrame(videoReadyRafRef.current);
-				videoReadyRafRef.current = null;
-			}
 		}, [videoPath]);
 
 		useEffect(() => {
@@ -2316,27 +2200,9 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 				currentTime,
 				Number.isFinite(video.duration) ? video.duration : null,
 			);
-			video.currentTime = targetTime;
+			if (Math.abs(video.currentTime - targetTime) > 1e-8) video.currentTime = targetTime;
 			video.pause();
 			currentTimeRef.current = targetTime * 1000;
-
-			if (videoReadyRafRef.current) {
-				cancelAnimationFrame(videoReadyRafRef.current);
-				videoReadyRafRef.current = null;
-			}
-
-			const waitForRenderableFrame = () => {
-				const hasDimensions = video.videoWidth > 0 && video.videoHeight > 0;
-				const hasData = video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA;
-				if (hasDimensions && hasData) {
-					videoReadyRafRef.current = null;
-					setVideoReady(true);
-					return;
-				}
-				videoReadyRafRef.current = requestAnimationFrame(waitForRenderableFrame);
-			};
-
-			videoReadyRafRef.current = requestAnimationFrame(waitForRenderableFrame);
 		};
 
 		const [resolvedWallpaper, setResolvedWallpaper] = useState<string | null>(null);
@@ -2422,15 +2288,6 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 			};
 		}, [wallpaper]);
 
-		useEffect(() => {
-			return () => {
-				if (videoReadyRafRef.current) {
-					cancelAnimationFrame(videoReadyRafRef.current);
-					videoReadyRafRef.current = null;
-				}
-			};
-		}, []);
-
 		const isImageUrl =
 			resolvedWallpaperKind === "image" &&
 			Boolean(
@@ -2454,10 +2311,6 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 		// Overscan blurred wallpaper layers so the browser never samples transparent
 		// pixels beyond the preview bounds, which otherwise looks like a vignette.
 		const backgroundBlurOverscan = sceneEffects.backgroundOverscanPx;
-		const fallbackVideoClassName = pixiRendererError
-			? "absolute inset-0 h-full w-full object-cover"
-			: "pointer-events-none absolute left-0 top-0 h-px w-px opacity-0";
-		const hasRendererFallback = Boolean(pixiRendererError);
 		const nativeAspectRatio = (() => {
 			const locked = lockedVideoDimensionsRef.current;
 			if (locked) {
@@ -2531,16 +2384,6 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 						visibility: isGap ? "hidden" : "visible",
 					}}
 				/>
-				{hasRendererFallback && !isGap && (
-					<div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 p-2 text-center">
-						<div className="rounded-md bg-black/70 px-3 py-1.5 text-xs text-white">
-							{`Pixi renderer unavailable on this environment (${pixiRendererBackend ?? "unknown"}).`}
-							<br />
-							Fallback to 2D native preview so you can continue working while the GPU
-							path is unavailable.
-						</div>
-					</div>
-				)}
 				{/* Only render overlay after PIXI and video are fully initialized */}
 				{pixiReady && videoReady && (
 					<div
@@ -2930,9 +2773,9 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 				<video
 					ref={attachVideo}
 					src={videoPath}
-					className={fallbackVideoClassName}
+					className="pointer-events-none absolute left-0 top-0 h-px w-px opacity-0"
 					style={{ visibility: isGap ? "hidden" : "visible" }}
-					preload="metadata"
+					preload="auto"
 					playsInline
 					aria-hidden="true"
 					onLoadedMetadata={handleLoadedMetadata}

@@ -289,22 +289,23 @@ function createRenderer() {
 }
 
 describe("FrameRenderer webcam export path", () => {
-	it("renders a timeline gap as solid black", async () => {
+	it("composites the background during a gap without source layers", async () => {
 		const renderer = createRenderer();
 		const camera = { visible: true };
 		const context = createMockContext();
 		const app = { stage: {}, renderer: { render: vi.fn() } };
+		const composite = vi.fn();
 		Object.assign(renderer, {
 			app,
 			cameraContainer: camera,
 			videoContainer: {},
 			compositeCtx: context,
+			compositeWithShadows: composite,
 		});
 		await renderer.renderFrame(null, 0, 0, 33333, 1500000);
 		expect(camera.visible).toBe(false);
-		expect(context.fillStyle).toBe("#000000");
-		expect(context.fillRect).toHaveBeenCalledWith(0, 0, 1920, 1080);
-		expect(app.renderer.render).not.toHaveBeenCalled();
+		expect(app.renderer.render).toHaveBeenCalledWith(app.stage);
+		expect(composite).toHaveBeenCalledWith(false);
 	});
 	const createdCanvases: ReturnType<typeof createMockCanvas>[] = [];
 

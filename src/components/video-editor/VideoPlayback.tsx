@@ -2336,7 +2336,6 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 				style={{
 					width: "100%",
 					aspectRatio: formatAspectRatioForCSS(aspectRatio, nativeAspectRatio),
-					backgroundColor: "#000000",
 					borderRadius: 0,
 					clipPath: "none",
 				}}
@@ -2352,7 +2351,6 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 						loop
 						playsInline
 						style={{
-							visibility: isGap ? "hidden" : "visible",
 							filter:
 								sceneEffects.backgroundBlurPx > 0
 									? `blur(${sceneEffects.backgroundBlurPx}px)`
@@ -2367,7 +2365,6 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 						className="absolute inset-0 bg-cover bg-center"
 						style={{
 							...backgroundStyle,
-							visibility: isGap ? "hidden" : "visible",
 							filter:
 								sceneEffects.backgroundBlurPx > 0
 									? `blur(${sceneEffects.backgroundBlurPx}px)`

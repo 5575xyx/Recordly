@@ -1418,8 +1418,11 @@ export class FrameRenderer {
 		this.cameraContainer.visible = videoFrame !== null;
 		if (!videoFrame) {
 			this.updateAnimationState(backgroundTimelineTimestamp / 1000, cursorTimestamp / 1000);
-			this.compositeCtx.fillStyle = "#000000";
-			this.compositeCtx.fillRect(0, 0, this.config.width, this.config.height);
+			if (this.backgroundForwardFrameSource || this.backgroundVideoElement) {
+				await this.syncBackgroundFrame(backgroundTimelineTimestamp / 1_000_000);
+			}
+			this.app.renderer.render(this.app.stage);
+			this.compositeWithShadows(false);
 			return;
 		}
 

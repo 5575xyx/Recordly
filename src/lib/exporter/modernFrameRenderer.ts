@@ -2862,11 +2862,12 @@ export class FrameRenderer {
 		this.cameraContainer.visible = videoFrame !== null;
 		if (!videoFrame) {
 			this.updateAnimationState(backgroundTimelineTimestamp / 1000, cursorTimestamp / 1000);
-			const output = this.ensureExportCompositeCanvas();
-			if (!output) throw new Error("Failed to create gap frame canvas");
-			output.context.fillStyle = "#000000";
-			output.context.fillRect(0, 0, output.canvas.width, output.canvas.height);
-			this.outputCanvasOverride = output.canvas;
+			if (this.backgroundForwardFrameSource || this.backgroundVideoElement) {
+				await this.syncBackgroundFrame(backgroundTimelineTimestamp / 1_000_000);
+			}
+			if (this.webcamRootContainer) this.webcamRootContainer.visible = false;
+			if (this.captionContainer) this.captionContainer.visible = false;
+			await this.renderOutput(backgroundTimelineTimestamp / 1000);
 			return;
 		}
 		if (this.captionContainer) this.captionContainer.visible = true;

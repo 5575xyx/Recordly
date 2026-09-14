@@ -202,7 +202,7 @@ function createRenderer() {
 	});
 }
 
-it("renders a timeline gap as solid black", async () => {
+it("renders the background during a timeline gap without source layers", async () => {
 	const renderer = createRenderer();
 	const camera = { visible: true };
 	const output = createMockCanvas();
@@ -221,11 +221,9 @@ it("renders a timeline gap as solid black", async () => {
 	});
 	await renderer.renderFrame(null, 0, 0, 33333, 1500000);
 	expect(camera.visible).toBe(false);
-	expect(output.context.fillStyle).toBe("#000000");
-	expect(output.context.fillRect).toHaveBeenCalledWith(0, 0, 1920, 1080);
+	expect(output.context.fillRect).not.toHaveBeenCalled();
 	expect(annotations).not.toHaveBeenCalled();
-	expect(renderOutput).not.toHaveBeenCalled();
-	expect(renderer.getCanvas()).toBe(output);
+	expect(renderOutput).toHaveBeenCalledWith(1500);
 });
 
 describe("ModernFrameRenderer Pixi lifecycle", () => {
@@ -817,7 +815,7 @@ describe("ModernFrameRenderer webcam export fallback", () => {
 describe("ModernFrameRenderer frame sequencing", () => {
 	it.each([
 		0, 1,
-	])("resumes visual layers after a black gap with temporal blur set to %s", async (temporalBlur) => {
+	])("resumes visual layers after a background gap with temporal blur set to %s", async (temporalBlur) => {
 		const renderer = createRenderer();
 		const sceneCanvas = createMockCanvas();
 		const gapCanvas = createMockCanvas();
@@ -865,23 +863,18 @@ describe("ModernFrameRenderer frame sequencing", () => {
 
 		await renderer.renderFrame(null, 0, 0, 33_333, 1_500_000);
 		expect(updateAnimation).toHaveBeenLastCalledWith(1500, 0);
-		expect(renderer.getCanvas()).toBe(gapCanvas);
+		expect(renderer.getCanvas()).toBe(sceneCanvas);
+		expect(render).toHaveBeenCalledTimes(2);
+		expect(syncBackground).toHaveBeenCalledTimes(2);
 		expect(camera.visible).toBe(false);
-		for (const callback of [
-			render,
-			syncWebcam,
-			syncBackground,
-			updateAnnotations,
-			updateCaptions,
-			updateWebcam,
-		]) {
+		for (const callback of [syncWebcam, updateAnnotations, updateCaptions, updateWebcam]) {
 			expect(callback).toHaveBeenCalledTimes(1);
 		}
 
 		await renderer.renderFrame({} as VideoFrame, 6_000_000, 6_000_000, 33_333, 2_000_000);
 		expect(renderer.getCanvas()).toBe(sceneCanvas);
 		expect(camera.visible).toBe(true);
-		expect(render).toHaveBeenCalledTimes(2);
+		expect(render).toHaveBeenCalledTimes(3);
 		expect(syncWebcam).toHaveBeenLastCalledWith(6);
 		expect(syncBackground).toHaveBeenLastCalledWith(2);
 		expect(updateAnnotations).toHaveBeenLastCalledWith(2000);

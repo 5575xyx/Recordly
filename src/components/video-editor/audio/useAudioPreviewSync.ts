@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildResolvedAudioPlan } from "@/lib/exporter/audioRoutingEngine";
 import { resolveMediaElementSource } from "@/lib/exporter/localMediaSource";
 import {
@@ -80,6 +80,7 @@ export function useAudioPreviewSync({
 	const sourceAudioMasterGainRef = useRef<GainNode | null>(null);
 	const sourceAudioResumePromiseRef = useRef<Promise<void> | null>(null);
 	const lastSourceAudioSyncTimeRef = useRef<number | null>(null);
+	const [sourceLoadVersion, setSourceLoadVersion] = useState(0);
 
 	const ensureSourceAudioContext = useCallback(() => {
 		if (!sourceAudioContextRef.current) {
@@ -111,10 +112,6 @@ export function useAudioPreviewSync({
 
 	const playSourceAudioPreview = useCallback(() => {
 		void ensureSourceAudioRunning();
-		for (const audio of sourceAudioElementsRef.current.values()) {
-			if (!audio.src) continue;
-			audio.play().catch(() => undefined);
-		}
 	}, [ensureSourceAudioRunning]);
 
 	useEffect(() => {
@@ -242,9 +239,7 @@ export function useAudioPreviewSync({
 							sourceAudioResourceVersion,
 						);
 						latestAudio.load();
-						if (isPlaying) {
-							playSourceAudioPreview();
-						}
+						setSourceLoadVersion((version) => version + 1);
 					} catch (error) {
 						const latestAudio = existing.get(audioPath);
 						if (
@@ -290,13 +285,11 @@ export function useAudioPreviewSync({
 		}
 	}, [
 		getSourceTrackPreviewGain,
-		isPlaying,
 		isCurrentClipMuted,
 		onSourceFallbackLoadError,
 		resolvedSourceTracks,
 		sourceAudioResourceVersion,
 		previewVolume,
-		playSourceAudioPreview,
 	]);
 
 	useEffect(() => {
@@ -382,6 +375,9 @@ export function useAudioPreviewSync({
 			lastSourceAudioSyncTimeRef.current = null;
 			return;
 		}
+		let cancelled = false;
+		// A newly resolved source must pass the same playback checks as timeline updates.
+		void sourceLoadVersion;
 
 		const previousTimelineTime = lastSourceAudioSyncTimeRef.current;
 		const timelineJumped =
@@ -396,6 +392,7 @@ export function useAudioPreviewSync({
 		}
 
 		for (const audio of sourceAudioElementsRef.current.values()) {
+			if (!audio.src) continue;
 			if (!supportsPreviewPlaybackRate(sourcePlaybackRate)) {
 				audio.pause();
 				continue;
@@ -455,7 +452,7 @@ export function useAudioPreviewSync({
 			const atEnd = audioDuration !== null && targetTime >= audioDuration;
 			if (isPlaying && !isCurrentClipMuted && !beforeAudioStart && !atEnd) {
 				void ensureSourceAudioRunning().then(() => {
-					audio.play().catch(() => undefined);
+					if (!cancelled) audio.play().catch(() => undefined);
 				});
 			} else if (!audio.paused) {
 				audio.pause();
@@ -463,7 +460,11 @@ export function useAudioPreviewSync({
 		}
 
 		lastSourceAudioSyncTimeRef.current = currentTime;
+		return () => {
+			cancelled = true;
+		};
 	}, [
+		sourceLoadVersion,
 		currentTime,
 		duration,
 		sourcePlaybackRate,
@@ -475,19 +476,6 @@ export function useAudioPreviewSync({
 		sourceAudioFallbackStartDelayMsByPath,
 		ensureSourceAudioRunning,
 	]);
-
-	useEffect(() => {
-		if (!isPlaying || resolvedSourceTracks.length === 0) {
-			return;
-		}
-		void ensureSourceAudioRunning().then(() => {
-			for (const audio of sourceAudioElementsRef.current.values()) {
-				if (audio.paused) {
-					audio.play().catch(() => undefined);
-				}
-			}
-		});
-	}, [isPlaying, resolvedSourceTracks.length, ensureSourceAudioRunning]);
 
 	return { playSourceAudioPreview };
 }

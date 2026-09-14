@@ -20,6 +20,7 @@ function setup(selectedClipId: string | null = "clip") {
 	const addEventListener = vi.fn();
 	vi.stubGlobal("window", { addEventListener, removeEventListener: vi.fn() });
 	const deleteSelectedClip = vi.fn();
+	// React useEffect is mocked to test listener registration without mounting a component.
 	useTimelineKeyboardShortcuts({
 		isTimelineFocusedRef: { current: false },
 		selectedClipId,

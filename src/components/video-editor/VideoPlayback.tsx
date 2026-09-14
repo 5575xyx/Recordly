@@ -451,9 +451,11 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 		const clipRegionsRef = useRef(clipRegions);
 		const clipPlaybackRef = useRef<ReturnType<typeof createClipPlayback> | null>(null);
 		const onPlaybackErrorRef = useRef(onError);
-		onPlaybackErrorRef.current = onError;
 		const timelineTimeRef = useRef(timelineTime);
-		timelineTimeRef.current = timelineTime;
+		useEffect(() => {
+			onPlaybackErrorRef.current = onError;
+			timelineTimeRef.current = timelineTime;
+		}, [onError, timelineTime]);
 		const currentTimeRef = useRef(0);
 		useEffect(() => {
 			clipRegionsRef.current = clipRegions;

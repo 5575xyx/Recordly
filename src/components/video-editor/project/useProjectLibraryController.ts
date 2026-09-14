@@ -5,13 +5,9 @@ import { toFileUrl } from "../projectPersistence";
 import type { useAppearanceState } from "../state/useAppearanceState";
 import type { useProjectState } from "../state/useProjectState";
 import type { useTimelineState } from "../state/useTimelineState";
-import {
-	findClipAtTimelineTime,
-	getClipSourceEndMs,
-	getClipSourceStartMs,
-	type SpeedRegion,
-} from "../types";
+import { getClipSourceEndMs, getClipSourceStartMs, type SpeedRegion } from "../types";
 import type { VideoPlaybackRef } from "../VideoPlayback";
+import { findPreviewClipAtTimelineTime } from "../videoPlayback/clipPlayback";
 
 type Input = {
 	project: ReturnType<typeof useProjectState>;
@@ -146,7 +142,7 @@ export function useProjectLibraryController({
 
 			try {
 				const sourceTimestampUs = previewVideo.currentTime * 1_000_000;
-				if (findClipAtTimelineTime(frameTimestampUs / 1000, clipRegions)) {
+				if (findPreviewClipAtTimelineTime(frameTimestampUs / 1000, clipRegions)) {
 					videoFrame = new VideoFrame(previewVideo, { timestamp: sourceTimestampUs });
 				}
 				frameRenderer = new FrameRenderer({

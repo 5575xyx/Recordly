@@ -106,7 +106,7 @@ export function EditorTimelinePanel(props: Props) {
 						(cue) =>
 							cue.sourceCueId === timeline.selectedCaptionId &&
 							currentTime * 1000 >= cue.startMs &&
-							currentTime * 1000 <= cue.endMs,
+							currentTime * 1000 < cue.endMs,
 					)?.id ?? null
 				}
 				onSelectCaption={(id) => {

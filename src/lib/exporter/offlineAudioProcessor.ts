@@ -1,14 +1,14 @@
 import { SOURCE_AUDIO_NORMALIZE_GAIN } from "@/components/video-editor/audio/audioTypes";
-import {
-	getClipSourceStartMs,
-	getClipSourceEndMs,
-	getTimelineDurationMs,
-} from "@/components/video-editor/types";
 import type {
 	AudioRegion,
 	ClipRegion,
 	SourceAudioTrackSettings,
 	SpeedRegion,
+} from "@/components/video-editor/types";
+import {
+	getClipSourceEndMs,
+	getClipSourceStartMs,
+	getTimelineDurationMs,
 } from "@/components/video-editor/types";
 import { buildResolvedAudioPlan } from "@/lib/exporter/audioRoutingEngine";
 import { estimateCompanionAudioStartDelaySeconds } from "@/lib/mediaTiming";
@@ -291,6 +291,7 @@ export class OfflineAudioProcessor extends AudioMediaProcessor {
 		await this.renderChunked(prepared, totalOutputSec, async (rendered) => {
 			pcmParts.push(...this.audioBufferToPcmParts(rendered));
 		});
+		if (this.cancelled) throw new Error("Export cancelled");
 
 		return new Blob(pcmParts, { type: "audio/wav" });
 	}

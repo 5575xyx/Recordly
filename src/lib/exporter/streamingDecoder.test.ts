@@ -204,9 +204,10 @@ describe("StreamingVideoDecoder decode failures", () => {
 	});
 
 	it.each([
-		false,
-		true,
-	])("emits real gap frames on the output clock (reordered: %s)", async (reordered) => {
+		[false, 3, 0, 2400],
+		[true, 3, 0, 2400],
+		[false, 0.1, 5, 2405],
+	])("emits real gap frames (reordered: %s, speed: %s)", async (reordered, speed, firstSource, secondSource) => {
 		mockDemuxerRead.mockImplementation(
 			() =>
 				new ReadableStream({
@@ -239,16 +240,29 @@ describe("StreamingVideoDecoder decode failures", () => {
 		const decoder = new StreamingVideoDecoder();
 		await decoder.loadMetadata("/tmp/clip-timeline.mp4");
 		const clips = [
-			{ id: "a", startMs: 0, endMs: 400, sourceStartMs: reordered ? 2400 : 0, speed: 3 },
-			{ id: "b", startMs: 800, endMs: 1200, sourceStartMs: reordered ? 0 : 2400, speed: 3 },
+			{
+				id: "a",
+				startMs: 0,
+				endMs: 400,
+				sourceStartMs: reordered ? secondSource : firstSource,
+				speed,
+			},
+			{
+				id: "b",
+				startMs: 800,
+				endMs: 1200,
+				sourceStartMs: reordered ? firstSource : secondSource,
+				speed,
+			},
 		];
-		const frames: Array<{ gap: boolean; timestamp: number; source: number }> = [];
+		const frames: Array<{ gap: boolean; timestamp: number; source: number; decoded?: number }> =
+			[];
 		await decoder.decodeAll(
 			30,
 			undefined,
 			undefined,
 			async (frame, timestamp, source) => {
-				frames.push({ gap: frame === null, timestamp, source });
+				frames.push({ gap: frame === null, timestamp, source, decoded: frame?.timestamp });
 			},
 			clips,
 		);
@@ -258,7 +272,10 @@ describe("StreamingVideoDecoder decode failures", () => {
 			expect(frames[i].timestamp).toBeCloseTo((i * 1_000_000) / 30, 5);
 			expect(frames[i].gap).toBe(i >= 12 && i < 24);
 		}
-		expect(frames[24].source).toBeCloseTo(reordered ? 0 : 2400);
+		expect(frames[24].source).toBeCloseTo(reordered ? firstSource : secondSource);
+		expect(frames[0].decoded).toBeCloseTo(
+			(Math.round(((reordered ? secondSource : firstSource) * 30) / 1000) * 1_000_000) / 30,
+		);
 		expect(decoder.getEffectiveDuration(undefined, undefined, clips)).toBe(1.2);
 	});
 });

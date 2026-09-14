@@ -1,18 +1,18 @@
+import type { WebDemuxer } from "web-demuxer";
 import type { SpeedRegion, TrimRegion } from "@/components/video-editor/types";
 import { getEffectiveVideoStreamDurationSeconds } from "@/lib/mediaTiming";
-import type { WebDemuxer } from "web-demuxer";
 import {
 	buildVideoDecodeFailure,
+	type DecodedVideoInfo,
 	getDecodedFrameTimelineOffsetUs,
 	preserveFirstVideoDecodeFailure,
-	type DecodedVideoInfo,
 	type VideoDecodeFailureContext,
 } from "./streamingDecoderSupport";
 import {
 	computeVideoSegments,
-	splitVideoSegmentsBySpeed,
 	segmentFrameCount,
 	segmentSourceTime,
+	splitVideoSegmentsBySpeed,
 	type VideoSegment,
 } from "./videoTimelineSegments";
 
@@ -322,14 +322,6 @@ export async function decodeVideoStream(
 
 			segmentIdx++;
 			segmentFrameIndex = 0;
-			if (
-				heldFrame &&
-				segmentIdx < segments.length &&
-				heldFrameSec < segments[segmentIdx].startSec - epsilonSec
-			) {
-				heldFrame.close();
-				heldFrame = null;
-			}
 		}
 
 		if (segmentIdx >= segments.length) {
@@ -339,9 +331,11 @@ export async function decodeVideoStream(
 
 		const currentSegment = segments[segmentIdx];
 
-		// Before current segment (trimmed region or pre-roll).
+		// Keep the nearest pre-roll frame for cuts between source frames.
 		if (frameTimeSec < currentSegment.startSec - epsilonSec) {
-			frame.close();
+			heldFrame?.close();
+			heldFrame = frame;
+			heldFrameSec = frameTimeSec;
 			continue;
 		}
 

@@ -109,6 +109,7 @@ export function useTimelineEditingController(input: Input) {
 		timelineDuration: projection.timelineDuration,
 	});
 	const captionCommands = useCaptionCommands({
+		clipRegions: timeline.clipRegions,
 		autoCaptions: timeline.autoCaptions,
 		setAutoCaptions: timeline.setAutoCaptions,
 		setAutoCaptionSettings: timeline.setAutoCaptionSettings,
@@ -120,7 +121,6 @@ export function useTimelineEditingController(input: Input) {
 		setActiveEffectSection: input.setActiveEffectSection,
 		videoPlaybackRef: input.videoPlaybackRef,
 		mapSourceTimeToTimelineTime: projection.mapSourceTimeToTimelineTime,
-		mapTimelineTimeToSourceTime: projection.mapTimelineTimeToSourceTime,
 		handleSeek: playback.handleSeek,
 	});
 	const zoomCommands = useZoomRegionCommands({

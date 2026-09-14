@@ -1,4 +1,3 @@
-import { requiresClipTimelineRendering } from "./clipTimeline";
 import type {
 	AnnotationRegion,
 	AudioRegion,
@@ -54,6 +53,7 @@ import {
 	shouldPreferNativeAutoBackend,
 	shouldPreferNativeStaticLayoutBeforeBreeze,
 } from "./backendPolicy";
+import { requiresClipTimelineRendering } from "./clipTimeline";
 import { buildEditedTrackSourceSegments, classifyEditedTrackStrategy } from "./editedTrackStrategy";
 import {
 	type ExportBackpressureProfile,
@@ -383,11 +383,13 @@ export class ModernVideoExporter {
 	async export(): Promise<ExportResult> {
 		let useFallbackMediaSource = false;
 		let retriedWithFallbackMediaSource = false;
+		let nativeFailure: string | null = null;
 		this.mediaSourceRetryAttempted = false;
 		this.runtimeDiagnostics = await this.collectRuntimeDiagnostics();
 
 		while (true) {
-			let shouldRetryWithFallbackMediaSource = false;
+			let retryExport = false;
+			let inNativeStage = false;
 			try {
 				this.cleanup();
 				this.cancelled = false;
@@ -398,21 +400,21 @@ export class ModernVideoExporter {
 				this.nativeStaticLayoutBackgroundSkipReason = null;
 				this.sourceVideoInfo = null;
 				this.totalExportStartTimeMs = this.getNowMs();
-				const backendPreference = this.config.backendPreference ?? "auto";
+				const backendPreference = nativeFailure
+					? "webcodecs"
+					: (this.config.backendPreference ?? "auto");
 				const runtimePlatform = this.getRuntimePlatform();
 				let useNativeEncoder = false;
 				let triedNativeStaticLayoutWithProbe = false;
 				const prefersNativeStaticLayoutBeforeBreeze =
 					shouldPreferNativeStaticLayoutBeforeBreeze(runtimePlatform, backendPreference);
 				const shouldTryNativeStaticLayout =
-					backendPreference === "breeze" ||
-					this.config.experimentalNvidiaCudaExport === true ||
-					prefersNativeStaticLayoutBeforeBreeze;
-				let shouldDeferNativeEncoderStart =
-					backendPreference === "breeze" ||
-					this.config.experimentalNvidiaCudaExport === true ||
-					prefersNativeStaticLayoutBeforeBreeze;
-				this.lastNativeExportError = null;
+					!nativeFailure &&
+					(backendPreference === "breeze" ||
+						this.config.experimentalNvidiaCudaExport === true ||
+						prefersNativeStaticLayoutBeforeBreeze);
+				let shouldDeferNativeEncoderStart = shouldTryNativeStaticLayout;
+				this.lastNativeExportError = nativeFailure;
 
 				let stageStartedAt = this.getNowMs();
 				if (shouldDeferNativeEncoderStart) {
@@ -724,11 +726,13 @@ export class ModernVideoExporter {
 						}
 
 						if (useNativeEncoder) {
+							inNativeStage = true;
 							await this.encodeRenderedFrameNative(
 								timestamp,
 								frameDuration,
 								frameIndex,
 							);
+							inNativeStage = false;
 						} else {
 							await this.encodeRenderedFrame(timestamp, frameDuration, frameIndex);
 						}
@@ -760,6 +764,7 @@ export class ModernVideoExporter {
 				this.reportFinalizingProgress(totalFrames, 96);
 
 				if (useNativeEncoder) {
+					inNativeStage = true;
 					stageStartedAt = this.getNowMs();
 					this.reportFinalizingProgress(totalFrames, 99);
 					if (this.nativeH264Encoder) {
@@ -773,12 +778,9 @@ export class ModernVideoExporter {
 						!finishResult.success ||
 						(!finishResult.tempFilePath && !finishResult.blob)
 					) {
-						return {
-							success: false,
-							error:
-								finishResult.error || `${NATIVE_EXPORT_ENGINE_NAME} export failed`,
-							metrics: this.buildExportMetrics(),
-						};
+						throw new Error(
+							finishResult.error || `${NATIVE_EXPORT_ENGINE_NAME} export failed`,
+						);
 					}
 
 					return {
@@ -907,6 +909,20 @@ export class ModernVideoExporter {
 				};
 			} catch (error) {
 				if (
+					!this.cancelled &&
+					!nativeFailure &&
+					(inNativeStage || this.nativeEncoderError)
+				) {
+					nativeFailure = this.buildLightningExportError(
+						this.nativeEncoderError ?? error,
+					);
+					console.error(
+						"[VideoExporter] Native export failed; restarting once with WebCodecs.\n" +
+							nativeFailure,
+					);
+					retryExport = true;
+				} else if (
+					!this.cancelled &&
 					!useFallbackMediaSource &&
 					!retriedWithFallbackMediaSource &&
 					this.shouldRetryWithFallbackMediaSource(error)
@@ -914,7 +930,7 @@ export class ModernVideoExporter {
 					retriedWithFallbackMediaSource = true;
 					this.mediaSourceRetryAttempted = true;
 					useFallbackMediaSource = true;
-					shouldRetryWithFallbackMediaSource = true;
+					retryExport = true;
 					console.warn(
 						"[VideoExporter] Primary decode path failed; retrying export once with a fresh media source.",
 						error,
@@ -937,7 +953,7 @@ export class ModernVideoExporter {
 					};
 				}
 			} finally {
-				if (!shouldRetryWithFallbackMediaSource && this.totalExportStartTimeMs > 0) {
+				if (!retryExport && this.totalExportStartTimeMs > 0) {
 					console.log(
 						`[VideoExporter] Final metrics ${JSON.stringify(this.buildExportMetrics())}`,
 					);
@@ -945,7 +961,7 @@ export class ModernVideoExporter {
 				this.cleanup();
 			}
 
-			if (shouldRetryWithFallbackMediaSource) {
+			if (retryExport) {
 				continue;
 			}
 		}
@@ -2141,10 +2157,17 @@ export class ModernVideoExporter {
 			),
 		);
 
+		this.throwIfCancelled();
+		const editedAudioData = await audioBlob.arrayBuffer();
+		this.throwIfCancelled();
 		return {
-			editedAudioData: await audioBlob.arrayBuffer(),
+			editedAudioData,
 			editedAudioMimeType: audioBlob.type || null,
 		};
+	}
+
+	private throwIfCancelled(): void {
+		if (this.cancelled) throw new Error("Export cancelled");
 	}
 
 	private async getNativeStaticLayoutAudioOptions(
@@ -2616,6 +2639,7 @@ export class ModernVideoExporter {
 		);
 
 		try {
+			this.throwIfCancelled();
 			const result = await window.electronAPI.nativeStaticLayoutExport({
 				sessionId,
 				inputPath: sourcePath,
@@ -2826,6 +2850,7 @@ export class ModernVideoExporter {
 				this.queueNativeWriteChunk(sessionId, new Uint8Array(buffer));
 			},
 			error: (error) => {
+				if (this.nativeExportSessionId !== sessionId) return;
 				this.nativeEncoderError = error;
 				this.notifyEncodeCapacityAvailable();
 			},
@@ -2889,8 +2914,11 @@ export class ModernVideoExporter {
 			duration: frameDuration,
 			colorSpace: EXPORT_CANVAS_COLOR_SPACE,
 		});
-		this.nativeH264Encoder.encode(frame, { keyFrame: frameIndex % 300 === 0 });
-		frame.close();
+		try {
+			this.nativeH264Encoder.encode(frame, { keyFrame: frameIndex % 300 === 0 });
+		} finally {
+			frame.close();
+		}
 	}
 
 	private async finishNativeVideoExport(audioPlan: NativeAudioPlan): Promise<ExportResult> {
@@ -2928,6 +2956,7 @@ export class ModernVideoExporter {
 
 		this.flushPendingNativeWriteBatch(sessionId);
 		await this.awaitPendingNativeWrites();
+		this.throwIfCancelled();
 
 		const result = await this.measureFinalizationStage("nativeExportFinalizeMs", async () =>
 			this.awaitWithFinalizationTimeout(
@@ -3015,6 +3044,7 @@ export class ModernVideoExporter {
 			editedAudioMimeType = renderedAudio.editedAudioMimeType;
 		}
 
+		this.throwIfCancelled();
 		const muxOptions = {
 			audioMode: audioPlan.audioMode,
 			audioSourcePath:
@@ -3079,6 +3109,7 @@ export class ModernVideoExporter {
 			};
 		}
 		const videoBuffer = await videoSource.blob.arrayBuffer();
+		this.throwIfCancelled();
 		const result = await this.measureFinalizationStage("ffmpegAudioMuxMs", async () =>
 			this.awaitWithFinalizationTimeout(
 				window.electronAPI.muxExportedVideoAudio(videoBuffer, muxOptions),
@@ -3216,7 +3247,7 @@ export class ModernVideoExporter {
 				}
 			})
 			.catch((error) => {
-				if (!this.cancelled) {
+				if (!this.cancelled && this.nativeExportSessionId === sessionId) {
 					const resolvedError = error instanceof Error ? error : new Error(String(error));
 					if (!this.nativeEncoderError) {
 						this.nativeEncoderError = resolvedError;
@@ -3420,9 +3451,10 @@ export class ModernVideoExporter {
 			this.nativeWritePromises.size,
 		);
 
-		void writePromise.finally(() => {
+		const removeWrite = () => {
 			this.nativeWritePromises.delete(writePromise);
-		});
+		};
+		void writePromise.then(removeWrite, removeWrite);
 	}
 
 	private async awaitOldestNativeWrite(): Promise<void> {

@@ -117,6 +117,20 @@ describe("extendAutoFullTrackClip", () => {
 });
 
 describe("clip timeline mapping", () => {
+	it("selects the next source at an exact cut, but keeps fractional times before it in the previous clip", () => {
+		const clips = [
+			{ id: "a", startMs: 0, endMs: 1000, sourceStartMs: 0, speed: 3 },
+			{ id: "b", startMs: 1000, endMs: 2000, sourceStartMs: 6000, speed: 1 },
+		];
+		expect(mapTimelineTimeToSourceTime(1000, clips)).toBe(6000);
+		expect(mapTimelineTimeToSourceTime(999.9, clips)).toBe(3000);
+		expect(mapTimelineTimeToSourceTime(2000, clips)).toBe(7000);
+		const sourceAdjacent = [
+			clips[0],
+			{ ...clips[1], startMs: 2000, endMs: 3000, sourceStartMs: 3000 },
+		];
+		expect(mapSourceTimeToTimelineTime(3000, sourceAdjacent)).toBe(2000);
+	});
 	const clips = [
 		{ id: "clip-1", startMs: 0, endMs: 4_000, speed: 1 },
 		{ id: "clip-2", startMs: 6_000, endMs: 8_000, speed: 2 },

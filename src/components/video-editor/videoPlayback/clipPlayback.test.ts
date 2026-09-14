@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ClipRegion } from "../types";
-import { createClipPlayback } from "./clipPlayback";
+import { createClipPlayback, findPreviewClipAtTimelineTime } from "./clipPlayback";
 
 describe("clip timeline playback", () => {
 	let now = 0;
@@ -87,6 +87,28 @@ describe("clip timeline playback", () => {
 		advance(250);
 		expect(onTime).toHaveBeenLastCalledWith(1.75, null);
 	});
+	it("does not skip a short gap when a media tick overshoots the cut", async () => {
+		const { video, playback, onTime } = setup([
+			{ id: "a", startMs: 0, endMs: 1000, sourceStartMs: 0, speed: 3 },
+			{ id: "b", startMs: 1010, endMs: 2000, sourceStartMs: 6000, speed: 3 },
+		]);
+		await playback.play();
+		video.currentTime = 3.15;
+		advance(1050);
+		expect(onTime).toHaveBeenLastCalledWith(1, null);
+		advance(10);
+		expect(onTime).toHaveBeenLastCalledWith(1.01, 6);
+	});
+	it("leaves a clip at source EOF even when metadata rounding extends its timeline end", async () => {
+		const { video, playback, onTime } = setup([
+			{ id: "a", startMs: 0, endMs: 4000, sourceStartMs: 0, speed: 3 },
+		]);
+		await playback.play();
+		Object.assign(video, { currentTime: 11.999, ended: true });
+		advance(4000);
+		expect(onTime).toHaveBeenLastCalledWith(4, 12);
+		expect(playback.isPlaying).toBe(false);
+	});
 	it("does not skip footage when source playback stalls or a seek is pending", async () => {
 		const { video, playback, onTime } = setup();
 		await playback.play();
@@ -115,5 +137,55 @@ describe("clip timeline playback", () => {
 		await playback.play();
 		expect(onError).toHaveBeenCalledWith(error);
 		expect(playback.isPlaying).toBe(false);
+	});
+	it.each([
+		20, 30,
+	])("reports unsupported %sx without crashing or scheduling playback", async (speed) => {
+		const clips = [{ id: "fast", startMs: 0, endMs: 1000, speed }];
+		const { video, playback, onError } = setup(clips);
+		Object.defineProperty(video, "playbackRate", {
+			get: () => 1,
+			set: (rate: number) => {
+				if (rate > 16)
+					throw new DOMException("Unsupported playback rate", "NotSupportedError");
+			},
+		});
+		expect(() => playback.refresh()).not.toThrow();
+		expect(() => playback.seek(0.5)).not.toThrow();
+		await playback.play();
+		expect(playback.isPlaying).toBe(false);
+		expect(tick).toBeUndefined();
+		expect(video.play).not.toHaveBeenCalled();
+		expect(onError).toHaveBeenCalledWith(
+			expect.objectContaining({ name: "NotSupportedError" }),
+		);
+		expect(clips[0].speed).toBe(speed);
+		clips[0].speed = 2;
+		playback.refresh();
+		await playback.play();
+		expect(playback.isPlaying).toBe(true);
+	});
+	it("holds the final clip when seeking to the timeline end and restarts on play", async () => {
+		const { playback, video, onTime } = setup();
+		playback.seek(4);
+		expect(onTime).toHaveBeenLastCalledWith(4, 12);
+		expect(video.currentTime).toBe(12);
+		expect(video.play).not.toHaveBeenCalled();
+		await playback.play();
+		expect(onTime).toHaveBeenLastCalledWith(0, 0);
+	});
+	it("keeps real gaps black, chooses the next clip at cuts, and holds only the final endpoint", () => {
+		const clips = [
+			{ id: "a", startMs: 0, endMs: 1000, speed: 1 },
+			{ id: "b", startMs: 1000, endMs: 2000, sourceStartMs: 4000, speed: 1 },
+			{ id: "c", startMs: 3000, endMs: 4000, sourceStartMs: 6000, speed: 1 },
+		];
+		expect(findPreviewClipAtTimelineTime(999.9, clips)?.id).toBe("a");
+		expect(findPreviewClipAtTimelineTime(1000, clips)?.id).toBe("b");
+		expect(findPreviewClipAtTimelineTime(2000, clips)).toBeNull();
+		expect(findPreviewClipAtTimelineTime(2500, clips)).toBeNull();
+		expect(findPreviewClipAtTimelineTime(4000, clips)?.id).toBe("c");
+		expect(findPreviewClipAtTimelineTime(4001, clips)).toBeNull();
+		expect(findPreviewClipAtTimelineTime(0, [])).toBeNull();
 	});
 });

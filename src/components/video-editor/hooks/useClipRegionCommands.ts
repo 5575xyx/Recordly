@@ -1,10 +1,11 @@
 import type { Span } from "dnd-timeline";
 import { type Dispatch, type MutableRefObject, type SetStateAction, useCallback } from "react";
 import { toast } from "sonner";
-import { planClipSpeedChange } from "../clipSpeedChange";
 import { changeClipSpan } from "../clipSpanChange";
+import { planClipSpeedChange } from "../clipSpeedChange";
 import { planClipSplit } from "../clipSplit";
 import type { ClipRegion, EditorEffectSection, ZoomRegion } from "../types";
+import { supportsPreviewPlaybackRate } from "../videoPlayback/playbackRate";
 
 type Translator = (
 	key: string,
@@ -123,6 +124,15 @@ export function useClipRegionCommands({
 	const handleClipSpeedChange = useCallback(
 		(speed: number) => {
 			if (!selectedClipId || !Number.isFinite(speed) || speed <= 0) return;
+			if (!supportsPreviewPlaybackRate(speed)) {
+				toast.error(
+					t(
+						"editor.timeline.unsupportedSpeed",
+						"This speed is not supported for preview on this device.",
+					),
+				);
+				return;
+			}
 			const plan = planClipSpeedChange({ clipRegions, zoomRegions, selectedClipId, speed });
 			if (!plan) return;
 			if ("blockedReason" in plan) {

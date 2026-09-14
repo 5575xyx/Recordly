@@ -1417,6 +1417,7 @@ export class FrameRenderer {
 		this.currentVideoTime = timestamp / 1000000;
 		this.cameraContainer.visible = videoFrame !== null;
 		if (!videoFrame) {
+			this.updateAnimationState(backgroundTimelineTimestamp / 1000, cursorTimestamp / 1000);
 			this.compositeCtx.fillStyle = "#000000";
 			this.compositeCtx.fillRect(0, 0, this.config.width, this.config.height);
 			return;

@@ -9,6 +9,7 @@ import {
 	resolvePreviewMediaDuration,
 } from "@/lib/mediaTiming";
 import type { AudioRegion } from "../types";
+import { supportsPreviewPlaybackRate } from "../videoPlayback/playbackRate";
 import {
 	getAudioResourceVersionKey,
 	getVersionedAudioResourceUrl,
@@ -395,6 +396,10 @@ export function useAudioPreviewSync({
 		}
 
 		for (const audio of sourceAudioElementsRef.current.values()) {
+			if (!supportsPreviewPlaybackRate(sourcePlaybackRate)) {
+				audio.pause();
+				continue;
+			}
 			const sourceAudioPath = audio.dataset.sourceAudioPath ?? "";
 			audio.volume = Math.max(
 				0,

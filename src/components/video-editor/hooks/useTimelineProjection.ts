@@ -1,9 +1,9 @@
 /* biome-ignore-all lint/correctness/useExhaustiveDependencies: mutable timeline bootstrap refs intentionally do not trigger effects. */
 import { type MutableRefObject, useCallback, useEffect, useMemo } from "react";
+import { projectCaptionCues } from "../captionTimeline";
 import { deriveNextId } from "../projectPersistence";
 import type { useTimelineState } from "../state/useTimelineState";
 import {
-	type CaptionCue,
 	clipsToTrims,
 	extendAutoFullTrackClip,
 	getClipSourceEndMs,
@@ -90,14 +90,9 @@ export function useTimelineProjection({
 		[clipRegions],
 	);
 	const effectiveZoomRegions: ZoomRegion[] = zoomRegions;
-	const effectiveCaptionRegions = useMemo<CaptionCue[]>(
-		() =>
-			autoCaptions.map((cue) => ({
-				...cue,
-				startMs: toTimelineTime(cue.startMs),
-				endMs: toTimelineTime(cue.endMs),
-			})),
-		[autoCaptions, toTimelineTime],
+	const effectiveCaptionRegions = useMemo(
+		() => projectCaptionCues(autoCaptions, clipRegions),
+		[autoCaptions, clipRegions],
 	);
 	const timelinePlayheadTime = currentTime;
 	const timelineDuration = useMemo(

@@ -4,7 +4,19 @@ import {
 	findClipAtTimelineTime,
 	getClipSourceStartMs,
 	getTimelineDurationMs,
+	sortClipRegions,
 } from "../types";
+
+/** The playhead may stop at the timeline end; that is not a black gap. */
+export function findPreviewClipAtTimelineTime(
+	timeMs: number,
+	clips: ClipRegion[],
+): ClipRegion | null {
+	const active = findClipAtTimelineTime(timeMs, clips);
+	if (active) return active;
+	const last = sortClipRegions(clips)[clips.length - 1];
+	return last && timeMs === last.endMs ? last : null;
+}
 
 /** Timeline time advances at 1x; only the source media uses the clip's speed. */
 export function createClipPlayback({
@@ -46,13 +58,19 @@ export function createClipPlayback({
 		});
 	};
 	const sync = (seek = false) => {
-		const clip = findClipAtTimelineTime(timeMs, getClips());
+		const clip = findPreviewClipAtTimelineTime(timeMs, getClips());
 		const sourceMs = clip
 			? getClipSourceStartMs(clip) + (timeMs - clip.startMs) * clip.speed
 			: null;
 		if (clip && sourceMs !== null) {
 			enablePitchPreservingPlayback(video);
-			video.playbackRate = clip.speed;
+			try {
+				video.playbackRate = clip.speed;
+			} catch (error) {
+				pause();
+				onError(error);
+				return;
+			}
 			if (seek || clip !== activeClip) video.currentTime = sourceMs / 1000;
 			if (playing && (seek || clip !== activeClip)) playSource();
 		} else {
@@ -69,13 +87,19 @@ export function createClipPlayback({
 		// A gap has no source clock, so advance it with elapsed real time.
 		if (!activeClip) timeMs += now - lastTick;
 		else if (!video.seeking) {
-			timeMs =
-				activeClip.startMs +
-				(video.currentTime * 1000 - getClipSourceStartMs(activeClip)) / activeClip.speed;
+			timeMs = video.ended
+				? activeClip.endMs
+				: Math.min(
+						activeClip.endMs,
+						activeClip.startMs +
+							(video.currentTime * 1000 - getClipSourceStartMs(activeClip)) /
+								activeClip.speed,
+					);
 		}
 		timeMs = Math.min(duration(), timeMs);
 		lastTick = now;
 		sync();
+		if (!playing) return;
 		if (timeMs >= duration()) pause();
 		else request = requestAnimationFrame(tick);
 	};
@@ -90,7 +114,7 @@ export function createClipPlayback({
 			onPlaying(true);
 			lastTick = performance.now();
 			sync(true);
-			request = requestAnimationFrame(tick);
+			if (playing) request = requestAnimationFrame(tick);
 		},
 		pause,
 		seek: (seconds: number) => {

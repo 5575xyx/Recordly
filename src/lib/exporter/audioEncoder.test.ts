@@ -53,6 +53,19 @@ function fakeAudioBuffer(channels: Float32Array[]): AudioBuffer {
 }
 
 describe("AudioProcessor offline render preparation", () => {
+	it("rejects a cancelled chunked render instead of returning a partial WAV", async () => {
+		const processor = new AudioProcessor() as unknown as OfflineRenderTestHarness;
+		vi.spyOn(processor, "prepareOfflineRender").mockResolvedValue({
+			mainBufferEntry: null,
+			companionEntries: [],
+			outputDurationMs: 1000,
+			numChannels: 2,
+		} as never);
+		vi.spyOn(processor, "renderChunked").mockImplementation(async () => processor.cancel());
+		await expect(processor.renderEditedAudioTrack("source.mp4")).rejects.toThrow(
+			"Export cancelled",
+		);
+	});
 	it("keeps embedded source audio separate from external companion sidecars", async () => {
 		const processor = new AudioProcessor() as unknown as OfflineRenderTestHarness;
 		const mainBuffer = { duration: 10, numberOfChannels: 2 } as AudioBuffer;

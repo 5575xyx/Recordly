@@ -91,7 +91,7 @@ import {
 	isAnnotationActiveAtTime,
 	shouldClearSelectedAnnotation,
 } from "./videoPlayback/annotationVisibility";
-import { createClipPlayback } from "./videoPlayback/clipPlayback";
+import { createClipPlayback, findPreviewClipAtTimelineTime } from "./videoPlayback/clipPlayback";
 import { DEFAULT_FOCUS } from "./videoPlayback/constants";
 import {
 	type CursorFollowCameraState,
@@ -113,6 +113,7 @@ import {
 	stepSpringValue,
 } from "./videoPlayback/motionSmoothing";
 import { updateOverlayIndicator } from "./videoPlayback/overlayUtils";
+import { supportsPreviewPlaybackRate } from "./videoPlayback/playbackRate";
 import { PreviewVideoSource } from "./videoPlayback/previewVideoSource";
 import { getSceneEffectMetrics } from "./videoPlayback/sceneEffects";
 import {
@@ -446,7 +447,7 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 			null,
 		);
 		const currentTime = mapTimelineTimeToSourceTime(timelineTime * 1000, clipRegions) / 1000;
-		const isGap = !findClipAtTimelineTime(timelineTime * 1000, clipRegions);
+		const isGap = !findPreviewClipAtTimelineTime(timelineTime * 1000, clipRegions);
 		const clipRegionsRef = useRef(clipRegions);
 		const clipPlaybackRef = useRef<ReturnType<typeof createClipPlayback> | null>(null);
 		const onPlaybackErrorRef = useRef(onError);
@@ -1717,6 +1718,10 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 
 			const targetPlaybackRate =
 				findClipAtTimelineTime(timelineTime * 1000, clipRegions)?.speed ?? 1;
+			if (!supportsPreviewPlaybackRate(targetPlaybackRate)) {
+				webcamVideo.pause();
+				return;
+			}
 			enablePitchPreservingPlayback(webcamVideo);
 			if (Math.abs(webcamVideo.playbackRate - targetPlaybackRate) > 0.001) {
 				webcamVideo.playbackRate = targetPlaybackRate;

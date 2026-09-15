@@ -131,9 +131,6 @@ export function useProjectLifecycle(input: Input) {
 		appearance.setBackgroundBlur(editor.backgroundBlur);
 		appearance.setZoomMotionBlur(editor.zoomMotionBlur);
 		appearance.setZoomMotionBlurTuning({ ...editor.zoomMotionBlurTuning });
-		appearance.setZoomTemporalMotionBlur(editor.zoomTemporalMotionBlur);
-		appearance.setZoomMotionBlurSampleCount(editor.zoomMotionBlurSampleCount);
-		appearance.setZoomMotionBlurShutterFraction(editor.zoomMotionBlurShutterFraction);
 		appearance.setConnectZooms(editor.connectZooms);
 		appearance.setZoomInDurationMs(editor.zoomInDurationMs);
 		appearance.setZoomInOverlapMs(editor.zoomInOverlapMs);

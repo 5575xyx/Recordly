@@ -202,28 +202,32 @@ function createRenderer() {
 	});
 }
 
-it("renders the background during a timeline gap without source layers", async () => {
+it("bypasses blur annotation compositing during gaps and clears stale composite frames", async () => {
 	const renderer = createRenderer();
 	const camera = { visible: true };
-	const output = createMockCanvas();
-	output.width = 1920;
-	output.height = 1080;
-	const annotations = vi.fn();
-	const renderOutput = vi.fn(async () => {});
+	const canvas = createMockCanvas();
+	const render = vi.fn();
+	const compose = vi.fn();
+	const webcam = { visible: true };
+	const captions = { visible: true };
 	Object.assign(renderer, {
-		app: {},
+		app: { canvas, render },
 		videoContainer: {},
 		videoMaskGraphics: {},
 		cameraContainer: camera,
-		ensureExportCompositeCanvas: () => ({ canvas: output, context: output.context }),
-		updateAnnotationLayer: annotations,
-		renderOutput,
+		webcamRootContainer: webcam,
+		captionContainer: captions,
+		hasActiveBlurAnnotations: () => true,
+		composeBlurAnnotationFrame: compose,
+		outputCanvasOverride: createMockCanvas(),
 	});
 	await renderer.renderFrame(null, 0, 0, 33333, 1500000);
 	expect(camera.visible).toBe(false);
-	expect(output.context.fillRect).not.toHaveBeenCalled();
-	expect(annotations).not.toHaveBeenCalled();
-	expect(renderOutput).toHaveBeenCalledWith(1500);
+	expect(webcam.visible).toBe(false);
+	expect(captions.visible).toBe(false);
+	expect(compose).not.toHaveBeenCalled();
+	expect(render).toHaveBeenCalledOnce();
+	expect(renderer.getCanvas()).toBe(canvas);
 });
 
 describe("ModernFrameRenderer Pixi lifecycle", () => {
@@ -813,9 +817,7 @@ describe("ModernFrameRenderer webcam export fallback", () => {
 });
 
 describe("ModernFrameRenderer frame sequencing", () => {
-	it.each([
-		0, 1,
-	])("resumes visual layers after a background gap with temporal blur set to %s", async (temporalBlur) => {
+	it("resumes visual layers after a background gap", async () => {
 		const renderer = createRenderer();
 		const sceneCanvas = createMockCanvas();
 		const gapCanvas = createMockCanvas();
@@ -834,7 +836,6 @@ describe("ModernFrameRenderer frame sequencing", () => {
 				width: 1920,
 				height: 1080,
 				timelineEffects: true,
-				zoomTemporalMotionBlur: temporalBlur,
 				zoomMotionBlur: 0.5,
 			},
 			app: { canvas: sceneCanvas, render },

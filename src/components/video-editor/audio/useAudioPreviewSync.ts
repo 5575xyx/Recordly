@@ -239,6 +239,7 @@ export function useAudioPreviewSync({
 							sourceAudioResourceVersion,
 						);
 						latestAudio.load();
+						lastSourceAudioSyncTimeRef.current = null;
 						setSourceLoadVersion((version) => version + 1);
 					} catch (error) {
 						const latestAudio = existing.get(audioPath);

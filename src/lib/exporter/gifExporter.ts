@@ -46,9 +46,6 @@ interface GifExporterConfig {
 	backgroundBlur: number;
 	zoomMotionBlur?: number;
 	zoomMotionBlurTuning?: ZoomMotionBlurTuning;
-	zoomTemporalMotionBlur?: number;
-	zoomMotionBlurSampleCount?: number | null;
-	zoomMotionBlurShutterFraction?: number | null;
 	connectZooms?: boolean;
 	zoomInDurationMs?: number;
 	zoomInOverlapMs?: number;
@@ -149,9 +146,6 @@ export function buildGifFrameRendererConfig(
 		backgroundBlur: config.backgroundBlur,
 		zoomMotionBlur: config.zoomMotionBlur,
 		zoomMotionBlurTuning: config.zoomMotionBlurTuning,
-		zoomTemporalMotionBlur: config.zoomTemporalMotionBlur,
-		zoomMotionBlurSampleCount: config.zoomMotionBlurSampleCount,
-		zoomMotionBlurShutterFraction: config.zoomMotionBlurShutterFraction,
 		connectZooms: config.connectZooms,
 		zoomInDurationMs: config.zoomInDurationMs,
 		zoomInOverlapMs: config.zoomInOverlapMs,

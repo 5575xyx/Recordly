@@ -36,6 +36,15 @@ afterEach(() => {
 describe("source preview playback ownership", () => {
 	it.each([
 		{
+			name: "sub-second offset",
+			muted: false,
+			playing: true,
+			rate: 1,
+			time: 0.5,
+			delay: 0,
+			plays: true,
+		},
+		{
 			name: "playing clip",
 			muted: false,
 			playing: true,
@@ -145,5 +154,6 @@ describe("source preview playback ownership", () => {
 		harness.effects.at(-1)?.();
 		await Promise.resolve();
 		expect(audio.play).toHaveBeenCalledTimes(plays ? 1 : 0);
+		if (plays) expect(audio.currentTime).toBeCloseTo(time - delay / 1000);
 	});
 });

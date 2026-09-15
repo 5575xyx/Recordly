@@ -108,9 +108,6 @@ interface FrameRenderConfig {
 	backgroundBlur: number;
 	zoomMotionBlur?: number;
 	zoomMotionBlurTuning?: ZoomMotionBlurTuning;
-	zoomTemporalMotionBlur?: number;
-	zoomMotionBlurSampleCount?: number | null;
-	zoomMotionBlurShutterFraction?: number | null;
 	connectZooms?: boolean;
 	zoomInDurationMs?: number;
 	zoomInOverlapMs?: number;
@@ -2867,7 +2864,9 @@ export class FrameRenderer {
 			}
 			if (this.webcamRootContainer) this.webcamRootContainer.visible = false;
 			if (this.captionContainer) this.captionContainer.visible = false;
-			await this.renderOutput(backgroundTimelineTimestamp / 1000);
+			// Gap frames must bypass canvas annotation compositing as well as Pixi layers.
+			this.outputCanvasOverride = null;
+			this.app.render();
 			return;
 		}
 		if (this.captionContainer) this.captionContainer.visible = true;

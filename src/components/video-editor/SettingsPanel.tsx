@@ -91,6 +91,7 @@ import {
 } from "./types";
 import { fromCursorSwaySliderValue, toCursorSwaySliderValue } from "./videoPlayback/cursorSway";
 import { isZeroPadding } from "./videoPlayback/layoutUtils";
+import { supportsPreviewPlaybackRate } from "./videoPlayback/playbackRate";
 import {
 	cursorSetAssets,
 	getCursorStyleSizeMultiplier,
@@ -3057,6 +3058,15 @@ export function SettingsPanel({
 								key={option.speed}
 								type="button"
 								onClick={() => onClipSpeedChange?.(option.speed)}
+								disabled={!supportsPreviewPlaybackRate(option.speed)}
+								title={
+									!supportsPreviewPlaybackRate(option.speed)
+										? tSettings(
+												"speed.unsupported",
+												"Not supported for preview on this device",
+											)
+										: undefined
+								}
 								className={cn(
 									"h-auto w-full rounded-lg border px-0.5 py-2 text-center shadow-sm transition-all duration-200 ease-out cursor-pointer",
 									isActive

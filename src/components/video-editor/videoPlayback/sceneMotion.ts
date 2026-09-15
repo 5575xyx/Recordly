@@ -60,6 +60,7 @@ export function shouldComposePreviewFrame({
 export function resolveSceneZoomTarget({
 	zoomRegions,
 	timeMs,
+	cursorTimeMs = timeMs,
 	connectZooms,
 	zoomInDurationMs,
 	zoomOutDurationMs,
@@ -69,6 +70,7 @@ export function resolveSceneZoomTarget({
 }: {
 	zoomRegions: ZoomRegion[];
 	timeMs: number;
+	cursorTimeMs?: number;
 	connectZooms?: boolean;
 	zoomInDurationMs?: number;
 	zoomOutDurationMs?: number;
@@ -97,7 +99,7 @@ export function resolveSceneZoomTarget({
 		focus = computeCursorFollowFocus(
 			cursorFollowCamera,
 			cursorTelemetry,
-			timeMs,
+			cursorTimeMs,
 			scale,
 			strength,
 			region.focus,

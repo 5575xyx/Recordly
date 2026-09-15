@@ -412,6 +412,7 @@ export class VideoExporter {
 								this.config.sourceAudioFallbackPaths,
 								this.config.sourceAudioFallbackStartDelayMsByPath,
 								this.config.sourceAudioTrackSettings,
+								this.config.clipRegions,
 							),
 							"audio processing",
 							"audio",

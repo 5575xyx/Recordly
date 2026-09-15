@@ -91,7 +91,7 @@ import {
 } from "./types";
 import { fromCursorSwaySliderValue, toCursorSwaySliderValue } from "./videoPlayback/cursorSway";
 import { isZeroPadding } from "./videoPlayback/layoutUtils";
-import { supportsPreviewPlaybackRate } from "./videoPlayback/playbackRate";
+import { getPreviewPlaybackRateRange } from "./videoPlayback/playbackRate";
 import {
 	cursorSetAssets,
 	getCursorStyleSizeMultiplier,
@@ -1089,12 +1089,7 @@ export function SettingsPanel({
 	const { preference: themePreference, setPreference: setThemePreference } = useTheme();
 	const isBackgroundPanel = panelMode === "background";
 	const initialEditorPreferences = useMemo(() => loadEditorPreferences(), []);
-	const maxClipSpeed = useMemo(() => {
-		for (let speed = 30; speed >= 1; speed -= 0.25) {
-			if (supportsPreviewPlaybackRate(speed)) return speed;
-		}
-		return 1;
-	}, []);
+	const clipSpeedRange = useMemo(getPreviewPlaybackRateRange, []);
 	const [builtInWallpapers, setBuiltInWallpapers] =
 		useState<BuiltInWallpaper[]>(BUILT_IN_WALLPAPERS);
 	const [wallpaperPreviewPaths, setWallpaperPreviewPaths] = useState<string[]>([]);
@@ -2441,6 +2436,12 @@ export function SettingsPanel({
 						className="data-[state=checked]:bg-[#2563EB] scale-75"
 					/>
 				</div>
+				{selectedClipSpeed != null &&
+					(selectedClipSpeed < clipSpeedRange.min || selectedClipSpeed > clipSpeedRange.max) && (
+						<p className="text-[11px] text-muted-foreground" role="status">
+							{selectedClipSpeed}× — {tSettings("speed.unsupported", "Not supported for preview on this device")}
+						</p>
+					)}
 				<label className="flex items-center justify-between rounded-lg bg-foreground/[0.03] px-2.5 py-2">
 					<span className="text-[10px] text-muted-foreground">
 						{tSettings("captions.textColor", "Text color")}
@@ -3011,22 +3012,26 @@ export function SettingsPanel({
 			</section>
 		);
 
-
-
 		const clipSectionContent = (
 			<section className="flex flex-col gap-3">
 				<SectionLabel>{tSettings("clip.title", "Clip")}</SectionLabel>
 				<SliderControl
 					label={tSettings("speed.label", "Speed")}
-					value={selectedClipSpeed ?? 1}
+					value={Math.min(clipSpeedRange.max, Math.max(clipSpeedRange.min, selectedClipSpeed ?? 1))}
 					defaultValue={1}
-					min={0.25}
-					max={maxClipSpeed}
+					min={clipSpeedRange.min}
+					max={clipSpeedRange.max}
 					step={0.25}
 					onChange={(value) => onClipSpeedChange?.(value)}
 					formatValue={(value) => `${value}×`}
 					parseInput={(text) => Number.parseFloat(text)}
 				/>
+				{selectedClipSpeed != null &&
+					(selectedClipSpeed < clipSpeedRange.min || selectedClipSpeed > clipSpeedRange.max) && (
+						<p className="text-[11px] text-muted-foreground" role="status">
+							{selectedClipSpeed}× — {tSettings("speed.unsupported", "Not supported for preview on this device")}
+						</p>
+					)}
 				<label className="flex items-center justify-between rounded-lg bg-foreground/[0.03] px-2.5 py-2">
 					<span className="text-[11px] text-muted-foreground">
 						{tSettings("clip.mute", "Mute clip")}

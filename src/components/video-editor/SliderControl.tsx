@@ -13,6 +13,8 @@ interface SliderControlProps {
 	formatValue: (value: number) => string;
 	parseInput: (text: string) => number | null;
 	accentColor?: "purple" | "blue";
+	/** Disable when the parent can reject a requested value. */
+	optimistic?: boolean;
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -38,6 +40,7 @@ export const SliderControl = memo(function SliderControl({
 	formatValue,
 	parseInput: _parseInput,
 	accentColor = "blue",
+	optimistic = true,
 }: SliderControlProps) {
 	const rootRef = useRef<HTMLDivElement | null>(null);
 	const valueTextRef = useRef<HTMLSpanElement | null>(null);
@@ -71,20 +74,20 @@ export const SliderControl = memo(function SliderControl({
 			const finalValue = Number(nextValue.toFixed(6));
 			const finalPct = (((finalValue - min) / (max - min || 1)) * 100).toFixed(4);
 
-			// Direct DOM update for instant feedback
-			if (rootRef.current) {
+			// Only bypass React when the parent accepts every requested value.
+			if (optimistic && rootRef.current) {
 				rootRef.current.style.setProperty("--slider-pct", String(Number(finalPct) / 100));
 				rootRef.current.setAttribute("aria-valuenow", String(finalValue));
 				rootRef.current.setAttribute("aria-valuetext", formatValue(finalValue));
 			}
-			if (valueTextRef.current) {
+			if (optimistic && valueTextRef.current) {
 				valueTextRef.current.textContent = formatValue(finalValue);
 			}
 
 			// Notify parent
 			onChange(finalValue);
 		},
-		[max, min, onChange, step, formatValue],
+		[max, min, onChange, step, formatValue, optimistic],
 	);
 
 	const handlePointerDown = useCallback(

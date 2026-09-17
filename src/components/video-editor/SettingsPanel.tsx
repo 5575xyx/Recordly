@@ -3011,6 +3011,7 @@ export function SettingsPanel({
 				<SectionLabel>{tSettings("clip.title", "Clip")}</SectionLabel>
 				<SliderControl
 					label={tSettings("speed.label", "Speed")}
+					optimistic={false}
 					value={Math.min(clipSpeedRange.max, Math.max(clipSpeedRange.min, selectedClipSpeed ?? 1))}
 					defaultValue={1}
 					min={clipSpeedRange.min}

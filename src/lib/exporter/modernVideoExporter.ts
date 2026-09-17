@@ -815,10 +815,12 @@ export class ModernVideoExporter {
 					!this.cancelled
 				) {
 					const demuxer = this.streamingDecoder.getDemuxer();
+					const sourceAudioFallbackPaths =
+						this.getNormalizedAudioFallbackPaths(videoInfo);
 					if (
 						demuxer ||
 						(this.config.audioRegions ?? []).length > 0 ||
-						(this.config.sourceAudioFallbackPaths ?? []).length > 0
+						sourceAudioFallbackPaths.length > 0
 					) {
 						this.audioProcessor = new AudioProcessor();
 						this.audioProcessor.setOnProgress((progress) => {
@@ -835,7 +837,7 @@ export class ModernVideoExporter {
 									this.config.speedRegions,
 									undefined,
 									this.config.audioRegions,
-									this.config.sourceAudioFallbackPaths,
+									sourceAudioFallbackPaths,
 									this.config.sourceAudioFallbackStartDelayMsByPath,
 									this.config.sourceAudioTrackSettings,
 									this.config.clipRegions,
@@ -1416,7 +1418,7 @@ export class ModernVideoExporter {
 		return buildNativeStaticLayoutTimelineSegments(sourceSegments);
 	}
 
-	private getNativeAudioFallbackPaths(videoInfo: DecodedVideoInfo): string[] {
+	private getNormalizedAudioFallbackPaths(videoInfo: DecodedVideoInfo): string[] {
 		const sourceAudioFallbackPaths = (this.config.sourceAudioFallbackPaths ?? []).filter(
 			(audioPath) => typeof audioPath === "string" && audioPath.trim().length > 0,
 		);
@@ -1455,7 +1457,7 @@ export class ModernVideoExporter {
 	private buildNativeAudioPlan(videoInfo: DecodedVideoInfo): NativeAudioPlan {
 		const speedRegions = this.config.speedRegions ?? [];
 		const audioRegions = this.config.audioRegions ?? [];
-		const sourceAudioFallbackPaths = this.getNativeAudioFallbackPaths(videoInfo);
+		const sourceAudioFallbackPaths = this.getNormalizedAudioFallbackPaths(videoInfo);
 		const hasTimedSourceAudioFallback = sourceAudioFallbackPaths.some(
 			(audioPath) =>
 				(this.config.sourceAudioFallbackStartDelayMsByPath?.[audioPath] ?? 0) > 0,

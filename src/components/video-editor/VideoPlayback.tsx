@@ -1044,9 +1044,9 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 				});
 				cropBoundsRef.current = result.cropBounds;
 
-				// Reset camera container to identity
-				cameraContainer.scale.set(1);
-				cameraContainer.position.set(0, 0);
+				// Layout updates the media geometry, not the composed camera pose.
+				// In particular, a ResizeObserver notification while paused must not
+				// replace the exported spring position with an unzoomed frame.
 
 				const selectedId = selectedZoomIdRef.current;
 				const activeRegion = selectedId
@@ -1893,6 +1893,7 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 				video,
 				getClips: () => clipRegionsRef.current,
 				onTime: (time, source) => {
+					timelineTimeRef.current = time;
 					if (source !== null) currentTimeRef.current = source * 1000;
 					onTimeUpdate(time);
 				},
@@ -1909,6 +1910,7 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 			transport.seek(timelineTimeRef.current);
 			const handleSeeked = () => {
 				isSeekingRef.current = false;
+				shouldSnapPausedFrameRef.current = true;
 			};
 			const handleSeeking = () => {
 				isSeekingRef.current = true;
@@ -2016,6 +2018,7 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 				if (
 					!shouldComposePreviewFrame({
 						motionMode,
+						isSeeking: isSeekingRef.current || Boolean(videoRef.current?.seeking),
 						contentTimeChanged,
 						shouldSnapPausedFrame: shouldSnapPausedFrameRef.current,
 					})

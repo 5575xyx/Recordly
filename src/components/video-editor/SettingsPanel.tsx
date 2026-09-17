@@ -2436,12 +2436,6 @@ export function SettingsPanel({
 						className="data-[state=checked]:bg-[#2563EB] scale-75"
 					/>
 				</div>
-				{selectedClipSpeed != null &&
-					(selectedClipSpeed < clipSpeedRange.min || selectedClipSpeed > clipSpeedRange.max) && (
-						<p className="text-[11px] text-muted-foreground" role="status">
-							{selectedClipSpeed}× — {tSettings("speed.unsupported", "Not supported for preview on this device")}
-						</p>
-					)}
 				<label className="flex items-center justify-between rounded-lg bg-foreground/[0.03] px-2.5 py-2">
 					<span className="text-[10px] text-muted-foreground">
 						{tSettings("captions.textColor", "Text color")}

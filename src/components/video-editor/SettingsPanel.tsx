@@ -1,8 +1,7 @@
-import { ToggleButton } from "@heroui/react";
 import { Card, RadioGroup, Radio, Label, Description } from "@heroui/react";
 import { ProgressBar } from "@heroui/react";
 import { ColorControl, ColorPalette } from "@/components/ui/color-picker";
-import { Palette, Trash as Trash2, UploadSimple as Upload, X } from "@phosphor-icons/react";
+import { Palette, Trash as Trash2, UploadSimple as Upload } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "@/components/ui/toast";
@@ -41,6 +40,7 @@ import {
 import { loadEditorPreferences, saveEditorPreferences } from "./editorPreferences";
 import { getDefaultBorderRadiusPercent } from "./projectPersistence";
 import { SliderControl } from "./SliderControl";
+import { WallpaperGrid } from "./WallpaperGrid";
 import { KeyboardShortcutsDialog } from "./TutorialHelp";
 import type {
 	AnnotationRegion,
@@ -185,49 +185,7 @@ function getBackgroundTabForWallpaper(value: string): BackgroundTab {
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
-	return <Label>{children}</Label>;
-}
-
-function WallpaperVideoPreview({ src }: { src: string }) {
-	const [resolvedSrc, setResolvedSrc] = useState(src);
-
-	useEffect(() => {
-		let cancelled = false;
-		setResolvedSrc(src);
-
-		void (async () => {
-			try {
-				const nextSrc = await getRenderableVideoUrl(src);
-				if (!cancelled) {
-					setResolvedSrc(nextSrc);
-				}
-			} catch {
-				if (!cancelled) {
-					setResolvedSrc(src);
-				}
-			}
-		})();
-
-		return () => {
-			cancelled = true;
-		};
-	}, [src]);
-
-	return (
-		<video
-			src={resolvedSrc}
-			muted
-			playsInline
-			preload="metadata"
-			className="h-full w-full select-none object-cover [transform:translateZ(0)]"
-			draggable={false}
-			onMouseEnter={(e) => e.currentTarget.play().catch(() => undefined)}
-			onMouseLeave={(e) => {
-				e.currentTarget.pause();
-				e.currentTarget.currentTime = 0;
-			}}
-		/>
-	);
+	return <Label className="text-[13px]">{children}</Label>;
 }
 
 const MOTION_PRESET_ORDER: CursorMotionPresetId[] = ["focused", "smooth"];
@@ -1386,44 +1344,6 @@ export function SettingsPanel({
 			isSelected && "ring-2 ring-accent",
 		);
 
-	const renderWallpaperImageTile = (
-		wallpaperUrl: string,
-		isSelected: boolean,
-		props?: {
-			key?: string;
-			ariaLabel?: string;
-			title?: string;
-			onClick?: () => void;
-			children?: React.ReactNode;
-		},
-	) => (
-		<ToggleButton
-			isSelected={isSelected}
-			key={props?.key}
-			className={wallpaperTileClass(isSelected)}
-			aria-label={props?.ariaLabel}
-			onClick={props?.onClick}
-		>
-			<div className="absolute inset-px overflow-hidden rounded-[5px]">
-				{isVideoWallpaperSource(wallpaperUrl) ? (
-					<WallpaperVideoPreview src={wallpaperUrl} />
-				) : (
-					<img
-						src={wallpaperUrl}
-						alt={
-							props?.title ??
-							props?.ariaLabel ??
-							tSettings("background.wallpaperPreview", "Wallpaper preview")
-						}
-						className="h-full w-full select-none object-cover [transform:translateZ(0)]"
-						draggable={false}
-					/>
-				)}
-			</div>
-			{props?.children}
-		</ToggleButton>
-	);
-
 	const crop = cropRegion ?? {
 		x: 0,
 		y: 0,
@@ -1654,8 +1574,7 @@ export function SettingsPanel({
 		}
 	};
 
-	const handleRemoveCustomImage = (imageUrl: string, event: React.MouseEvent) => {
-		event.stopPropagation();
+	const handleRemoveCustomImage = (imageUrl: string) => {
 		setCustomImages((prev) => prev.filter((img) => img !== imageUrl));
 		// If the removed image was selected, clear selection
 		if (selected === imageUrl) {
@@ -1733,8 +1652,8 @@ export function SettingsPanel({
 							exit={{ opacity: 0, y: -8, filter: "blur(6px)" }}
 							transition={{ duration: 0.2, ease: "easeOut" }}
 						>
-							{backgroundTab === "image" ? (
-								<div className="mt-0 space-y-4">
+							{backgroundTab === "image" || backgroundTab === "video" ? (
+								<>
 									<input
 										type="file"
 										ref={fileInputRef}
@@ -1742,126 +1661,49 @@ export function SettingsPanel({
 										accept=".jpg,.jpeg,image/jpeg"
 										className="hidden"
 									/>
-									<Button
-										onClick={() => fileInputRef.current?.click()}
-										variant="outline"
-										className="w-full gap-2 h-9"
-									>
-										<Upload className="w-3 h-3" />
-										{tSettings("background.uploadCustom")}
-									</Button>
-
-									<div className="grid grid-cols-5 gap-2">
-										{customImages.map((imageUrl, idx) => {
-											const isSelected = getWallpaperTileState(imageUrl);
-											return renderWallpaperImageTile(imageUrl, isSelected, {
-												key: `custom-${idx}`,
-												ariaLabel: isVideoWallpaperSource(imageUrl)
-													? (imageUrl.split(/[\\/]/).pop() ??
-														tSettings(
-															"background.video",
-															"Video background",
-														))
-													: undefined,
-												title: isVideoWallpaperSource(imageUrl)
-													? imageUrl.split(/[\\/]/).pop()
-													: undefined,
-												onClick: () => onWallpaperChange(imageUrl),
-												children: (
-													<Button
-														variant="destructive-soft"
-														onClick={(e) =>
-															handleRemoveCustomImage(imageUrl, e)
-														}
-														className="absolute top-0.5 right-0.5 w-3 h-3 flex items-center justify-center z-10"
-													>
-														<X className="w-2 h-2 text-white" />
-													</Button>
-												),
-											});
-										})}
-
-										{imageWallpaperTiles.map((tile) => {
-											const isSelected = getWallpaperTileState(
-												tile.value,
-												tile.previewUrl,
-											);
-											return renderWallpaperImageTile(
-												tile.previewUrl,
-												isSelected,
-												{
-													key: tile.key,
-													ariaLabel: tile.label,
-													title: tile.label,
-													onClick: () => onWallpaperChange(tile.value),
-												},
-											);
-										})}
-									</div>
-								</div>
-							) : backgroundTab === "video" ? (
-								<div className="mt-0 space-y-4">
-									<Button
-										onClick={handleVideoUpload}
-										variant="outline"
-										className="w-full gap-2 h-9"
-									>
-										<Upload className="w-3 h-3" />
-										{tSettings("background.uploadCustomVideo", "Upload Video")}
-									</Button>
-
-									<div className="grid grid-cols-5 gap-2">
-										{customImages
-											.filter(isVideoWallpaperSource)
-											.map((videoUrl, idx) => {
-												const isSelected = getWallpaperTileState(videoUrl);
-												return renderWallpaperImageTile(
-													videoUrl,
-													isSelected,
-													{
-														key: `custom-video-${idx}`,
-														ariaLabel:
-															videoUrl.split(/[\\/]/).pop() ??
-															"Video background",
-														title: videoUrl.split(/[\\/]/).pop(),
-														onClick: () => onWallpaperChange(videoUrl),
-														children: (
-															<Button
-																variant="destructive-soft"
-																onClick={(e) =>
-																	handleRemoveCustomImage(
-																		videoUrl,
-																		e,
-																	)
-																}
-																className="absolute top-0.5 right-0.5 w-3 h-3 flex items-center justify-center z-10"
-															>
-																<X className="w-2 h-2 text-white" />
-															</Button>
-														),
-													},
-												);
-											})}
-
-										{videoWallpaperTiles.map((wallpaper) => {
-											const isSelected = getWallpaperTileState(
-												wallpaper.value,
-												wallpaper.previewUrl,
-											);
-											return renderWallpaperImageTile(
-												wallpaper.previewUrl,
-												isSelected,
-												{
-													key: wallpaper.key,
-													ariaLabel: wallpaper.label,
-													title: wallpaper.label,
-													onClick: () =>
-														onWallpaperChange(wallpaper.value),
-												},
-											);
-										})}
-									</div>
-								</div>
+									<WallpaperGrid
+										addLabel={
+											backgroundTab === "image"
+												? tSettings(
+														"background.addWallpaper",
+														"Add wallpaper",
+													)
+												: tSettings(
+														"background.addVideoWallpaper",
+														"Add video wallpaper",
+													)
+										}
+										onAdd={
+											backgroundTab === "image"
+												? () => fileInputRef.current?.click()
+												: handleVideoUpload
+										}
+										onSelect={onWallpaperChange}
+										onRemove={handleRemoveCustomImage}
+										isSelected={getWallpaperTileState}
+										items={[
+											...customImages
+												.filter(
+													(url) =>
+														isVideoWallpaperSource(url) ===
+														(backgroundTab === "video"),
+												)
+												.map((url, index) => ({
+													key: `custom-${index}`,
+													value: url,
+													previewUrl: url,
+													label: isVideoWallpaperSource(url)
+														? (url.split(/[\\/]/).pop() ??
+															"Custom video wallpaper")
+														: `${tSettings("background.customWallpaper", "Custom wallpaper")} ${index + 1}`,
+													removable: true,
+												})),
+											...(backgroundTab === "image"
+												? imageWallpaperTiles
+												: videoWallpaperTiles),
+										]}
+									/>
+								</>
 							) : backgroundTab === "color" ? (
 								<div className="mt-0 space-y-4">
 									<div className="flex flex-col gap-3">
@@ -2165,6 +2007,8 @@ export function SettingsPanel({
 				<div className="flex items-center gap-3">
 					<SectionLabel>{tSettings("captions.generation", "Generation")}</SectionLabel>
 					<Button
+						className="text-xs text-muted"
+						size="sm"
 						variant="ghost"
 						type="button"
 						onClick={() => onAutoCaptionSettingsChange?.(DEFAULT_AUTO_CAPTION_SETTINGS)}
@@ -2188,7 +2032,7 @@ export function SettingsPanel({
 						type="button"
 						variant="outline"
 						onClick={onPickWhisperModel}
-						className="h-10 w-full px-4 text-sm"
+						className="h-9 w-full px-4 text-sm"
 					>
 						{tSettings("captions.selectModel", "Select Model")}
 					</Button>
@@ -2201,7 +2045,7 @@ export function SettingsPanel({
 						value={autoCaptionSettings.language || "auto"}
 						onValueChange={(value) => updateAutoCaptionSettings({ language: value })}
 					>
-						<SelectTrigger className="h-10 w-[180px] text-sm">
+						<SelectTrigger className="h-9 w-[180px] text-sm">
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
@@ -2216,7 +2060,7 @@ export function SettingsPanel({
 				<div className="flex flex-wrap items-center gap-2">
 					<div className="grid w-full grid-cols-2 gap-2">
 						{whisperModelDownloadStatus === "downloading" ? (
-							<Button type="button" disabled className="h-10 w-full px-4 text-sm">
+							<Button type="button" disabled className="h-9 w-full px-4 text-sm">
 								{tSettings("captions.downloading", "Downloading...")}{" "}
 								{Math.round(whisperModelDownloadProgress)}%
 							</Button>
@@ -2225,7 +2069,7 @@ export function SettingsPanel({
 								type="button"
 								variant="outline"
 								onClick={onDeleteWhisperSmallModel}
-								className="h-10 w-full px-4 text-sm"
+								className="h-9 w-full px-4 text-sm"
 							>
 								{tSettings("captions.deleteModel", "Delete Model")}
 							</Button>
@@ -2233,7 +2077,7 @@ export function SettingsPanel({
 							<Button
 								type="button"
 								onClick={onDownloadWhisperSmallModel}
-								className="h-10 w-full px-4 text-sm"
+								className="h-9 w-full px-4 text-sm"
 							>
 								{tSettings("captions.downloadModel", "Download Model")}
 							</Button>
@@ -2243,7 +2087,7 @@ export function SettingsPanel({
 							variant="outline"
 							onClick={onClearAutoCaptions}
 							disabled={captionCueCount === 0}
-							className="h-10 w-full px-4 text-sm"
+							className="h-9 w-full px-4 text-sm"
 						>
 							{tSettings("captions.clearFull", "Clear Captions")}
 						</Button>
@@ -2254,7 +2098,7 @@ export function SettingsPanel({
 						type="button"
 						onClick={onGenerateAutoCaptions}
 						disabled={isGeneratingCaptions || !whisperModelPath}
-						className="h-10 w-full px-4 text-sm"
+						className="h-9 w-full px-4 text-sm"
 					>
 						{isGeneratingCaptions
 							? tSettings("captions.generating", "Generating...")
@@ -2460,7 +2304,7 @@ export function SettingsPanel({
 				<section className="flex flex-col gap-4">
 					<SectionLabel>{t("common.app.language", "Language")}</SectionLabel>
 					<Select value={locale} onValueChange={(value) => setLocale(value as AppLocale)}>
-						<SelectTrigger className="h-10 w-full text-sm">
+						<SelectTrigger className="h-9 w-full text-sm">
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
@@ -2564,7 +2408,7 @@ export function SettingsPanel({
 					<SectionLabel>{t("editor.keyboardShortcuts.title")}</SectionLabel>
 					<KeyboardShortcutsDialog
 						triggerLabel={t("editor.keyboardShortcuts.customize")}
-						triggerClassName="h-10 w-full justify-start rounded-xl border border-foreground/10 bg-foreground/5 px-3 text-sm text-foreground hover:bg-foreground/10 hover:text-foreground"
+						triggerClassName="h-9 w-full justify-start rounded-xl border border-foreground/10 bg-foreground/5 px-3 text-sm text-foreground hover:bg-foreground/10 hover:text-foreground"
 					/>
 				</section>
 
@@ -2854,7 +2698,7 @@ export function SettingsPanel({
 						}}
 						variant="destructive-soft"
 						size="sm"
-						className="mt-1 h-10 w-full gap-2 text-xs"
+						className="mt-1 h-9 w-full gap-2 text-xs"
 					>
 						<Trash2 className="h-3 w-3" />
 						{tSettings("zoom.deleteZoom")}
@@ -2868,6 +2712,8 @@ export function SettingsPanel({
 				<div className="flex items-center justify-between gap-3">
 					<SectionLabel>{tSettings("audio.volumeTitle", "Audio")}</SectionLabel>
 					<Button
+						className="text-xs text-muted"
+						size="sm"
 						variant="ghost"
 						type="button"
 						onClick={() => {
@@ -3304,6 +3150,8 @@ export function SettingsPanel({
 											{tSettings("effects.webcamCrop", "Crop")}
 										</div>
 										<Button
+											className="text-xs text-muted"
+											size="sm"
 											variant="ghost"
 											type="button"
 											onClick={() =>
@@ -3475,7 +3323,7 @@ export function SettingsPanel({
 											type="button"
 											variant="outline"
 											onClick={onUploadWebcam}
-											className="h-10 min-w-0 gap-2 px-3"
+											className="h-9 min-w-0 gap-2 px-3"
 										>
 											<Upload className="h-3 w-3" />
 											<span className="min-w-0 truncate">
@@ -3489,7 +3337,7 @@ export function SettingsPanel({
 												type="button"
 												variant="outline"
 												onClick={onClearWebcam}
-												className="h-10 min-w-0 gap-2 px-3"
+												className="h-9 min-w-0 gap-2 px-3"
 											>
 												<Trash2 className="h-3 w-3" />
 												<span className="min-w-0 truncate">
@@ -3547,7 +3395,7 @@ export function SettingsPanel({
 						}}
 						variant="destructive-soft"
 						size="sm"
-						className="h-10 w-full gap-2 text-xs"
+						className="h-9 w-full gap-2 text-xs"
 					>
 						<Trash2 className="h-3 w-3" />
 						{tSettings("clip.delete", "Delete Clip")}
@@ -3560,7 +3408,7 @@ export function SettingsPanel({
 						}}
 						variant="destructive-soft"
 						size="sm"
-						className="h-10 w-full gap-2 text-xs"
+						className="h-9 w-full gap-2 text-xs"
 					>
 						<Trash2 className="h-3 w-3" />
 						{tSettings("zoom.deleteZoom", "Delete Zoom")}
@@ -3573,7 +3421,7 @@ export function SettingsPanel({
 						}}
 						variant="destructive-soft"
 						size="sm"
-						className="h-10 w-full gap-2 text-xs"
+						className="h-9 w-full gap-2 text-xs"
 					>
 						<Trash2 className="h-3 w-3" />
 						{tSettings("audio.deleteRegion", "Delete Audio")}
@@ -3587,7 +3435,7 @@ export function SettingsPanel({
 						}}
 						variant="destructive-soft"
 						size="sm"
-						className="h-10 w-full gap-2 text-xs"
+						className="h-9 w-full gap-2 text-xs"
 					>
 						<Trash2 className="h-3 w-3" />
 						{tSettings("annotation.delete", "Delete Annotation")}

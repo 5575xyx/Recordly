@@ -37,8 +37,11 @@ toolbars, consistent spacing, and restrained selection colors. Advanced controls
 live behind a per-section switch; changing views preserves project values.
 Background types and other exclusive choices use TagGroup. The header follows
 native fullscreen state and keeps project titles centered at narrow widths. Floating layers keep one
-surface instead of nesting cards and shadows. Timeline colors follow the theme
-and retain the distinction between clip types. The recorder keeps its compact
+surface instead of nesting cards and shadows. Timeline blocks retain the original
+Recordly palette in both themes. Inspector controls use compact 12–13px text and
+32–36px controls, with 14px section titles. Image and video wallpaper grids share
+a plus tile for importing and a small remove control on custom tiles, revealed
+on hover or keyboard focus. The recorder keeps its compact
 desktop layout.
 
 The adapters in `src/components/ui` translate existing Recordly state/callback
@@ -64,7 +67,8 @@ Browser tests use an explicit mocked Electron bridge and a generated six-second
 video fixture; they never start a real screen recording. They cover control
 callbacks and keyboard behavior, modal focus, export settings, presets, cropping,
 annotation formatting/undo, project menus, recorder popovers, countdown and update
-windows, theme switching, Advanced state, color editing, and header/playback
+windows, theme switching, Advanced state, color editing, wallpaper uploads and
+keyboard/hover removal, and header/playback
 alignment from 800–1440px with and without macOS window controls. Screenshots and failure
 traces go to the ignored `test-results/` directory.
 

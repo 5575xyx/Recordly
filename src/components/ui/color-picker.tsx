@@ -58,7 +58,7 @@ export function ColorControl({
 			<Button
 				variant="secondary"
 				aria-label={label}
-				className="h-10 min-w-0 max-w-full gap-2 px-3"
+				className="h-9 min-w-0 max-w-full gap-2 px-3 text-[13px]"
 			>
 				<ColorSwatch size="sm" />
 				<span className="truncate">

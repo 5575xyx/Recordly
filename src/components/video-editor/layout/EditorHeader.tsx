@@ -93,7 +93,7 @@ export function EditorHeader(props: Props) {
 
 	return (
 		<header
-			className="editor-header relative z-50 grid h-14 shrink-0 bg-surface grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)] items-center gap-3 px-4"
+			className="editor-header [--text-sm:0.8125rem] relative z-50 grid h-14 shrink-0 border-b border-separator grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)] items-center gap-3 px-4"
 			style={{ WebkitAppRegion: "drag" } as CSSProperties}
 		>
 			<div
@@ -116,7 +116,7 @@ export function EditorHeader(props: Props) {
 					<DiscordLinkButton />
 					<FeedbackDialog />
 				</div>
-				<div className="w-2 shrink-0" />
+				<div className="mx-2 h-4 w-px shrink-0 bg-separator" />
 				<Button
 					type="button"
 					variant="ghost"
@@ -187,7 +187,7 @@ export function EditorHeader(props: Props) {
 						{hasUnsavedChanges ? (
 							<span className="size-1.5 shrink-0 rounded-full bg-accent" />
 						) : null}
-						<span className="truncate text-sm font-semibold tracking-tight text-foreground/90">
+						<span className="truncate text-[13px] font-medium tracking-tight text-foreground/90">
 							{projectDisplayName}
 						</span>
 						<span className="project-file-extension shrink-0 text-xs font-medium tracking-tight text-muted-foreground/70">

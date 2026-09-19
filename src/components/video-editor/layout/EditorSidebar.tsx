@@ -103,10 +103,10 @@ export function EditorSidebar({ t, activeSection, setActiveSection, settingsPane
 					<UserCircle />
 				</Button>
 			</nav>
-			<aside className="flex w-[320px] min-h-0 flex-col">
+			<aside className="editor-inspector [--text-sm:0.8125rem] [--text-base:0.8125rem] flex w-[320px] min-h-0 flex-col">
 				<Card className="min-h-0 flex-1 gap-0 overflow-hidden p-0">
 					<header className="flex min-h-14 shrink-0 items-center justify-between gap-3 px-5 py-3">
-						<Card.Title>
+						<Card.Title className="text-[14px]">
 							{settingsPanelProps.selectedAnnotationId
 								? t("timeline.annotation.label", "Annotation")
 								: (sections.find((section) => section.id === activeSection)
@@ -130,7 +130,7 @@ export function EditorSidebar({ t, activeSection, setActiveSection, settingsPane
 								aria-label="Advanced settings"
 							>
 								<Switch.Content>
-									<Label>Advanced</Label>
+									<Label className="text-xs">Advanced</Label>
 									<Switch.Control>
 										<Switch.Thumb />
 									</Switch.Control>

@@ -20,7 +20,7 @@ export function ChoiceGroup({
 }) {
 	return (
 		<TagGroup
-			size="lg"
+			size="md"
 			aria-label={props["aria-label"]}
 			selectionMode="single"
 			disallowEmptySelection
@@ -58,7 +58,7 @@ export function ChoiceItem({
 				title ??
 				(typeof children === "string" ? children : props["aria-label"])
 			}
-			className={`min-h-9 justify-center ${className ?? ""}`}
+			className={`min-h-8 justify-center ${className ?? ""}`}
 		>
 			{children}
 		</Tag>

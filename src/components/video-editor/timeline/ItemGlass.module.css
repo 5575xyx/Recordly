@@ -327,10 +327,7 @@
 	content: none;
 }
 
-/* Clip handles remain legible over both light and dark source frames. */
-.zoomEndCap.clipHandle,
-:global(:root:not(.dark)) .zoomEndCap.clipHandle {
+/* Keep clip handles visible using the original theme-aware handle colors. */
+.zoomEndCap.clipHandle {
 	opacity: 1;
-	background: white;
-	box-shadow: 0 0 2px rgb(0 0 0 / 45%);
 }

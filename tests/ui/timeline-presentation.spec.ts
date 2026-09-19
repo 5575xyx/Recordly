@@ -40,7 +40,7 @@ test("editor uses skeletons until media opens", async ({ page }) => {
 	await expect(page.locator('[data-variant="clip"]')).toBeVisible();
 });
 
-test("filmstrips have white handles, conditional speed badges and centered navigation", async ({
+test("filmstrips have persistent handles, conditional speed badges and centered navigation", async ({
 	page,
 }) => {
 	test.setTimeout(90000);
@@ -54,7 +54,7 @@ test("filmstrips have white handles, conditional speed badges and centered navig
 		await expect(clip.getByTitle(`Resize ${side}`)).toHaveCSS("opacity", "1");
 		await expect(clip.getByTitle(`Resize ${side}`)).toHaveCSS(
 			"background-color",
-			"rgb(255, 255, 255)",
+			"rgba(0, 0, 0, 0.5)",
 		);
 	}
 	await page.getByRole("button", { name: "Add Zoom (Z)", exact: true }).click();

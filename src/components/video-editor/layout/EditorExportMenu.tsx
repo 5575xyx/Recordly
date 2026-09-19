@@ -112,9 +112,14 @@ export function EditorExportMenu(props: Props) {
 					</span>
 				</Button>
 			</PopoverTrigger>
-			<PopoverContent align="end" sideOffset={10} className="w-[360px] p-0">
+			<PopoverContent
+				aria-label="Export"
+				align="end"
+				sideOffset={10}
+				className="w-[360px] p-0"
+			>
 				{isExporting ? (
-					<Card className="rounded-none bg-transparent p-1 text-foreground shadow-none">
+					<Card className="rounded-none bg-transparent p-5 text-foreground shadow-none">
 						<div className="mb-3 flex items-center justify-between gap-3">
 							<div>
 								<p className="text-sm font-semibold text-foreground">
@@ -186,7 +191,7 @@ export function EditorExportMenu(props: Props) {
 						) : null}
 					</Card>
 				) : exportError ? (
-					<Card className="rounded-none bg-transparent p-1 text-foreground shadow-none">
+					<Card className="rounded-none bg-transparent p-5 text-foreground shadow-none">
 						<p className="text-sm font-semibold text-foreground">
 							{t("editor.exportStatus.issue", "Export issue")}
 						</p>
@@ -241,7 +246,7 @@ export function EditorExportMenu(props: Props) {
 						</div>
 					</Card>
 				) : exportedFilePath ? (
-					<Card className="rounded-none bg-transparent p-1 text-foreground shadow-none">
+					<Card className="rounded-none bg-transparent p-5 text-foreground shadow-none">
 						<p className="text-sm font-semibold text-foreground">
 							{t("editor.exportStatus.complete", "Export complete")}
 						</p>
@@ -305,7 +310,7 @@ export function EditorExportMenu(props: Props) {
 						mp4OutputDimensions={mp4OutputDimensions}
 						gifOutputDimensions={gifOutputDimensions}
 						onExport={handleStartExportFromDropdown}
-						className="rounded-none bg-transparent p-1 shadow-none"
+						className="rounded-none bg-transparent p-5 shadow-none"
 					/>
 				)}
 			</PopoverContent>

@@ -52,7 +52,9 @@ existing saved values remain intact. New recordings inherit the saved webcam
 appearance, and 100% is the maximum squircle radius rather than a circular mask.
 Three compact timeline tracks fit before
 vertical scrolling. Popovers support outside-click and Escape dismissal and
-share one padding layer. Project and preset names truncate inside their rows.
+share one padding layer. Export states retain generous content padding. Timeline
+selection ignores pointer jitter up to 4px, including clicks on trim handles,
+so selecting a clip cannot introduce a leading gap. Project and preset names truncate inside their rows.
 The recorder keeps its compact desktop layout.
 
 The adapters in `src/components/ui` translate existing Recordly state/callback

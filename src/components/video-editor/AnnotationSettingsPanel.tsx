@@ -1,3 +1,6 @@
+import { ToggleButton } from "@heroui/react";
+import { Card } from "@heroui/react";
+import { TextArea } from "@/components/ui/input";
 import {
 	AlignCenterHorizontal as AlignCenter,
 	AlignLeft,
@@ -13,9 +16,9 @@ import {
 	TextUnderline as Underline,
 	UploadSimple as Upload,
 } from "@phosphor-icons/react";
-import Block from "@uiw/react-color-block";
+import { ColorControl, ColorPalette } from "@/components/ui/color-picker";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -139,43 +142,25 @@ export function AnnotationSettingsPanel({
 	};
 
 	return (
-		<div className="flex-[2] min-w-0 bg-editor-panel border border-foreground/10 rounded-2xl flex flex-col shadow-xl h-full overflow-hidden">
+		<Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-none bg-transparent p-0 shadow-none">
 			<div className="flex-1 min-h-0 p-4 overflow-y-auto custom-scrollbar">
 				<div className="mb-6">
-					<div className="flex items-center justify-between mb-4">
-						<span className="text-sm font-medium text-foreground">
-							{t("annotations.settings")}
-						</span>
-						<span className="text-[10px] uppercase tracking-wider font-medium text-[#2563EB] bg-[#2563EB]/10 px-2 py-1 rounded-full">
-							{t("annotations.active")}
-						</span>
-					</div>
-
 					{/* Type Selector */}
 					<Tabs
 						value={annotation.type}
 						onValueChange={(value) => onTypeChange(value as AnnotationType)}
 						className="mb-6"
 					>
-						<TabsList className="mb-4 bg-foreground/5 border border-foreground/5 p-1 w-full grid grid-cols-4 h-auto rounded-xl">
-							<TabsTrigger
-								value="text"
-								className="data-[state=active]:bg-[#2563EB] data-[state=active]:text-white text-muted-foreground py-2 rounded-lg transition-all gap-2"
-							>
+						<TabsList className="w-full grid grid-cols-4">
+							<TabsTrigger value="text" className="gap-1 text-xs">
 								<Type className="w-4 h-4" />
 								{t("annotations.text")}
 							</TabsTrigger>
-							<TabsTrigger
-								value="image"
-								className="data-[state=active]:bg-[#2563EB] data-[state=active]:text-white text-muted-foreground py-2 rounded-lg transition-all gap-2"
-							>
+							<TabsTrigger value="image" className="gap-1 text-xs">
 								<ImageIcon className="w-4 h-4" />
 								{t("annotations.image")}
 							</TabsTrigger>
-							<TabsTrigger
-								value="figure"
-								className="data-[state=active]:bg-[#2563EB] data-[state=active]:text-white text-muted-foreground py-2 rounded-lg transition-all gap-2"
-							>
+							<TabsTrigger value="figure" className="gap-1 text-xs">
 								<svg
 									className="w-4 h-4"
 									viewBox="0 0 24 24"
@@ -191,10 +176,7 @@ export function AnnotationSettingsPanel({
 								</svg>
 								{t("annotations.arrow")}
 							</TabsTrigger>
-							<TabsTrigger
-								value="blur"
-								className="data-[state=active]:bg-[#2563EB] data-[state=active]:text-white text-muted-foreground py-2 rounded-lg transition-all gap-2"
-							>
+							<TabsTrigger value="blur" className="gap-1 text-xs">
 								<SquareDashed className="w-4 h-4" />
 								{t("annotations.blur")}
 							</TabsTrigger>
@@ -206,12 +188,12 @@ export function AnnotationSettingsPanel({
 								<label className="text-xs font-medium text-foreground mb-2 block">
 									{t("annotations.textContent")}
 								</label>
-								<textarea
+								<TextArea
 									value={annotation.textContent || annotation.content}
 									onChange={(e) => onContentChange(e.target.value)}
 									placeholder={t("annotations.textPlaceholder")}
 									rows={5}
-									className="w-full px-3 py-2 bg-foreground/5 border border-foreground/10 rounded-lg text-foreground text-sm placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-transparent resize-none"
+									className="w-full px-3 py-2 text-sm resize-none"
 								/>
 							</div>
 
@@ -229,12 +211,12 @@ export function AnnotationSettingsPanel({
 												onStyleChange({ fontFamily: value })
 											}
 										>
-											<SelectTrigger className="w-full bg-foreground/5 border-foreground/10 text-foreground h-9 text-xs">
+											<SelectTrigger className="w-full h-9 text-xs">
 												<SelectValue
 													placeholder={t("annotations.selectStyle")}
 												/>
 											</SelectTrigger>
-											<SelectContent className="bg-editor-surface-alt border-foreground/10 text-foreground max-h-[300px]">
+											<SelectContent className="max-h-[300px]">
 												{fontFamilies.map((font) => (
 													<SelectItem
 														key={font.value}
@@ -275,10 +257,10 @@ export function AnnotationSettingsPanel({
 												onStyleChange({ fontSize: parseInt(value) })
 											}
 										>
-											<SelectTrigger className="w-full bg-foreground/5 border-foreground/10 text-foreground h-9 text-xs">
+											<SelectTrigger className="w-full h-9 text-xs">
 												<SelectValue placeholder={t("annotations.size")} />
 											</SelectTrigger>
-											<SelectContent className="bg-editor-surface-alt border-foreground/10 text-foreground max-h-[200px]">
+											<SelectContent className="max-h-[200px]">
 												{FONT_SIZES.map((size) => (
 													<SelectItem key={size} value={size.toString()}>
 														{size}px
@@ -303,16 +285,23 @@ export function AnnotationSettingsPanel({
 								<div className="flex items-center justify-between gap-2">
 									<ToggleGroup
 										type="multiple"
-										className="justify-start bg-foreground/5 p-1 rounded-lg border border-foreground/5"
+										value={[
+											...(annotation.style.fontWeight === "bold"
+												? ["bold"]
+												: []),
+											...(annotation.style.fontStyle === "italic"
+												? ["italic"]
+												: []),
+											...(annotation.style.textDecoration === "underline"
+												? ["underline"]
+												: []),
+										]}
+										size="sm"
+										className="justify-start"
 									>
 										<ToggleGroupItem
 											value="bold"
 											aria-label={t("annotations.toggleBold")}
-											data-state={
-												annotation.style.fontWeight === "bold"
-													? "on"
-													: "off"
-											}
 											onClick={() =>
 												onStyleChange({
 													fontWeight:
@@ -321,18 +310,13 @@ export function AnnotationSettingsPanel({
 															: "bold",
 												})
 											}
-											className="h-8 w-8 data-[state=on]:bg-[#2563EB] data-[state=on]:text-white text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
+											className="h-8 w-8"
 										>
 											<Bold className="h-4 w-4" />
 										</ToggleGroupItem>
 										<ToggleGroupItem
 											value="italic"
 											aria-label={t("annotations.toggleItalic")}
-											data-state={
-												annotation.style.fontStyle === "italic"
-													? "on"
-													: "off"
-											}
 											onClick={() =>
 												onStyleChange({
 													fontStyle:
@@ -341,18 +325,13 @@ export function AnnotationSettingsPanel({
 															: "italic",
 												})
 											}
-											className="h-8 w-8 data-[state=on]:bg-[#2563EB] data-[state=on]:text-white text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
+											className="h-8 w-8"
 										>
 											<Italic className="h-4 w-4" />
 										</ToggleGroupItem>
 										<ToggleGroupItem
 											value="underline"
 											aria-label={t("annotations.toggleUnderline")}
-											data-state={
-												annotation.style.textDecoration === "underline"
-													? "on"
-													: "off"
-											}
 											onClick={() =>
 												onStyleChange({
 													textDecoration:
@@ -362,7 +341,7 @@ export function AnnotationSettingsPanel({
 															: "underline",
 												})
 											}
-											className="h-8 w-8 data-[state=on]:bg-[#2563EB] data-[state=on]:text-white text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
+											className="h-8 w-8"
 										>
 											<Underline className="h-4 w-4" />
 										</ToggleGroupItem>
@@ -371,13 +350,14 @@ export function AnnotationSettingsPanel({
 									<ToggleGroup
 										type="single"
 										value={annotation.style.textAlign}
-										className="justify-start bg-foreground/5 p-1 rounded-lg border border-foreground/5"
+										size="sm"
+										className="justify-start"
 									>
 										<ToggleGroupItem
 											value="left"
 											aria-label={t("annotations.alignLeft")}
 											onClick={() => onStyleChange({ textAlign: "left" })}
-											className="h-8 w-8 data-[state=on]:bg-[#2563EB] data-[state=on]:text-white text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
+											className="h-8 w-8"
 										>
 											<AlignLeft className="h-4 w-4" />
 										</ToggleGroupItem>
@@ -385,7 +365,7 @@ export function AnnotationSettingsPanel({
 											value="center"
 											aria-label={t("annotations.alignCenter")}
 											onClick={() => onStyleChange({ textAlign: "center" })}
-											className="h-8 w-8 data-[state=on]:bg-[#2563EB] data-[state=on]:text-white text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
+											className="h-8 w-8"
 										>
 											<AlignCenter className="h-4 w-4" />
 										</ToggleGroupItem>
@@ -393,7 +373,7 @@ export function AnnotationSettingsPanel({
 											value="right"
 											aria-label={t("annotations.alignRight")}
 											onClick={() => onStyleChange({ textAlign: "right" })}
-											className="h-8 w-8 data-[state=on]:bg-[#2563EB] data-[state=on]:text-white text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
+											className="h-8 w-8"
 										>
 											<AlignRight className="h-4 w-4" />
 										</ToggleGroupItem>
@@ -410,7 +390,7 @@ export function AnnotationSettingsPanel({
 											<PopoverTrigger asChild>
 												<Button
 													variant="outline"
-													className="w-full h-9 justify-start gap-2 bg-foreground/5 border-foreground/10 hover:bg-foreground/10 px-2"
+													className="w-full h-9 justify-start gap-2 px-2"
 												>
 													<div
 														className="w-4 h-4 rounded-full border border-foreground/20"
@@ -424,8 +404,8 @@ export function AnnotationSettingsPanel({
 													<ChevronDown className="h-3 w-3 opacity-50" />
 												</Button>
 											</PopoverTrigger>
-											<PopoverContent className="w-[260px] p-3 bg-editor-surface-alt border border-foreground/10 rounded-xl shadow-xl">
-												<Block
+											<PopoverContent className="w-[260px] p-3">
+												<ColorPalette
 													color={annotation.style.color}
 													colors={colorPalette}
 													onChange={(color) => {
@@ -446,7 +426,7 @@ export function AnnotationSettingsPanel({
 											<PopoverTrigger asChild>
 												<Button
 													variant="outline"
-													className="w-full h-9 justify-start gap-2 bg-foreground/5 border-foreground/10 hover:bg-foreground/10 px-2"
+													className="w-full h-9 justify-start gap-2 px-2"
 												>
 													<div className="w-4 h-4 rounded-full border border-foreground/20 relative overflow-hidden">
 														<div className="absolute inset-0 checkerboard-bg opacity-50" />
@@ -468,8 +448,8 @@ export function AnnotationSettingsPanel({
 													<ChevronDown className="h-3 w-3 opacity-50" />
 												</Button>
 											</PopoverTrigger>
-											<PopoverContent className="w-[260px] p-3 bg-editor-surface-alt border border-foreground/10 rounded-xl shadow-xl">
-												<Block
+											<PopoverContent className="w-[260px] p-3">
+												<ColorPalette
 													color={
 														annotation.style.backgroundColor ===
 														"transparent"
@@ -489,7 +469,7 @@ export function AnnotationSettingsPanel({
 												<Button
 													variant="ghost"
 													size="sm"
-													className="w-full mt-2 text-xs h-7 hover:bg-foreground/5 text-muted-foreground"
+													className="w-full mt-2 text-xs h-7"
 													onClick={() => {
 														onStyleChange({
 															backgroundColor: "transparent",
@@ -517,7 +497,7 @@ export function AnnotationSettingsPanel({
 							<Button
 								onClick={() => fileInputRef.current?.click()}
 								variant="outline"
-								className="w-full gap-2 bg-foreground/5 text-foreground border-foreground/10 hover:bg-[#2563EB] hover:text-white hover:border-[#2563EB] transition-all py-8"
+								className="w-full gap-2 py-8"
 							>
 								<Upload className="w-5 h-5" />
 								{t("annotations.uploadImage")}
@@ -558,7 +538,11 @@ export function AnnotationSettingsPanel({
 									).map((direction) => {
 										const ArrowComponent = getArrowComponent(direction);
 										return (
-											<button
+											<ToggleButton
+												isSelected={
+													annotation.figureData?.arrowDirection ===
+													direction
+												}
 												key={direction}
 												onClick={() => {
 													const newFigureData: FigureData = {
@@ -573,11 +557,7 @@ export function AnnotationSettingsPanel({
 													{ direction: direction.replace(/-/g, " ") },
 												)}
 												className={cn(
-													"h-16 rounded-lg border flex items-center justify-center transition-all p-2",
-													annotation.figureData?.arrowDirection ===
-														direction
-														? "bg-[#2563EB] border-[#2563EB]"
-														: "bg-foreground/5 border-foreground/10 hover:bg-foreground/10 hover:border-foreground/20",
+													"h-16 flex items-center justify-center p-2",
 												)}
 											>
 												<ArrowComponent
@@ -589,7 +569,7 @@ export function AnnotationSettingsPanel({
 													}
 													strokeWidth={3}
 												/>
-											</button>
+											</ToggleButton>
 										);
 									})}
 								</div>
@@ -602,6 +582,9 @@ export function AnnotationSettingsPanel({
 									})}
 								</label>
 								<Slider
+									aria-label={t("annotations.strokeWidth", undefined, {
+										width: annotation.figureData?.strokeWidth || 4,
+									})}
 									value={[annotation.figureData?.strokeWidth || 4]}
 									onValueChange={([value]) => {
 										const newFigureData: FigureData = {
@@ -625,7 +608,7 @@ export function AnnotationSettingsPanel({
 									<PopoverTrigger asChild>
 										<Button
 											variant="outline"
-											className="w-full h-10 justify-start gap-2 bg-foreground/5 border-foreground/10 hover:bg-foreground/10"
+											className="w-full h-10 justify-start gap-2"
 										>
 											<div
 												className="w-5 h-5 rounded-full border border-foreground/20"
@@ -640,8 +623,8 @@ export function AnnotationSettingsPanel({
 											<ChevronDown className="h-3 w-3 opacity-50" />
 										</Button>
 									</PopoverTrigger>
-									<PopoverContent className="w-[260px] p-3 bg-editor-surface-alt border border-foreground/10 rounded-xl shadow-xl">
-										<Block
+									<PopoverContent className="w-[260px] p-3">
+										<ColorPalette
 											color={annotation.figureData?.color || "#2563EB"}
 											colors={colorPalette}
 											onChange={(color) => {
@@ -671,6 +654,9 @@ export function AnnotationSettingsPanel({
 										</span>
 									</div>
 									<Slider
+										aria-label={t("annotations.blurStrength", undefined, {
+											strength: annotation.blurIntensity ?? 20,
+										})}
 										value={[annotation.blurIntensity ?? 20]}
 										onValueChange={([value]) => onBlurIntensityChange?.(value)}
 										min={1}
@@ -689,98 +675,27 @@ export function AnnotationSettingsPanel({
 											)}
 										</span>
 									</div>
-									<div className="flex flex-wrap gap-2">
-										<button
-											onClick={() => onBlurColorChange?.("")}
-											className={cn(
-												"w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all",
+									<div className="flex flex-col gap-3">
+										<Button
+											variant="secondary"
+											aria-pressed={
 												!annotation.blurColor ||
-													annotation.blurColor === "transparent"
-													? "border-[#2563EB] scale-110"
-													: "border-transparent hover:border-foreground/20",
-											)}
-											title={t("annotations.none", "None")}
+												annotation.blurColor === "transparent"
+											}
+											onClick={() => onBlurColorChange?.("")}
 										>
-											<div className="w-5 h-5 rounded-full bg-editor-bg flex items-center justify-center overflow-hidden relative">
-												<div className="absolute w-full h-0.5 bg-red-500 rotate-45" />
-											</div>
-										</button>
-										<button
-											onClick={() => onBlurColorChange?.("#000000")}
-											className={cn(
-												"w-8 h-8 rounded-full border-2 transition-all bg-black",
-												annotation.blurColor === "#000000"
-													? "border-[#2563EB] scale-110"
-													: "border-transparent hover:border-foreground/20",
-											)}
-											title="Black"
+											{t("annotations.none", "None")}
+										</Button>
+										<ColorPalette
+											color={annotation.blurColor || "transparent"}
+											colors={colorPalette}
+											onChange={({ hex }) => onBlurColorChange?.(hex)}
 										/>
-										<button
-											onClick={() => onBlurColorChange?.("#FFFFFF")}
-											className={cn(
-												"w-8 h-8 rounded-full border-2 transition-all bg-white",
-												annotation.blurColor === "#FFFFFF"
-													? "border-[#2563EB] scale-110"
-													: "border-transparent hover:border-foreground/20",
-											)}
-											title="White"
+										<ColorControl
+											label={t("annotations.customColor", "Custom color")}
+											value={annotation.blurColor || "#000000"}
+											onChange={(color) => onBlurColorChange?.(color)}
 										/>
-
-										<Popover>
-											<PopoverTrigger asChild>
-												<button
-													className={cn(
-														"w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center overflow-hidden relative",
-														annotation.blurColor &&
-															![
-																"#000000",
-																"#FFFFFF",
-																"transparent",
-																"",
-															].includes(annotation.blurColor)
-															? "border-[#2563EB] scale-110"
-															: "border-transparent hover:border-foreground/20",
-													)}
-													style={{
-														backgroundColor:
-															annotation.blurColor &&
-															![
-																"#000000",
-																"#FFFFFF",
-																"transparent",
-																"",
-															].includes(annotation.blurColor)
-																? annotation.blurColor
-																: "transparent",
-													}}
-													title="Custom Color"
-												>
-													{(!annotation.blurColor ||
-														[
-															"#000000",
-															"#FFFFFF",
-															"transparent",
-															"",
-														].includes(annotation.blurColor)) && (
-														<div className="w-full h-full flex items-center justify-center bg-foreground/5">
-															<div className="w-full h-full bg-gradient-to-tr from-red-500 via-green-500 to-blue-500 opacity-50" />
-														</div>
-													)}
-												</button>
-											</PopoverTrigger>
-											<PopoverContent className="w-[260px] p-3 bg-editor-surface-alt border border-foreground/10 rounded-xl shadow-xl">
-												<Block
-													color={annotation.blurColor || "#2563EB"}
-													colors={colorPalette}
-													onChange={(color) => {
-														onBlurColorChange?.(color.hex);
-													}}
-													style={{
-														borderRadius: "8px",
-													}}
-												/>
-											</PopoverContent>
-										</Popover>
 									</div>
 								</div>
 							</div>
@@ -805,14 +720,14 @@ export function AnnotationSettingsPanel({
 			<div className="flex-shrink-0 border-t border-foreground/10 bg-editor-panel p-4 pt-3">
 				<Button
 					onClick={onDelete}
-					variant="destructive"
+					variant="destructive-soft"
 					size="sm"
-					className="w-full gap-2 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/30 transition-all"
+					className="w-full gap-2"
 				>
 					<Trash2 className="w-4 h-4" />
 					{t("annotations.deleteAnnotation")}
 				</Button>
 			</div>
-		</div>
+		</Card>
 	);
 }

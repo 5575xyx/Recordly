@@ -1,6 +1,6 @@
 import type { Dispatch, MutableRefObject, RefObject, SetStateAction } from "react";
 import { useCallback } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import type { useI18n } from "@/contexts/I18nContext";
 import type { useShortcuts } from "@/contexts/ShortcutsContext";
 import { useVideoEditorAudio } from "../audio/useVideoEditorAudio";
@@ -39,8 +39,8 @@ type Input = {
 	isPreviewReady: boolean;
 	setActiveEffectSection: Dispatch<SetStateAction<EditorEffectSection>>;
 	setAutoSuggestZoomsTrigger: Dispatch<SetStateAction<number>>;
-	videoPlaybackRef: RefObject<VideoPlaybackRef>;
-	timelineRef: RefObject<TimelineEditorHandle>;
+	videoPlaybackRef: RefObject<VideoPlaybackRef | null>;
+	timelineRef: RefObject<TimelineEditorHandle | null>;
 	nextZoomIdRef: MutableRefObject<number>;
 	nextClipIdRef: MutableRefObject<number>;
 	nextAudioIdRef: MutableRefObject<number>;

@@ -1,6 +1,6 @@
 import { ArrowLeft, ArrowRight, ArrowSquareOut, Megaphone } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { BUNDLED_ANNOUNCEMENT_FEED } from "@/content/announcements";
 import { useI18n } from "@/contexts/I18nContext";
 import { runAnnouncementAction } from "@/lib/announcementActions";
@@ -275,9 +275,7 @@ export function AnnouncementDialog({ audience }: { audience: AnnouncementAudienc
 									type="button"
 									variant="ghost"
 									size="icon"
-									className={
-										usesCoverMedia ? "text-white hover:bg-white/15" : undefined
-									}
+									className={usesCoverMedia ? "" : undefined}
 									onClick={() =>
 										setCurrentIndex(
 											(index) =>
@@ -296,14 +294,14 @@ export function AnnouncementDialog({ audience }: { audience: AnnouncementAudienc
 							{controls.indicators && (
 								<div className="flex gap-1.5">
 									{announcements.map((announcement, index) => (
-										<button
+										<Button
 											type="button"
 											key={announcement.id}
-											className={`h-1.5 rounded-full transition-all ${
+											className={`h-1.5  ${
 												index === currentIndex
 													? `w-6 ${usesCoverMedia ? "bg-white" : "bg-primary"}`
 													: `w-1.5 ${usesCoverMedia ? "bg-white/40" : "bg-foreground/25"}`
-											}`}
+											} `}
 											onClick={() => setCurrentIndex(index)}
 											aria-label={`${t("announcements.show", "Show announcement")} ${index + 1}`}
 										/>
@@ -315,9 +313,7 @@ export function AnnouncementDialog({ audience }: { audience: AnnouncementAudienc
 									type="button"
 									variant="ghost"
 									size="icon"
-									className={
-										usesCoverMedia ? "text-white hover:bg-white/15" : undefined
-									}
+									className={usesCoverMedia ? "" : undefined}
 									onClick={() =>
 										setCurrentIndex(
 											(index) => (index + 1) % announcements.length,
@@ -336,9 +332,7 @@ export function AnnouncementDialog({ audience }: { audience: AnnouncementAudienc
 							<Button
 								type="button"
 								variant="ghost"
-								className={
-									usesCoverMedia ? "text-white hover:bg-white/15" : undefined
-								}
+								className={usesCoverMedia ? "" : undefined}
 								onClick={dismissCurrent}
 							>
 								{t("announcements.dismiss", "Dismiss")}

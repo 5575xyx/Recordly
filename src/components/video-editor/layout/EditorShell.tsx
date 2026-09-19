@@ -1,6 +1,7 @@
+import { Button } from "@/components/ui/button";
 import type { ComponentProps } from "react";
 import { EditorAnnouncementBanner } from "@/components/announcements/EditorAnnouncementBanner";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toast";
 import type { useI18n } from "@/contexts/I18nContext";
 import type { useEditorExportController } from "../export/useEditorExportController";
 import type { useExportDimensions } from "../export/useExportDimensions";
@@ -130,14 +131,15 @@ export function EditorShell(props: Props) {
 			<div className="flex h-screen items-center justify-center bg-background">
 				<div className="flex flex-col items-center gap-3">
 					<div className="text-destructive">{project.error}</div>
-					<button
+					<Button
+						variant="ghost"
 						ref={ui.projectBrowserFallbackTriggerRef}
 						type="button"
 						onClick={openActions.handleOpenProjectBrowser}
-						className="rounded-[5px] bg-neutral-800 px-3 py-1.5 text-sm font-semibold text-white shadow-[0_14px_32px_rgba(0,0,0,0.18)] transition-colors hover:bg-neutral-700 dark:bg-white dark:text-black dark:hover:bg-white/90"
+						className="px-3 py-1.5 text-sm"
 					>
 						Open Projects
-					</button>
+					</Button>
 				</div>
 				{editorDialogs}
 				<Toaster className="pointer-events-auto" />
@@ -145,7 +147,7 @@ export function EditorShell(props: Props) {
 		);
 
 	return (
-		<div className="flex h-screen flex-col overflow-hidden bg-editor-bg text-foreground selection:bg-[#2563EB]/30">
+		<div className="flex h-screen flex-col overflow-hidden bg-editor-bg text-foreground selection:bg-accent/20">
 			<EditorHeader
 				t={t}
 				headerLeftControlsPaddingClass={headerLeftControlsPaddingClass}
@@ -179,8 +181,8 @@ export function EditorShell(props: Props) {
 				exportMessage={exportMessage}
 			/>
 			<EditorAnnouncementBanner />
-			<div className="relative flex min-h-0 flex-1 flex-col gap-3 p-4">
-				<div className="relative z-10 flex min-h-0 flex-1 gap-3">
+			<div className="relative flex min-h-0 flex-1 flex-col">
+				<div className="relative z-10 flex min-h-0 flex-1">
 					<EditorSidebar
 						t={t}
 						activeSection={ui.activeEffectSection}

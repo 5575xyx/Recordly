@@ -27,11 +27,12 @@ export function EditorPresetMenu({ t, presets }: Props) {
 	return (
 		<Popover open={presetPopoverOpen} onOpenChange={setPresetPopoverOpen}>
 			<PopoverTrigger asChild>
-				<button
+				<Button
+					variant="ghost"
 					type="button"
 					title={t("editor.presets.open", "Open presets")}
 					aria-label={t("editor.presets.open", "Open presets")}
-					className="inline-flex items-center gap-1.5 bg-transparent p-0 text-sm font-medium tracking-tight text-foreground outline-none transition-opacity hover:opacity-80"
+					className="inline-flex items-center gap-1.5 p-0 text-sm"
 				>
 					<span className="flex items-center gap-1.5">
 						<BookmarkSimple weight="fill" className="h-4 w-4" />
@@ -40,13 +41,9 @@ export function EditorPresetMenu({ t, presets }: Props) {
 						</span>
 					</span>
 					<CaretDown className="h-3.5 w-3.5 text-foreground" />
-				</button>
+				</Button>
 			</PopoverTrigger>
-			<PopoverContent
-				align="end"
-				sideOffset={10}
-				className="w-[300px] rounded-2xl border border-foreground/10 bg-editor-surface-alt p-3 shadow-xl"
-			>
+			<PopoverContent align="end" sideOffset={10} className="w-[300px] p-3">
 				<div className="space-y-3">
 					<form
 						onSubmit={(event) => {
@@ -62,15 +59,11 @@ export function EditorPresetMenu({ t, presets }: Props) {
 							<Input
 								value={presetNameDraft}
 								onChange={(event) => setPresetNameDraft(event.target.value)}
-								className="h-9 rounded-xl border-foreground/10 bg-background/70 text-sm"
+								className="h-9 text-sm"
 								placeholder={t("editor.presets.namePlaceholder", "Preset name")}
 								aria-label={t("editor.presets.namePlaceholder", "Preset name")}
 							/>
-							<Button
-								type="submit"
-								size="sm"
-								className="h-9 rounded-xl bg-[#2563EB] px-3 text-white hover:bg-[#1d4ed8]"
-							>
+							<Button type="submit" size="sm" className="h-9 px-3">
 								{t("common.actions.save", "Save")}
 							</Button>
 						</div>
@@ -97,7 +90,8 @@ export function EditorPresetMenu({ t, presets }: Props) {
 													: "border-foreground/8 bg-foreground/[0.03] text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground",
 											)}
 										>
-											<button
+											<Button
+												variant="ghost"
 												type="button"
 												onClick={() => handleApplyEditorPreset(preset.id)}
 												className="flex min-w-0 flex-1 items-center justify-between text-left"
@@ -106,11 +100,12 @@ export function EditorPresetMenu({ t, presets }: Props) {
 												{isActive ? (
 													<Check className="h-3.5 w-3.5 shrink-0 text-[#2563EB]" />
 												) : null}
-											</button>
-											<button
+											</Button>
+											<Button
+												variant="ghost"
 												type="button"
 												onClick={() => handleDeleteEditorPreset(preset.id)}
-												className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-foreground/8 hover:text-foreground"
+												className="inline-flex h-7 w-7 shrink-0 items-center justify-center"
 												aria-label={t(
 													"editor.presets.deleteAriaLabel",
 													"Delete preset {{name}}",
@@ -123,7 +118,7 @@ export function EditorPresetMenu({ t, presets }: Props) {
 												)}
 											>
 												<X className="h-3.5 w-3.5" />
-											</button>
+											</Button>
 										</div>
 									);
 								})

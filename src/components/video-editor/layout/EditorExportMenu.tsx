@@ -1,11 +1,9 @@
+import { Card } from "@heroui/react";
+import { ProgressBar } from "@heroui/react";
 import { DownloadSimple as Download } from "@phosphor-icons/react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { useI18n } from "@/contexts/I18nContext";
 import { ExportSettingsMenu } from "../ExportSettingsMenu";
 import type { useExportDimensions } from "../export/useExportDimensions";
@@ -95,26 +93,28 @@ export function EditorExportMenu(props: Props) {
 	} = exportStatus;
 
 	return (
-		<DropdownMenu open={showExportDropdown} onOpenChange={setShowExportDropdown} modal={false}>
-			<DropdownMenuTrigger asChild>
+		<Popover
+			open={showExportDropdown}
+			onOpenChange={(open) => {
+				if (open) handleOpenExportDropdown();
+				else setShowExportDropdown(false);
+			}}
+			modal={false}
+		>
+			<PopoverTrigger asChild>
 				<Button
 					type="button"
-					onClick={handleOpenExportDropdown}
-					className="inline-flex h-8 min-w-[112px] items-center justify-center gap-2 rounded-[5px] bg-[#2563EB] px-4.5 text-white transition-colors hover:bg-[#2563EB]/92"
+					className="inline-flex h-8 min-w-[112px] items-center justify-center gap-2 px-4.5"
 				>
 					<Download className="h-4 w-4" />
 					<span className="text-sm font-semibold tracking-tight">
 						{t("common.actions.export", "Export")}
 					</span>
 				</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent
-				align="end"
-				sideOffset={10}
-				className="w-[360px] border-none bg-transparent p-0 shadow-none"
-			>
+			</PopoverTrigger>
+			<PopoverContent align="end" sideOffset={10} className="w-[360px] p-0">
 				{isExporting ? (
-					<div className="rounded-2xl border border-foreground/10 bg-editor-surface p-4 text-foreground shadow-2xl">
+					<Card className="rounded-none bg-transparent p-1 text-foreground shadow-none">
 						<div className="mb-3 flex items-center justify-between gap-3">
 							<div>
 								<p className="text-sm font-semibold text-foreground">
@@ -138,25 +138,29 @@ export function EditorExportMenu(props: Props) {
 								type="button"
 								variant="outline"
 								onClick={handleCancelExport}
-								className="h-8 border-red-500/20 bg-red-500/10 px-3 text-xs text-red-400 hover:bg-red-500/20"
+								className="h-8 px-3 text-xs"
 							>
 								{t("common.actions.cancel")}
 							</Button>
 						</div>
-						<div className="h-2 overflow-hidden rounded-full border border-foreground/5 bg-foreground/5">
-							{isExportPreparing ||
-							isExportSaving ||
-							isExportFinalSaveIndeterminate ? (
-								<div className="indeterminate-progress h-full rounded-full bg-transparent" />
-							) : (
-								<div
-									className="h-full bg-[#2563EB] transition-all duration-300 ease-out"
-									style={{
-										width: `${Math.min(isRenderingAudio ? (exportProgress?.audioProgress ?? 0) * 100 : (exportFinalizingProgress ?? exportProgress?.percentage ?? 8), 100)}%`,
-									}}
-								/>
+						<ProgressBar
+							aria-label={t("editor.exportStatus.exporting", "Exporting")}
+							isIndeterminate={
+								isExportPreparing ||
+								isExportSaving ||
+								isExportFinalSaveIndeterminate
+							}
+							value={Math.min(
+								isRenderingAudio
+									? (exportProgress?.audioProgress ?? 0) * 100
+									: (exportFinalizingProgress ?? exportProgress?.percentage ?? 8),
+								100,
 							)}
-						</div>
+						>
+							<ProgressBar.Track>
+								<ProgressBar.Fill />
+							</ProgressBar.Track>
+						</ProgressBar>
 						<p className="mt-2 text-xs text-muted-foreground">{exportPercentLabel}</p>
 						{isRenderingAudio ? (
 							<p className="mt-1 text-[11px] text-muted-foreground/70">
@@ -180,9 +184,9 @@ export function EditorExportMenu(props: Props) {
 								{exportNativeSkipLabel}
 							</p>
 						) : null}
-					</div>
+					</Card>
 				) : exportError ? (
-					<div className="rounded-2xl border border-foreground/10 bg-editor-surface p-4 text-foreground shadow-2xl">
+					<Card className="rounded-none bg-transparent p-1 text-foreground shadow-none">
 						<p className="text-sm font-semibold text-foreground">
 							{t("editor.exportStatus.issue", "Export issue")}
 						</p>
@@ -221,7 +225,7 @@ export function EditorExportMenu(props: Props) {
 								<Button
 									type="button"
 									onClick={handleRetrySaveExport}
-									className="h-8 flex-1 rounded-[5px] bg-[#2563EB] text-xs font-semibold text-white hover:bg-[#2563EB]/92"
+									className="h-8 flex-1 text-xs"
 								>
 									{t("editor.actions.saveAgain", "Save Again")}
 								</Button>
@@ -230,14 +234,14 @@ export function EditorExportMenu(props: Props) {
 								type="button"
 								variant="outline"
 								onClick={handleExportDropdownClose}
-								className="h-8 flex-1 border-foreground/10 bg-foreground/5 text-xs text-muted-foreground hover:bg-foreground/10"
+								className="h-8 flex-1 text-xs"
 							>
 								{t("common.actions.close", "Close")}
 							</Button>
 						</div>
-					</div>
+					</Card>
 				) : exportedFilePath ? (
-					<div className="rounded-2xl border border-foreground/10 bg-editor-surface p-4 text-foreground shadow-2xl">
+					<Card className="rounded-none bg-transparent p-1 text-foreground shadow-none">
 						<p className="text-sm font-semibold text-foreground">
 							{t("editor.exportStatus.complete", "Export complete")}
 						</p>
@@ -259,7 +263,7 @@ export function EditorExportMenu(props: Props) {
 							<Button
 								type="button"
 								onClick={revealExportedFile}
-								className="h-8 flex-1 rounded-[5px] bg-[#2563EB] text-xs font-semibold text-white hover:bg-[#2563EB]/92"
+								className="h-8 flex-1 text-xs"
 							>
 								{t("editor.actions.showInFolder", "Show In Folder")}
 							</Button>
@@ -267,12 +271,12 @@ export function EditorExportMenu(props: Props) {
 								type="button"
 								variant="outline"
 								onClick={handleExportDropdownClose}
-								className="h-8 flex-1 border-foreground/10 bg-foreground/5 text-xs text-muted-foreground hover:bg-foreground/10"
+								className="h-8 flex-1 text-xs"
 							>
 								Done
 							</Button>
 						</div>
-					</div>
+					</Card>
 				) : (
 					<ExportSettingsMenu
 						exportFormat={exportFormat}
@@ -301,10 +305,10 @@ export function EditorExportMenu(props: Props) {
 						mp4OutputDimensions={mp4OutputDimensions}
 						gifOutputDimensions={gifOutputDimensions}
 						onExport={handleStartExportFromDropdown}
-						className="shadow-2xl"
+						className="rounded-none bg-transparent p-1 shadow-none"
 					/>
 				)}
-			</DropdownMenuContent>
-		</DropdownMenu>
+			</PopoverContent>
+		</Popover>
 	);
 }

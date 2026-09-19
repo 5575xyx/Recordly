@@ -8,7 +8,7 @@ import {
 	useMemo,
 	useRef,
 } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import type { AspectRatio } from "@/utils/aspectRatioUtils";
 import type { useExportSettings } from "../export/useExportSettings";
 import type { UnsavedChangesDecision } from "../layout/EditorDialogs";

@@ -12,7 +12,7 @@ import type { useTimelineState } from "../state/useTimelineState";
 import TimelineEditor, { type TimelineEditorHandle } from "../timeline/TimelineEditor";
 
 type Props = {
-	timelineRef: RefObject<TimelineEditorHandle>;
+	timelineRef: RefObject<TimelineEditorHandle | null>;
 	timeline: ReturnType<typeof useTimelineState>;
 	projection: ReturnType<typeof useTimelineProjection>;
 	playback: ReturnType<typeof useEditorPlaybackControls>;
@@ -57,7 +57,10 @@ export function EditorTimelinePanel(props: Props) {
 	} = props;
 
 	return (
-		<div className="flex flex-shrink-0 flex-col" style={{ height: "15%", minHeight: 160 }}>
+		<div
+			className="flex flex-shrink-0 flex-col border-t border-separator bg-surface px-3 pb-3 pt-1"
+			style={{ height: "22%", minHeight: 180, maxHeight: 280 }}
+		>
 			<TimelineEditor
 				ref={timelineRef}
 				videoDuration={projection.timelineDuration}

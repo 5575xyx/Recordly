@@ -6,7 +6,7 @@ import { resolveDeleteSelectionTarget } from "./utils/timelineSelectionUtils";
 interface UseTimelineKeyboardShortcutsParams {
 	isMac: boolean;
 	keyShortcuts: TimelineShortcutBindings;
-	isTimelineFocusedRef: RefObject<boolean>;
+	isTimelineFocusedRef: RefObject<boolean | null>;
 	hasAnyZoomBlocks: boolean;
 	activateSelectAllZooms: () => void;
 	annotationCount: number;

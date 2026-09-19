@@ -110,9 +110,8 @@ export default function Item({
 				onClickCapture={(event) => event.stopPropagation()}
 			>
 				<Skeleton
-					variant="clip"
-					animation="shimmer-premium"
-					label={loadingLabel || "Loading..."}
+					animationType="shimmer"
+					aria-label={loadingLabel || "Loading..."}
 					className="w-full"
 					style={{ height: "85%", minHeight: 22 }}
 				/>

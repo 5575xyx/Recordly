@@ -1,3 +1,4 @@
+import { Input } from "@/components/ui/input";
 import {
 	FolderOpen,
 	ArrowClockwise as Redo2,
@@ -20,8 +21,8 @@ type Props = {
 	t: ReturnType<typeof useI18n>["t"];
 	headerLeftControlsPaddingClass: string;
 	project: ReturnType<typeof useProjectState>;
-	projectBrowserTriggerRef: RefObject<HTMLButtonElement>;
-	projectNameInputRef: RefObject<HTMLInputElement>;
+	projectBrowserTriggerRef: RefObject<HTMLButtonElement | null>;
+	projectNameInputRef: RefObject<HTMLInputElement | null>;
 	projectDisplayName: string;
 	hasUnsavedChanges: boolean;
 	canUndo: boolean;
@@ -92,7 +93,7 @@ export function EditorHeader(props: Props) {
 
 	return (
 		<div
-			className="relative z-50 flex h-11 flex-shrink-0 items-center justify-between border-b border-foreground/10 bg-editor-header/88 px-5 backdrop-blur-md"
+			className="relative z-50 flex h-11 flex-shrink-0 items-center justify-between border-b border-separator bg-surface px-4"
 			style={{ WebkitAppRegion: "drag" } as CSSProperties}
 		>
 			<div
@@ -119,7 +120,7 @@ export function EditorHeader(props: Props) {
 					variant="ghost"
 					onClick={handleUndo}
 					disabled={!canUndo}
-					className="inline-flex h-8 w-8 items-center justify-center rounded-[5px] border border-foreground/10 bg-foreground/5 p-0 text-foreground transition-colors hover:bg-foreground/10 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+					className="inline-flex h-8 w-8 items-center justify-center p-0 disabled:cursor-not-allowed"
 					title={t("common.actions.undo", "Undo")}
 					aria-label={t("common.actions.undo", "Undo")}
 				>
@@ -130,7 +131,7 @@ export function EditorHeader(props: Props) {
 					variant="ghost"
 					onClick={handleRedo}
 					disabled={!canRedo}
-					className="inline-flex h-8 w-8 items-center justify-center rounded-[5px] border border-foreground/10 bg-foreground/5 p-0 text-foreground transition-colors hover:bg-foreground/10 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+					className="inline-flex h-8 w-8 items-center justify-center p-0 disabled:cursor-not-allowed"
 					title={t("common.actions.redo", "Redo")}
 					aria-label={t("common.actions.redo", "Redo")}
 				>
@@ -150,7 +151,7 @@ export function EditorHeader(props: Props) {
 						{hasUnsavedChanges ? (
 							<span className="mt-[1px] size-2 shrink-0 rounded-full bg-[#2563EB]" />
 						) : null}
-						<input
+						<Input
 							ref={projectNameInputRef}
 							type="text"
 							value={projectNameDraft}
@@ -165,7 +166,7 @@ export function EditorHeader(props: Props) {
 								}
 							}}
 							disabled={isSavingProjectName}
-							className="min-w-[10ch] max-w-[min(40vw,360px)] bg-transparent text-sm font-semibold tracking-tight text-foreground/95 outline-none placeholder:text-muted-foreground/60 disabled:cursor-wait"
+							className="min-w-[10ch] max-w-[min(40vw,360px)] text-sm disabled:cursor-wait"
 							style={{ width: `${Math.max(projectNameDraft.length, 10)}ch` }}
 							aria-label={t("editor.project.renameInput", "Project name")}
 						/>
@@ -174,10 +175,11 @@ export function EditorHeader(props: Props) {
 						</span>
 					</form>
 				) : (
-					<button
+					<Button
+						variant="ghost"
 						type="button"
 						onClick={() => setIsEditingProjectName(true)}
-						className="inline-flex max-w-[min(52vw,460px)] items-baseline gap-1 rounded-[7px] px-2.5 py-1 transition-colors hover:bg-foreground/5"
+						className="inline-flex max-w-[min(52vw,460px)] items-baseline gap-1 px-2.5 py-1"
 						title={t("editor.project.renameTitle", "Rename project")}
 						aria-label={t("editor.project.renameTitle", "Rename project")}
 					>
@@ -190,7 +192,7 @@ export function EditorHeader(props: Props) {
 						<span className="shrink-0 text-xs font-medium tracking-tight text-muted-foreground/70">
 							.recordly
 						</span>
-					</button>
+					</Button>
 				)}
 			</div>
 

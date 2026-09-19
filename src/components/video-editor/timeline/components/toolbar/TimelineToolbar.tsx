@@ -1,3 +1,4 @@
+import { Input } from "@/components/ui/input";
 import {
 	Check,
 	CaretDown as ChevronDown,
@@ -10,12 +11,7 @@ import {
 } from "@phosphor-icons/react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
 	ASPECT_RATIOS,
 	type AspectRatio,
@@ -79,7 +75,7 @@ export default function TimelineToolbar({
 					onClick={onAddZoom}
 					variant="ghost"
 					size="icon"
-					className="h-7 w-7 text-muted-foreground hover:text-[#2563EB] hover:bg-[#2563EB]/10 transition-all"
+					className="h-7 w-7"
 					title={addZoomLabel}
 					aria-label={addZoomLabel}
 				>
@@ -89,7 +85,7 @@ export default function TimelineToolbar({
 					onClick={onSuggestZooms}
 					variant="ghost"
 					size="icon"
-					className="h-7 w-7 text-muted-foreground hover:text-[#2563EB] hover:bg-[#2563EB]/10 transition-all"
+					className="h-7 w-7"
 					title={suggestZoomsLabel}
 					aria-label={suggestZoomsLabel}
 				>
@@ -99,7 +95,7 @@ export default function TimelineToolbar({
 					onClick={onAddAnnotation}
 					variant="ghost"
 					size="icon"
-					className="h-7 w-7 text-muted-foreground hover:text-[#B4A046] hover:bg-[#B4A046]/10 transition-all"
+					className="h-7 w-7"
 					title={addAnnotationLabel}
 					aria-label={addAnnotationLabel}
 				>
@@ -109,7 +105,7 @@ export default function TimelineToolbar({
 					onClick={onAddAudio}
 					variant="ghost"
 					size="icon"
-					className="h-7 w-7 text-muted-foreground hover:text-[#a855f7] hover:bg-[#a855f7]/10 transition-all"
+					className="h-7 w-7"
 					title={addAudioLabel}
 					aria-label={addAudioLabel}
 				>
@@ -119,7 +115,7 @@ export default function TimelineToolbar({
 					onClick={onSplitClip}
 					variant="ghost"
 					size="icon"
-					className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-foreground/10 transition-all"
+					className="h-7 w-7"
 					title={splitClipLabel}
 					aria-label={splitClipLabel}
 				>
@@ -127,23 +123,17 @@ export default function TimelineToolbar({
 				</Button>
 			</div>
 			<div className="flex items-center gap-2">
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<Button
-							variant="ghost"
-							size="sm"
-							className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-foreground/10 transition-all gap-1"
-						>
+				<Popover>
+					<PopoverTrigger asChild>
+						<Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1">
 							<span className="font-medium">{getAspectRatioLabel(aspectRatio)}</span>
 							<ChevronDown className="w-3 h-3" />
 						</Button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent
-						align="end"
-						className="bg-editor-surface-alt border-foreground/10"
-					>
+					</PopoverTrigger>
+					<PopoverContent align="end">
 						{ASPECT_RATIOS.map((ratio) => (
-							<DropdownMenuItem
+							<Button
+								variant="ghost"
 								key={ratio}
 								onClick={() => onAspectRatioChange?.(ratio)}
 								className="text-muted-foreground hover:text-foreground hover:bg-foreground/10 cursor-pointer flex items-center justify-between gap-3"
@@ -152,12 +142,12 @@ export default function TimelineToolbar({
 								{aspectRatio === ratio && (
 									<Check className="w-3 h-3 text-[#2563EB]" />
 								)}
-							</DropdownMenuItem>
+							</Button>
 						))}
 						<div className="mx-1 my-1 h-px bg-foreground/10" />
 						<div className="px-2 py-1.5 flex items-center gap-2 text-muted-foreground">
 							<span className="text-sm">Custom</span>
-							<input
+							<Input
 								type="text"
 								inputMode="numeric"
 								value={customAspectWidth}
@@ -165,11 +155,11 @@ export default function TimelineToolbar({
 									onCustomAspectWidthChange(event.target.value.replace(/\D/g, ""))
 								}
 								onKeyDown={onCustomAspectRatioKeyDown}
-								className="w-12 h-7 rounded border border-foreground/10 bg-foreground/5 px-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+								className="w-12 h-7 px-1.5 text-sm"
 								aria-label="Custom aspect width"
 							/>
 							<span className="text-muted-foreground/70">:</span>
-							<input
+							<Input
 								type="text"
 								inputMode="numeric"
 								value={customAspectHeight}
@@ -179,14 +169,14 @@ export default function TimelineToolbar({
 									)
 								}
 								onKeyDown={onCustomAspectRatioKeyDown}
-								className="w-12 h-7 rounded border border-foreground/10 bg-foreground/5 px-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+								className="w-12 h-7 px-1.5 text-sm"
 								aria-label="Custom aspect height"
 							/>
 							<Button
 								variant="ghost"
 								size="sm"
 								onClick={onApplyCustomAspectRatio}
-								className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-foreground/10"
+								className="h-7 px-2 text-xs"
 							>
 								Set
 							</Button>
@@ -194,15 +184,15 @@ export default function TimelineToolbar({
 								<Check className="w-3 h-3 text-[#2563EB] ml-auto" />
 							)}
 						</div>
-					</DropdownMenuContent>
-				</DropdownMenu>
+					</PopoverContent>
+				</Popover>
 				<div className="w-[1px] h-4 bg-foreground/10" />
 				<Button
 					variant="ghost"
 					size="sm"
 					onClick={onOpenCropEditor}
 					disabled={!onOpenCropEditor}
-					className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-foreground/10 transition-all gap-1.5"
+					className="h-7 px-2 text-xs gap-1.5"
 				>
 					<Crop className="w-3.5 h-3.5" />
 					<span className="font-medium">{cropLabel}</span>

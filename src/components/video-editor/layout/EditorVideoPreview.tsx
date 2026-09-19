@@ -21,7 +21,7 @@ type Props = {
 	videoPath: string | null;
 	previewVersion: number;
 	aspectRatio: AspectRatio;
-	playbackRef: RefObject<VideoPlaybackRef>;
+	playbackRef: RefObject<VideoPlaybackRef | null>;
 	currentTime: number;
 	isPlaying: boolean;
 	previewVolume: number;

@@ -69,7 +69,7 @@ interface UseTimelineEditorRuntimeParams {
 	onSelectCaption?: (id: string | null) => void;
 	isMac: boolean;
 	keyShortcuts: TimelineShortcutBindings;
-	isTimelineFocusedRef: RefObject<boolean>;
+	isTimelineFocusedRef: RefObject<boolean | null>;
 }
 
 export function useTimelineEditorRuntime({

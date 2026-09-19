@@ -47,8 +47,10 @@ The clip lane samples real source frames with a bounded cache and one background
 video decoder. Sampling follows clip source offsets, speed, and the visible timeline
 range; it never seeks the playback element. Zooms use a compact lane with labels
 that adapt to block width. The ruler chooses tick density from available width,
-and the red playhead has a white centre line. Webcam roundness defaults to 69%;
-existing saved values remain intact. Three compact timeline tracks fit before
+and the red playhead has a white centre line. Webcam roundness defaults to 100%;
+existing saved values remain intact. New recordings inherit the saved webcam
+appearance, and 100% is the maximum squircle radius rather than a circular mask.
+Three compact timeline tracks fit before
 vertical scrolling. Popovers support outside-click and Escape dismissal and
 share one padding layer. Project and preset names truncate inside their rows.
 The recorder keeps its compact desktop layout.

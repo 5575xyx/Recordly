@@ -61,7 +61,7 @@ test("advanced controls, webcam defaults and captions have consistent layouts", 
 	await page.getByRole("radio", { name: "Webcam", exact: true }).click();
 	await expect(page.getByRole("switch", { name: "Mirror webcam" })).toHaveCount(0);
 	await expect(page.getByRole("switch", { name: "Webcam Reacts To Zoom" })).toHaveCount(0);
-	await expect(page.getByRole("slider", { name: "Webcam Roundness" })).toHaveValue("69");
+	await expect(page.getByRole("slider", { name: "Webcam Roundness" })).toHaveValue("100");
 	await page.evaluate(() => {
 		window.electronAPI.openVideoFilePicker = async () => ({
 			success: true,

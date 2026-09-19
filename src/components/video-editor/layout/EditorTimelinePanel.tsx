@@ -58,7 +58,7 @@ export function EditorTimelinePanel(props: Props) {
 
 	return (
 		<div
-			className="flex flex-shrink-0 flex-col border-t border-separator bg-surface px-3 pb-3 pt-1"
+			className="flex flex-shrink-0 flex-col bg-transparent px-4 pb-4 pt-2"
 			style={{ height: "22%", minHeight: 180, maxHeight: 280 }}
 		>
 			<TimelineEditor

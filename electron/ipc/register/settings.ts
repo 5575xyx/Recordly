@@ -1,5 +1,5 @@
 import fs from "node:fs/promises";
-import { app, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 import { hasAppSetting, readAppSettingsStore, writeAppSettingsStore } from "../../appSettingsStore";
 import { hideCursor } from "../../cursorHider";
 import { closeCountdownWindow, createCountdownWindow, getCountdownWindow } from "../../windows";
@@ -45,6 +45,17 @@ function getBrowserMicrophoneProfileFromEnv() {
 export function registerSettingsHandlers() {
 	ipcMain.handle("app:getVersion", () => {
 		return app.getVersion();
+	});
+
+	ipcMain.handle("get-window-chrome", (event) => {
+		const win = BrowserWindow.fromWebContents(event.sender);
+		return {
+			trafficLightsVisible:
+				process.platform === "darwin" &&
+				!!win &&
+				!win.isFullScreen() &&
+				!win.isSimpleFullScreen(),
+		};
 	});
 
 	ipcMain.handle("get-platform", () => {

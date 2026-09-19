@@ -92,12 +92,12 @@ export function EditorHeader(props: Props) {
 	} = project;
 
 	return (
-		<div
-			className="relative z-50 flex h-11 flex-shrink-0 items-center justify-between border-b border-separator bg-surface px-4"
+		<header
+			className="editor-header relative z-50 grid h-14 shrink-0 bg-surface grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)] items-center gap-3 px-4"
 			style={{ WebkitAppRegion: "drag" } as CSSProperties}
 		>
 			<div
-				className={`flex items-center justify-self-start gap-1.5 ${headerLeftControlsPaddingClass}`}
+				className={`editor-header-start flex items-center justify-self-start gap-1 ${headerLeftControlsPaddingClass}`}
 				style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
 			>
 				<Button
@@ -112,15 +112,17 @@ export function EditorHeader(props: Props) {
 				>
 					<FolderOpen className="h-4 w-4" />
 				</Button>
-				<DiscordLinkButton />
-				<FeedbackDialog />
-				<div className="ml-1 h-5 w-px bg-foreground/10" />
+				<div className="editor-header-community flex items-center gap-1">
+					<DiscordLinkButton />
+					<FeedbackDialog />
+				</div>
+				<div className="w-2 shrink-0" />
 				<Button
 					type="button"
 					variant="ghost"
 					onClick={handleUndo}
 					disabled={!canUndo}
-					className="inline-flex h-8 w-8 items-center justify-center p-0 disabled:cursor-not-allowed"
+					className="inline-flex h-9 w-9 min-w-9 items-center justify-center p-0 disabled:cursor-not-allowed"
 					title={t("common.actions.undo", "Undo")}
 					aria-label={t("common.actions.undo", "Undo")}
 				>
@@ -131,7 +133,7 @@ export function EditorHeader(props: Props) {
 					variant="ghost"
 					onClick={handleRedo}
 					disabled={!canRedo}
-					className="inline-flex h-8 w-8 items-center justify-center p-0 disabled:cursor-not-allowed"
+					className="inline-flex h-9 w-9 min-w-9 items-center justify-center p-0 disabled:cursor-not-allowed"
 					title={t("common.actions.redo", "Redo")}
 					aria-label={t("common.actions.redo", "Redo")}
 				>
@@ -140,16 +142,16 @@ export function EditorHeader(props: Props) {
 			</div>
 
 			<div
-				className="absolute left-1/2 flex min-w-0 -translate-x-1/2 items-center justify-center"
+				className="editor-header-title flex min-w-0 items-center justify-center"
 				style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
 			>
 				{isEditingProjectName ? (
 					<form
 						onSubmit={(event) => void handleProjectNameSubmit(event)}
-						className="flex max-w-[min(52vw,460px)] items-baseline gap-1 rounded-[7px] border border-foreground/10 bg-editor-panel/[0.88] px-2.5 py-1 shadow-[0_10px_28px_rgba(0,0,0,0.18)]"
+						className="flex w-full min-w-0 items-center gap-1"
 					>
 						{hasUnsavedChanges ? (
-							<span className="mt-[1px] size-2 shrink-0 rounded-full bg-[#2563EB]" />
+							<span className="size-1.5 shrink-0 rounded-full bg-accent" />
 						) : null}
 						<Input
 							ref={projectNameInputRef}
@@ -166,11 +168,10 @@ export function EditorHeader(props: Props) {
 								}
 							}}
 							disabled={isSavingProjectName}
-							className="min-w-[10ch] max-w-[min(40vw,360px)] text-sm disabled:cursor-wait"
-							style={{ width: `${Math.max(projectNameDraft.length, 10)}ch` }}
+							className="min-w-0 w-full text-sm disabled:cursor-wait"
 							aria-label={t("editor.project.renameInput", "Project name")}
 						/>
-						<span className="shrink-0 text-xs font-medium tracking-tight text-muted-foreground/70">
+						<span className="project-file-extension shrink-0 text-xs font-medium tracking-tight text-muted-foreground/70">
 							.recordly
 						</span>
 					</form>
@@ -179,17 +180,17 @@ export function EditorHeader(props: Props) {
 						variant="ghost"
 						type="button"
 						onClick={() => setIsEditingProjectName(true)}
-						className="inline-flex max-w-[min(52vw,460px)] items-baseline gap-1 px-2.5 py-1"
+						className="inline-flex h-9 min-w-0 max-w-full items-center gap-1.5 px-3"
 						title={t("editor.project.renameTitle", "Rename project")}
 						aria-label={t("editor.project.renameTitle", "Rename project")}
 					>
 						{hasUnsavedChanges ? (
-							<span className="mt-[1px] size-2 shrink-0 rounded-full bg-[#2563EB]" />
+							<span className="size-1.5 shrink-0 rounded-full bg-accent" />
 						) : null}
 						<span className="truncate text-sm font-semibold tracking-tight text-foreground/90">
 							{projectDisplayName}
 						</span>
-						<span className="shrink-0 text-xs font-medium tracking-tight text-muted-foreground/70">
+						<span className="project-file-extension shrink-0 text-xs font-medium tracking-tight text-muted-foreground/70">
 							.recordly
 						</span>
 					</Button>
@@ -197,14 +198,10 @@ export function EditorHeader(props: Props) {
 			</div>
 
 			<div
-				className="flex items-center justify-self-end"
+				className="editor-header-end flex min-w-0 items-center justify-self-end gap-3"
 				style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
 			>
 				<EditorPresetMenu t={t} presets={presets} />
-				<div
-					aria-hidden="true"
-					className="mx-2 h-4 w-px shrink-0 bg-foreground/10 opacity-0"
-				/>
 				<EditorExportMenu
 					t={t}
 					exportSettings={exportSettings}
@@ -224,6 +221,6 @@ export function EditorHeader(props: Props) {
 					exportMessage={exportMessage}
 				/>
 			</div>
-		</div>
+		</header>
 	);
 }

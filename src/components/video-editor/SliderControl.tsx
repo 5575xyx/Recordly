@@ -31,7 +31,7 @@ export const SliderControl = memo(function SliderControl({
 			maxValue={max}
 			step={step}
 			onChange={(value) => onChange(Number(value))}
-			className="w-full"
+			className="my-1.5 w-full gap-y-2"
 		>
 			<Label>{label}</Label>
 			<Slider.Output>{() => formatValue(value)}</Slider.Output>

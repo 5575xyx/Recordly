@@ -940,6 +940,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		ipcRenderer.on("menu-save-project-as", listener);
 		return () => ipcRenderer.removeListener("menu-save-project-as", listener);
 	},
+	getWindowChrome: () => ipcRenderer.invoke("get-window-chrome"),
+	onWindowChromeChanged: (callback: (chrome: { trafficLightsVisible: boolean }) => void) => {
+		const listener = (
+			_event: Electron.IpcRendererEvent,
+			chrome: { trafficLightsVisible: boolean },
+		) => callback(chrome);
+		ipcRenderer.on("window-chrome-changed", listener);
+		return () => ipcRenderer.removeListener("window-chrome-changed", listener);
+	},
 	getPlatform: () => {
 		return ipcRenderer.invoke("get-platform");
 	},

@@ -864,6 +864,10 @@ interface Window {
 		onMenuLoadProject: (callback: () => void) => () => void;
 		onMenuSaveProject: (callback: () => void) => () => void;
 		onMenuSaveProjectAs: (callback: () => void) => () => void;
+		getWindowChrome: () => Promise<{ trafficLightsVisible: boolean }>;
+		onWindowChromeChanged: (
+			callback: (chrome: { trafficLightsVisible: boolean }) => void,
+		) => () => void;
 		getPlatform: () => Promise<string>;
 		getLinuxWindowSystem: () => Promise<"wayland" | "x11" | null>;
 		revealInFolder: (

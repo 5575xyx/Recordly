@@ -117,7 +117,7 @@ export function EditorPreviewPanel(props: Props) {
 		<div className="flex min-h-0 min-w-0 flex-1 flex-col">
 			<div className="flex min-h-0 flex-1 flex-col">
 				<div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-					<div className="flex h-11 flex-shrink-0 items-center justify-center gap-2 border-b border-separator bg-surface">
+					<div className="flex h-14 shrink-0 items-center justify-center gap-3">
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
 								<Button
@@ -164,12 +164,15 @@ export function EditorPreviewPanel(props: Props) {
 						className="flex min-h-0 w-full flex-1 items-stretch px-6 py-5"
 						style={{ flex: "1 1 auto", margin: 0 }}
 					>
-						<div className="flex min-w-0 flex-1 items-center justify-center px-1">
+						<div
+							className="editor-preview-stage flex min-h-0 min-w-0 flex-1 items-center justify-center"
+							style={{ containerType: "size" }}
+						>
 							<div
-								className="relative"
+								className="editor-preview-frame relative"
 								style={{
-									width: "auto",
-									height: "100%",
+									width: `min(100cqw, calc(100cqh * ${previewAspectRatioValue}))`,
+									height: `min(100cqh, calc(100cqw / ${previewAspectRatioValue}))`,
 									aspectRatio: previewAspectRatioValue,
 									maxWidth: "100%",
 									margin: "0 auto",
@@ -213,11 +216,11 @@ export function EditorPreviewPanel(props: Props) {
 				</div>
 			</div>
 
-			<div className="relative flex h-12 flex-shrink-0 items-center border-t border-separator bg-surface px-4">
-				<div className="z-10 flex min-w-0 flex-1 items-center gap-1.5">
+			<div className="editor-playback relative grid min-h-14 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 px-4">
+				<div className="editor-playback-tools z-10 flex min-w-0 items-center gap-2">
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
-							<Button variant="ghost" size="sm" className="h-7 gap-1 px-2.5">
+							<Button variant="ghost" size="sm" className="h-9 gap-2 px-3">
 								<Plus className="h-3.5 w-3.5" />
 								<span className="font-medium">{t("editor.toolbar.addLayer")}</span>
 								<CaretDown className="h-3 w-3" />
@@ -258,12 +261,11 @@ export function EditorPreviewPanel(props: Props) {
 							</DropdownMenuItem>
 						</DropdownMenuContent>
 					</DropdownMenu>
-					<div className="mx-1 h-4 w-px bg-foreground/10" />
 					<Button
 						onClick={() => timelineRef.current?.addZoom()}
 						variant="ghost"
 						size="icon"
-						className="h-7 w-7"
+						className="h-9 w-9"
 						title={t("timeline.zoom.addZoom")}
 					>
 						<MagnifyingGlassPlus className="h-4 w-4" />
@@ -272,7 +274,7 @@ export function EditorPreviewPanel(props: Props) {
 						onClick={() => timelineRef.current?.suggestZooms()}
 						variant="ghost"
 						size="icon"
-						className="h-7 w-7"
+						className="h-9 w-9"
 						title={t("timeline.zoom.suggestZooms")}
 					>
 						<MagicWand className="h-4 w-4" />
@@ -281,14 +283,14 @@ export function EditorPreviewPanel(props: Props) {
 						onClick={() => timelineRef.current?.splitClip()}
 						variant="ghost"
 						size="icon"
-						className="h-7 w-7"
+						className="h-9 w-9"
 						title={t("editor.toolbar.splitClip")}
 					>
 						<Scissors className="h-4 w-4" />
 					</Button>
 				</div>
 
-				<div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+				<div className="editor-playback-center z-10 flex items-center justify-center">
 					<div className="pointer-events-auto flex items-center gap-1.5">
 						<span className="mr-1 text-[10px] font-medium tabular-nums text-muted-foreground">
 							{formatTime(projection.timelinePlayheadTime)}
@@ -296,7 +298,7 @@ export function EditorPreviewPanel(props: Props) {
 						<Button
 							variant="ghost"
 							size="icon"
-							className="h-7 w-7"
+							className="h-9 w-9"
 							title={t("editor.playback.skipBack")}
 							onClick={playback.handlePreviewSkipBack}
 						>
@@ -305,7 +307,7 @@ export function EditorPreviewPanel(props: Props) {
 						<Button
 							variant="ghost"
 							size="icon"
-							className={`h-7 w-7  ${isPlaying ? "bg-foreground/10 text-foreground hover:bg-foreground/20" : "bg-neutral-800 text-white hover:bg-neutral-700 dark:bg-white dark:text-black dark:hover:bg-white/90"} `}
+							className={`h-9 w-9  ${isPlaying ? "bg-foreground/10 text-foreground hover:bg-foreground/20" : "bg-neutral-800 text-white hover:bg-neutral-700 dark:bg-white dark:text-black dark:hover:bg-white/90"} `}
 							onClick={playback.togglePlayPause}
 							title={isPlaying ? "Pause" : "Play"}
 						>
@@ -318,7 +320,7 @@ export function EditorPreviewPanel(props: Props) {
 						<Button
 							variant="ghost"
 							size="icon"
-							className="h-7 w-7"
+							className="h-9 w-9"
 							title={t("editor.playback.skipForward")}
 							onClick={playback.handlePreviewSkipForward}
 						>
@@ -330,7 +332,7 @@ export function EditorPreviewPanel(props: Props) {
 					</div>
 				</div>
 
-				<div className="z-10 ml-auto flex items-center gap-2">
+				<div className="editor-playback-volume z-10 ml-auto flex items-center gap-2">
 					<div className="flex items-center gap-1.5">
 						<Button
 							variant="ghost"

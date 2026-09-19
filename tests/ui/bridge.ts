@@ -20,6 +20,14 @@ export async function installDesktopBridge(page: Page) {
 				}),
 				getAccessibilityPermissionStatus: async () => ({ success: true, trusted: true }),
 				getPlatform: async () => "darwin",
+				getWindowChrome: async () => ({ trafficLightsVisible: true }),
+				onWindowChromeChanged: (
+					callback: (chrome: { trafficLightsVisible: boolean }) => void,
+				) => {
+					const listener = (event: Event) => callback((event as CustomEvent).detail);
+					window.addEventListener("test-window-chrome", listener);
+					return () => window.removeEventListener("test-window-chrome", listener);
+				},
 				getAppVersion: async () => "1.4.0",
 				getAnnouncements: async () => ({ success: true, announcements: [] }),
 				loadCurrentProjectFile: async () => ({ success: false }),

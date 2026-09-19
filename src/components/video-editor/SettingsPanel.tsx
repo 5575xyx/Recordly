@@ -16,7 +16,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { ChoiceGroup, ChoiceItem } from "@/components/ui/choice-group";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getAssetPath, getRenderableVideoUrl, getWallpaperThumbnailUrl } from "@/lib/assetPath";
 import { cn } from "@/lib/utils";
@@ -185,7 +185,7 @@ function getBackgroundTabForWallpaper(value: string): BackgroundTab {
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
-	return <p className="text-xs font-medium text-foreground">{children}</p>;
+	return <Label>{children}</Label>;
 }
 
 function WallpaperVideoPreview({ src }: { src: string }) {
@@ -394,41 +394,20 @@ function CursorClickEffectCards({
 	activeEffectId,
 	effectColor,
 	onApply,
-	showAdvanced,
-	onToggleAdvanced,
 	tSettings,
 }: {
 	title: string;
 	activeEffectId: CursorClickEffectStyle;
 	effectColor: string;
 	onApply: (effectId: CursorClickEffectStyle) => void;
-	showAdvanced: boolean;
-	onToggleAdvanced: () => void;
 	tSettings: (key: string, fallback?: string) => string;
 }) {
 	return (
-		<div className="flex flex-col gap-2">
+		<div className="flex flex-col gap-4">
 			<div className="flex items-center justify-between">
-				<div className="text-xs text-muted-foreground">{title}</div>
-				<ToggleButton
-					onClick={onToggleAdvanced}
-					isSelected={showAdvanced}
-					aria-label={
-						showAdvanced
-							? tSettings(
-									"effects.cursorClickEffects.advancedHide",
-									"Hide advanced click effect controls",
-								)
-							: tSettings(
-									"effects.cursorClickEffects.advancedShow",
-									"Show advanced click effect controls",
-								)
-					}
-				>
-					{tSettings("effects.cursorClickEffects.advanced", "Advanced")}
-				</ToggleButton>
+				<Label>{title}</Label>
 			</div>
-			<ToggleGroup
+			<ChoiceGroup
 				type="single"
 				value={activeEffectId}
 				onValueChange={(value) => {
@@ -450,7 +429,7 @@ function CursorClickEffectCards({
 					);
 
 					return (
-						<ToggleGroupItem
+						<ChoiceItem
 							key={effect.id}
 							value={effect.id}
 							aria-label={label}
@@ -465,15 +444,16 @@ function CursorClickEffectCards({
 									/>
 								</div>
 							</div>
-						</ToggleGroupItem>
+						</ChoiceItem>
 					);
 				})}
-			</ToggleGroup>
+			</ChoiceGroup>
 		</div>
 	);
 }
 
 interface SettingsPanelProps {
+	advanced?: boolean;
 	panelMode?: "editor" | "background";
 	activeEffectSection?: EditorEffectSection;
 	selected: string;
@@ -929,6 +909,7 @@ function CursorStylePreview({
 }
 
 export function SettingsPanel({
+	advanced = false,
 	panelMode = "editor",
 	activeEffectSection: activeEffectSectionProp,
 	selected,
@@ -1202,7 +1183,7 @@ export function SettingsPanel({
 	const [builtInCursorPreviewUrls, setBuiltInCursorPreviewUrls] = useState<
 		Partial<Record<string, string>>
 	>({});
-	const [showCursorClickEffectAdvanced, setShowCursorClickEffectAdvanced] = useState(false);
+
 	const cursorPreviewUrls = builtInCursorPreviewUrls;
 	const showDevMotionControls = import.meta.env.DEV;
 	const cursorStyleOptions = BUILTIN_CURSOR_STYLE_OPTIONS;
@@ -1689,7 +1670,7 @@ export function SettingsPanel({
 
 	const backgroundSettingsContent = (
 		<div className="space-y-5">
-			<section className="flex flex-col gap-2">
+			<section className="flex flex-col gap-4">
 				<div className="flex items-center justify-between gap-3">
 					<SectionLabel>{tSettings("background.title")}</SectionLabel>
 					<Button
@@ -1716,15 +1697,14 @@ export function SettingsPanel({
 			</section>
 
 			<div className="w-full">
-				<ToggleGroup
+				<ChoiceGroup
 					type="single"
 					value={backgroundTab}
 					onValueChange={(value) => {
 						if (value) setBackgroundTab(value as typeof backgroundTab);
 					}}
 					aria-label={tSettings("background.title", "Background type")}
-					className="w-full"
-					size="sm"
+					className="grid w-full grid-cols-4 gap-2"
 				>
 					{(
 						[
@@ -1734,17 +1714,17 @@ export function SettingsPanel({
 							{ value: "gradient", label: tSettings("background.gradient") },
 						] as const
 					).map((option) => (
-						<ToggleGroupItem
+						<ChoiceItem
 							key={option.value}
 							value={option.value}
 							className="flex-1 min-w-0 px-2"
 						>
 							{option.label}
-						</ToggleGroupItem>
+						</ChoiceItem>
 					))}
-				</ToggleGroup>
+				</ChoiceGroup>
 
-				<div className="pt-2">
+				<div className="pt-4">
 					<AnimatePresence mode="wait" initial={false}>
 						<motion.div
 							key={backgroundTab}
@@ -1754,7 +1734,7 @@ export function SettingsPanel({
 							transition={{ duration: 0.2, ease: "easeOut" }}
 						>
 							{backgroundTab === "image" ? (
-								<div className="mt-0 space-y-2">
+								<div className="mt-0 space-y-4">
 									<input
 										type="file"
 										ref={fileInputRef}
@@ -1765,13 +1745,13 @@ export function SettingsPanel({
 									<Button
 										onClick={() => fileInputRef.current?.click()}
 										variant="outline"
-										className="w-full gap-2 h-7"
+										className="w-full gap-2 h-9"
 									>
 										<Upload className="w-3 h-3" />
 										{tSettings("background.uploadCustom")}
 									</Button>
 
-									<div className="grid grid-cols-6 gap-2">
+									<div className="grid grid-cols-5 gap-2">
 										{customImages.map((imageUrl, idx) => {
 											const isSelected = getWallpaperTileState(imageUrl);
 											return renderWallpaperImageTile(imageUrl, isSelected, {
@@ -1820,17 +1800,17 @@ export function SettingsPanel({
 									</div>
 								</div>
 							) : backgroundTab === "video" ? (
-								<div className="mt-0 space-y-2">
+								<div className="mt-0 space-y-4">
 									<Button
 										onClick={handleVideoUpload}
 										variant="outline"
-										className="w-full gap-2 h-7"
+										className="w-full gap-2 h-9"
 									>
 										<Upload className="w-3 h-3" />
 										{tSettings("background.uploadCustomVideo", "Upload Video")}
 									</Button>
 
-									<div className="grid grid-cols-6 gap-2">
+									<div className="grid grid-cols-5 gap-2">
 										{customImages
 											.filter(isVideoWallpaperSource)
 											.map((videoUrl, idx) => {
@@ -1883,7 +1863,7 @@ export function SettingsPanel({
 									</div>
 								</div>
 							) : backgroundTab === "color" ? (
-								<div className="mt-0 space-y-2">
+								<div className="mt-0 space-y-4">
 									<div className="flex flex-col gap-3">
 										<ColorPalette
 											color={selectedColor}
@@ -1904,7 +1884,7 @@ export function SettingsPanel({
 									</div>
 								</div>
 							) : (
-								<div className="mt-0 grid grid-cols-6 gap-2">
+								<div className="mt-0 grid grid-cols-5 gap-2">
 									{GRADIENTS.map((g, idx) => (
 										<Button
 											variant="ghost"
@@ -1975,7 +1955,7 @@ export function SettingsPanel({
 		return (
 			<Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-none bg-transparent p-0 shadow-none">
 				<div
-					className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4"
+					className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-5 pb-6 pt-1"
 					style={{ scrollbarGutter: "stable" }}
 				>
 					<div className="mb-4 flex items-center gap-2">
@@ -1991,7 +1971,7 @@ export function SettingsPanel({
 	}
 
 	const frameSectionContent = (
-		<section className="flex flex-col gap-2">
+		<section className="flex flex-col gap-4">
 			<div className="flex items-center justify-between gap-3">
 				<SectionLabel>{tSettings("sections.frame", "Frame")}</SectionLabel>
 				<Button
@@ -2004,7 +1984,7 @@ export function SettingsPanel({
 					{t("common.actions.reset", "Reset")}
 				</Button>
 			</div>
-			<div className="flex flex-col gap-1.5">
+			<div className="flex flex-col gap-3">
 				<SliderControl
 					label={tSettings("effects.shadow")}
 					value={shadowIntensity}
@@ -2027,32 +2007,21 @@ export function SettingsPanel({
 					formatValue={(v) => `${v}%`}
 					parseInput={(text) => parseFloat(text.replace(/%$/, ""))}
 				/>
-				<div className="flex flex-col gap-1.5 pt-0.5">
-					<div className="flex items-center justify-between">
-						<SectionLabel>{tSettings("effects.padding")}</SectionLabel>
-						<ToggleButton
-							onClick={togglePaddingLink}
-							isSelected={padding.linked === false}
-							aria-label={
-								padding.linked === false
-									? tSettings(
-											"effects.paddingAdvancedHide",
-											"Hide advanced padding controls",
-										)
-									: tSettings(
-											"effects.paddingAdvancedShow",
-											"Show advanced padding controls",
-										)
-							}
-						>
-							{tSettings("effects.paddingAdvanced", "Advanced")}
-						</ToggleButton>
-					</div>
+				<div className="flex flex-col gap-3 pt-0.5">
+					{advanced && (
+						<div className="flex items-center justify-between gap-3">
+							<Label>Link padding sides</Label>
+							<Switch
+								aria-label="Link padding sides"
+								checked={padding.linked !== false}
+								onCheckedChange={togglePaddingLink}
+							/>
+						</div>
+					)}
 
 					{padding.linked !== false ? (
 						<SliderControl
-							label=""
-							ariaLabel={tSettings("effects.padding")}
+							label={tSettings("effects.padding")}
 							value={padding.top}
 							defaultValue={DEFAULT_PADDING.top}
 							min={0}
@@ -2126,7 +2095,7 @@ export function SettingsPanel({
 	);
 
 	const cropSectionContent = (
-		<section className="flex flex-col gap-2">
+		<section className="flex flex-col gap-4">
 			<div className="flex items-center justify-between gap-3">
 				<SectionLabel>{tSettings("sections.crop", "Crop")}</SectionLabel>
 				{isCropped ? (
@@ -2141,7 +2110,7 @@ export function SettingsPanel({
 					</Button>
 				) : null}
 			</div>
-			<div className="flex flex-col gap-1.5">
+			<div className="flex flex-col gap-3">
 				<SliderControl
 					label={tSettings("crop.top", "Top")}
 					value={cropTop}
@@ -2191,10 +2160,10 @@ export function SettingsPanel({
 	);
 
 	const captionsSectionContent = (
-		<section className="flex flex-col gap-2">
+		<section className="flex flex-col gap-4">
 			<div className="flex items-center justify-between gap-3">
 				<div className="flex items-center gap-3">
-					<SectionLabel>{tSettings("sections.captions", "Captions")}</SectionLabel>
+					<SectionLabel>{tSettings("captions.generation", "Generation")}</SectionLabel>
 					<Button
 						variant="ghost"
 						type="button"
@@ -2280,7 +2249,7 @@ export function SettingsPanel({
 						</Button>
 					</div>
 				</div>
-				<div className="flex flex-col gap-2">
+				<div className="flex flex-col gap-4">
 					<Button
 						type="button"
 						onClick={onGenerateAutoCaptions}
@@ -2319,7 +2288,7 @@ export function SettingsPanel({
 				) : null}
 			</div>
 
-			<div className="flex flex-col gap-1.5">
+			<div className="flex flex-col gap-3">
 				<div className="flex items-center justify-between gap-3 py-2">
 					<div className="text-xs text-muted-foreground">
 						{tSettings("captions.animation", "Animation")}
@@ -2345,9 +2314,11 @@ export function SettingsPanel({
 					</Select>
 				</div>
 				<div className="flex items-center justify-between gap-3 py-2">
-					<div className="text-xs text-muted-foreground">
-						{tSettings("captions.timelineQuickAdd", "Hover to add on timeline")}
-					</div>
+					{advanced && (
+						<div className="text-xs text-muted-foreground">
+							{tSettings("captions.timelineQuickAdd", "Hover to add on timeline")}
+						</div>
+					)}
 					<Switch
 						checked={autoCaptionSettings.timelineQuickAdd}
 						onCheckedChange={(timelineQuickAdd) =>
@@ -2383,63 +2354,77 @@ export function SettingsPanel({
 					formatValue={(value) => `${Math.round(value)}px`}
 					parseInput={(text) => parseFloat(text.replace(/px$/, ""))}
 				/>
-				<SliderControl
-					label={tSettings("captions.rowCount", "Rows")}
-					value={autoCaptionSettings.maxRows}
-					defaultValue={DEFAULT_AUTO_CAPTION_SETTINGS.maxRows}
-					min={1}
-					max={4}
-					step={1}
-					onChange={(value) => updateAutoCaptionSettings({ maxRows: Math.round(value) })}
-					formatValue={(value) => `${Math.round(value)}`}
-					parseInput={(text) => parseFloat(text)}
-				/>
-				<SliderControl
-					label={tSettings("captions.bottomOffset", "Bottom offset")}
-					value={autoCaptionSettings.bottomOffset}
-					defaultValue={DEFAULT_AUTO_CAPTION_SETTINGS.bottomOffset}
-					min={0}
-					max={30}
-					step={1}
-					onChange={(value) => updateAutoCaptionSettings({ bottomOffset: value })}
-					formatValue={(value) => `${Math.round(value)}%`}
-					parseInput={(text) => parseFloat(text.replace(/%$/, ""))}
-				/>
-				<SliderControl
-					label={tSettings("captions.maxWidth", "Max width")}
-					value={autoCaptionSettings.maxWidth}
-					defaultValue={DEFAULT_AUTO_CAPTION_SETTINGS.maxWidth}
-					min={40}
-					max={95}
-					step={1}
-					onChange={(value) => updateAutoCaptionSettings({ maxWidth: value })}
-					formatValue={(value) => `${Math.round(value)}%`}
-					parseInput={(text) => parseFloat(text.replace(/%$/, ""))}
-				/>
-				<SliderControl
-					label={tSettings("captions.boxRadius", "Box radius")}
-					value={autoCaptionSettings.boxRadius}
-					defaultValue={DEFAULT_AUTO_CAPTION_SETTINGS.boxRadius}
-					min={0}
-					max={40}
-					step={0.5}
-					onChange={(value) => updateAutoCaptionSettings({ boxRadius: value })}
-					formatValue={(value) =>
-						`${Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1)}px`
-					}
-					parseInput={(text) => parseFloat(text.replace(/px$/, ""))}
-				/>
-				<SliderControl
-					label={tSettings("captions.backgroundOpacity", "Background opacity")}
-					value={autoCaptionSettings.backgroundOpacity}
-					defaultValue={DEFAULT_AUTO_CAPTION_SETTINGS.backgroundOpacity}
-					min={0}
-					max={1}
-					step={0.01}
-					onChange={(value) => updateAutoCaptionSettings({ backgroundOpacity: value })}
-					formatValue={(value) => `${Math.round(value * 100)}%`}
-					parseInput={(text) => parseFloat(text.replace(/%$/, "")) / 100}
-				/>
+				{advanced && (
+					<SliderControl
+						label={tSettings("captions.rowCount", "Rows")}
+						value={autoCaptionSettings.maxRows}
+						defaultValue={DEFAULT_AUTO_CAPTION_SETTINGS.maxRows}
+						min={1}
+						max={4}
+						step={1}
+						onChange={(value) =>
+							updateAutoCaptionSettings({ maxRows: Math.round(value) })
+						}
+						formatValue={(value) => `${Math.round(value)}`}
+						parseInput={(text) => parseFloat(text)}
+					/>
+				)}
+				{advanced && (
+					<SliderControl
+						label={tSettings("captions.bottomOffset", "Bottom offset")}
+						value={autoCaptionSettings.bottomOffset}
+						defaultValue={DEFAULT_AUTO_CAPTION_SETTINGS.bottomOffset}
+						min={0}
+						max={30}
+						step={1}
+						onChange={(value) => updateAutoCaptionSettings({ bottomOffset: value })}
+						formatValue={(value) => `${Math.round(value)}%`}
+						parseInput={(text) => parseFloat(text.replace(/%$/, ""))}
+					/>
+				)}
+				{advanced && (
+					<SliderControl
+						label={tSettings("captions.maxWidth", "Max width")}
+						value={autoCaptionSettings.maxWidth}
+						defaultValue={DEFAULT_AUTO_CAPTION_SETTINGS.maxWidth}
+						min={40}
+						max={95}
+						step={1}
+						onChange={(value) => updateAutoCaptionSettings({ maxWidth: value })}
+						formatValue={(value) => `${Math.round(value)}%`}
+						parseInput={(text) => parseFloat(text.replace(/%$/, ""))}
+					/>
+				)}
+				{advanced && (
+					<SliderControl
+						label={tSettings("captions.boxRadius", "Box radius")}
+						value={autoCaptionSettings.boxRadius}
+						defaultValue={DEFAULT_AUTO_CAPTION_SETTINGS.boxRadius}
+						min={0}
+						max={40}
+						step={0.5}
+						onChange={(value) => updateAutoCaptionSettings({ boxRadius: value })}
+						formatValue={(value) =>
+							`${Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1)}px`
+						}
+						parseInput={(text) => parseFloat(text.replace(/px$/, ""))}
+					/>
+				)}
+				{advanced && (
+					<SliderControl
+						label={tSettings("captions.backgroundOpacity", "Background opacity")}
+						value={autoCaptionSettings.backgroundOpacity}
+						defaultValue={DEFAULT_AUTO_CAPTION_SETTINGS.backgroundOpacity}
+						min={0}
+						max={1}
+						step={0.01}
+						onChange={(value) =>
+							updateAutoCaptionSettings({ backgroundOpacity: value })
+						}
+						formatValue={(value) => `${Math.round(value * 100)}%`}
+						parseInput={(text) => parseFloat(text.replace(/%$/, "")) / 100}
+					/>
+				)}
 			</div>
 		</section>
 	);
@@ -2447,9 +2432,9 @@ export function SettingsPanel({
 	const effectSectionContent = (() => {
 		const settingsSectionContent = (
 			<div className="space-y-5">
-				<section className="flex flex-col gap-2">
+				<section className="flex flex-col gap-4">
 					<SectionLabel>{t("editor.theme.appearance", "Appearance")}</SectionLabel>
-					<ToggleGroup
+					<ChoiceGroup
 						type="single"
 						aria-label={t("editor.theme.appearance", "Appearance")}
 						value={themePreference}
@@ -2460,19 +2445,19 @@ export function SettingsPanel({
 						fullWidth
 						size="sm"
 					>
-						<ToggleGroupItem value="light" className="flex-1">
+						<ChoiceItem value="light" className="flex-1">
 							{t("editor.theme.light", "Light")}
-						</ToggleGroupItem>
-						<ToggleGroupItem value="dark" className="flex-1">
+						</ChoiceItem>
+						<ChoiceItem value="dark" className="flex-1">
 							{t("editor.theme.dark", "Dark")}
-						</ToggleGroupItem>
-						<ToggleGroupItem value="system" className="flex-1">
+						</ChoiceItem>
+						<ChoiceItem value="system" className="flex-1">
 							{t("editor.theme.system", "System")}
-						</ToggleGroupItem>
-					</ToggleGroup>
+						</ChoiceItem>
+					</ChoiceGroup>
 				</section>
 
-				<section className="flex flex-col gap-2">
+				<section className="flex flex-col gap-4">
 					<SectionLabel>{t("common.app.language", "Language")}</SectionLabel>
 					<Select value={locale} onValueChange={(value) => setLocale(value as AppLocale)}>
 						<SelectTrigger className="h-10 w-full text-sm">
@@ -2488,35 +2473,40 @@ export function SettingsPanel({
 					</Select>
 				</section>
 
-				<section className="flex flex-col gap-2">
-					<SectionLabel>{tSettings("updates.title", "Updates")}</SectionLabel>
-					<div className="flex items-center justify-between gap-3 py-2">
-						<div>
-							<div className="text-xs font-medium text-foreground">
-								{tSettings("updates.experimental", "Experimental updates")}
+				{advanced && (
+					<section className="flex flex-col gap-4">
+						<SectionLabel>{tSettings("updates.title", "Updates")}</SectionLabel>
+						<div className="flex items-center justify-between gap-3 py-2">
+							<div>
+								<div className="text-sm font-medium text-foreground">
+									{tSettings("updates.experimental", "Experimental updates")}
+								</div>
+								<div className="mt-0.5 text-xs text-muted-foreground/70">
+									{tSettings(
+										"updates.experimentalDescription",
+										"This is the front line of user testing - highly experimental so expect bugs",
+									)}
+								</div>
 							</div>
-							<div className="mt-0.5 text-xs text-muted-foreground/70">
-								{tSettings(
-									"updates.experimentalDescription",
-									"This is the front line of user testing - highly experimental so expect bugs",
+							<Switch
+								checked={experimentalUpdatesEnabled}
+								disabled={savingExperimentalUpdates}
+								onCheckedChange={(enabled) =>
+									void updateExperimentalUpdatesPreference(enabled)
+								}
+								aria-label={tSettings(
+									"updates.experimental",
+									"Experimental updates",
 								)}
-							</div>
+							/>
 						</div>
-						<Switch
-							checked={experimentalUpdatesEnabled}
-							disabled={savingExperimentalUpdates}
-							onCheckedChange={(enabled) =>
-								void updateExperimentalUpdatesPreference(enabled)
-							}
-							aria-label={tSettings("updates.experimental", "Experimental updates")}
-						/>
-					</div>
-				</section>
+					</section>
+				)}
 
-				<section className="flex flex-col gap-1.5">
+				<section className="flex flex-col gap-3">
 					<div className="flex items-center justify-between gap-3 py-2">
 						<div>
-							<div className="text-xs font-medium text-foreground">
+							<div className="text-sm font-medium text-foreground">
 								{tSettings(
 									"effects.autoApplyFreshRecordingZooms",
 									"Auto-apply fresh recording zooms",
@@ -2540,7 +2530,7 @@ export function SettingsPanel({
 					</div>
 					<div className="flex items-center justify-between gap-3 py-2">
 						<div>
-							<div className="text-xs font-medium text-foreground">
+							<div className="text-sm font-medium text-foreground">
 								{tSettings("effects.connectZooms", "Connect neighboring zooms")}
 							</div>
 							<div className="mt-0.5 text-xs text-muted-foreground/70">
@@ -2561,7 +2551,7 @@ export function SettingsPanel({
 					</div>
 				</section>
 
-				<section className="flex flex-col gap-2">
+				<section className="flex flex-col gap-4">
 					<MotionPresetCards
 						title={tSettings("effects.motionPresetsTitle", "Motion Presets")}
 						activePresetId={activeMotionPresetId}
@@ -2570,7 +2560,7 @@ export function SettingsPanel({
 					/>
 				</section>
 
-				<section className="flex flex-col gap-2">
+				<section className="flex flex-col gap-4">
 					<SectionLabel>{t("editor.keyboardShortcuts.title")}</SectionLabel>
 					<KeyboardShortcutsDialog
 						triggerLabel={t("editor.keyboardShortcuts.customize")}
@@ -2578,8 +2568,8 @@ export function SettingsPanel({
 					/>
 				</section>
 
-				{showDevMotionControls ? (
-					<section className="flex flex-col gap-2 rounded-xl border border-[#2563EB]/15 bg-[#2563EB]/5 p-3">
+				{advanced && showDevMotionControls ? (
+					<section className="flex flex-col gap-4 rounded-xl border border-[#2563EB]/15 bg-[#2563EB]/5 p-3">
 						<div className="flex items-center justify-between gap-3">
 							<div>
 								<SectionLabel>
@@ -2600,7 +2590,7 @@ export function SettingsPanel({
 						<div className="rounded-lg border border-foreground/10 bg-background/60 px-3 py-3">
 							<div className="flex items-start justify-between gap-3">
 								<div>
-									<div className="text-xs font-medium text-foreground">
+									<div className="text-sm font-medium text-foreground">
 										{tSettings(
 											"effects.nativeCaptureWarningTester",
 											"Native capture warning",
@@ -2632,7 +2622,7 @@ export function SettingsPanel({
 
 						<div className="space-y-1.5 rounded-lg border border-foreground/10 bg-background/60 px-3 py-3">
 							<div>
-								<div className="text-xs font-medium text-foreground">
+								<div className="text-sm font-medium text-foreground">
 									{tSettings("effects.cameraDebugTuning", "Camera Debug Tuning")}
 								</div>
 								<div className="mt-0.5 text-xs text-muted-foreground">
@@ -2694,7 +2684,7 @@ export function SettingsPanel({
 
 						<div className="space-y-1.5 rounded-lg border border-foreground/10 bg-background/60 px-3 py-3">
 							<div>
-								<div className="text-xs font-medium text-foreground">
+								<div className="text-sm font-medium text-foreground">
 									{tSettings("effects.cursorDebugTuning", "Cursor Debug Tuning")}
 								</div>
 								<div className="mt-0.5 text-xs text-muted-foreground">
@@ -2762,12 +2752,12 @@ export function SettingsPanel({
 			<div className="space-y-5">
 				{backgroundSettingsContent}
 				{frameSectionContent}
-				{cropSectionContent}
+				{advanced && cropSectionContent}
 			</div>
 		);
 
 		const zoomItemSectionContent = (
-			<section className="flex flex-col gap-2">
+			<section className="flex flex-col gap-4">
 				{selectedZoomId && (
 					<>
 						<div className="flex items-center justify-between gap-3">
@@ -2783,22 +2773,19 @@ export function SettingsPanel({
 							)}
 						</div>
 						<div className="mb-1">
-							<div className="flex gap-1">
-								<ToggleButton
-									isSelected={selectedZoomMode === "auto"}
-									onClick={() => onZoomModeChange?.("auto")}
-									className={cn("flex-1 px-3 py-1.5 text-xs")}
-								>
+							<ChoiceGroup
+								aria-label="Zoom mode"
+								value={selectedZoomMode ?? "auto"}
+								onValueChange={(value) => onZoomModeChange?.(value as ZoomMode)}
+								className="grid grid-cols-2 gap-2"
+							>
+								<ChoiceItem value="auto">
 									{tSettings("zoom.modeAuto", "Auto")}
-								</ToggleButton>
-								<ToggleButton
-									isSelected={selectedZoomMode === "manual"}
-									onClick={() => onZoomModeChange?.("manual")}
-									className={cn("flex-1 px-3 py-1.5 text-xs")}
-								>
+								</ChoiceItem>
+								<ChoiceItem value="manual">
 									{tSettings("zoom.modeManual", "Manual")}
-								</ToggleButton>
-							</div>
+								</ChoiceItem>
+							</ChoiceGroup>
 							<p className="mt-1.5 text-xs text-muted-foreground/70">
 								{selectedZoomMode === "manual"
 									? tSettings(
@@ -2811,25 +2798,20 @@ export function SettingsPanel({
 										)}
 							</p>
 						</div>
-						<div className="grid grid-cols-6 gap-1.5">
-							{ZOOM_DEPTH_OPTIONS.map((option) => {
-								const isActive = selectedZoomDepth === option.depth;
-								return (
-									<ToggleButton
-										isSelected={isActive}
-										key={option.depth}
-										onClick={() => onZoomDepthChange?.(option.depth)}
-										className={cn(
-											"h-auto w-full px-1 py-2 text-center ease-out cursor-pointer",
-										)}
-									>
-										<span className="text-xs font-semibold">
-											{option.label}
-										</span>
-									</ToggleButton>
-								);
-							})}
-						</div>
+						<ChoiceGroup
+							aria-label="Zoom level"
+							value={String(selectedZoomDepth)}
+							onValueChange={(value) =>
+								onZoomDepthChange?.(Number(value) as ZoomDepth)
+							}
+							className="grid grid-cols-3 gap-2"
+						>
+							{ZOOM_DEPTH_OPTIONS.map((option) => (
+								<ChoiceItem key={option.depth} value={String(option.depth)}>
+									{option.label}
+								</ChoiceItem>
+							))}
+						</ChoiceGroup>
 						<div className="h-px bg-foreground/[0.06] my-1" />
 					</>
 				)}
@@ -2845,16 +2827,18 @@ export function SettingsPanel({
 						{t("common.actions.reset", "Reset")}
 					</Button>
 				</div>
-				<div className="flex items-center justify-between py-2">
-					<span className="text-xs text-muted-foreground">
-						{tSettings("effects.classicZoom", "Classic Animation")}
-					</span>
-					<Switch
-						aria-label={tSettings("effects.classicZoom", "Classic Animation")}
-						checked={zoomClassicMode}
-						onCheckedChange={(v) => onZoomClassicModeChange?.(v)}
-					/>
-				</div>
+				{advanced && (
+					<div className="flex items-center justify-between py-2">
+						<span className="text-xs text-muted-foreground">
+							{tSettings("effects.classicZoom", "Classic Animation")}
+						</span>
+						<Switch
+							aria-label={tSettings("effects.classicZoom", "Classic Animation")}
+							checked={zoomClassicMode}
+							onCheckedChange={(v) => onZoomClassicModeChange?.(v)}
+						/>
+					</div>
+				)}
 				{!zoomClassicMode && (
 					<div className="text-xs text-muted-foreground">
 						{tSettings(
@@ -2870,7 +2854,7 @@ export function SettingsPanel({
 						}}
 						variant="destructive-soft"
 						size="sm"
-						className="mt-1 h-8 w-full gap-2 text-xs"
+						className="mt-1 h-10 w-full gap-2 text-xs"
 					>
 						<Trash2 className="h-3 w-3" />
 						{tSettings("zoom.deleteZoom")}
@@ -2965,7 +2949,7 @@ export function SettingsPanel({
 		);
 
 		const captionSectionContent = (
-			<section className="flex flex-col gap-2">
+			<section className="flex flex-col gap-4">
 				<SectionLabel>{tSettings("sections.caption", "Caption")}</SectionLabel>
 				{selectedCaptionId !== null ? (
 					<CaptionListPanel
@@ -3013,11 +2997,11 @@ export function SettingsPanel({
 				return captionSectionContent;
 			case "cursor":
 				return (
-					<section className="flex flex-col gap-2">
-						<div className="flex items-center justify-between gap-3">
-							<div className="flex items-center gap-3">
+					<section className="flex flex-col gap-4">
+						<div className="flex flex-col gap-4">
+							<div className="flex items-center justify-between gap-3">
 								<SectionLabel>
-									{tSettings("sections.cursor", "Cursor")}
+									{tSettings("sections.appearance", "Appearance")}
 								</SectionLabel>
 								<Button
 									variant="ghost"
@@ -3029,7 +3013,7 @@ export function SettingsPanel({
 									{t("common.actions.reset", "Reset")}
 								</Button>
 							</div>
-							<div className="flex items-center gap-3">
+							<div className="flex items-center justify-between gap-3">
 								<label className="flex items-center gap-1.5 text-xs text-muted-foreground">
 									<span>{tSettings("effects.showCursor")}</span>
 									<Switch
@@ -3048,9 +3032,9 @@ export function SettingsPanel({
 								</label>
 							</div>
 						</div>
-						<div className="flex flex-col gap-1.5">
+						<div className="flex flex-col gap-3">
 							<div className="space-y-1.5">
-								<ToggleGroup
+								<ChoiceGroup
 									type="single"
 									value={cursorStyle}
 									onValueChange={(value) => {
@@ -3062,7 +3046,7 @@ export function SettingsPanel({
 									aria-label={tSettings("effects.cursorStyle", "Cursor Style")}
 								>
 									{cursorStyleOptions.map((option) => (
-										<ToggleGroupItem
+										<ChoiceItem
 											key={option.value}
 											value={option.value}
 											title={option.label}
@@ -3079,9 +3063,9 @@ export function SettingsPanel({
 													/>
 												</div>
 											</div>
-										</ToggleGroupItem>
+										</ChoiceItem>
 									))}
-								</ToggleGroup>
+								</ChoiceGroup>
 							</div>
 							<SliderControl
 								label={tSettings("effects.cursorSize")}
@@ -3102,14 +3086,10 @@ export function SettingsPanel({
 								activeEffectId={cursorClickEffect}
 								effectColor={cursorClickEffectColor}
 								onApply={(effectId) => onCursorClickEffectChange?.(effectId)}
-								showAdvanced={showCursorClickEffectAdvanced}
-								onToggleAdvanced={() =>
-									setShowCursorClickEffectAdvanced((current) => !current)
-								}
 								tSettings={tSettings}
 							/>
-							{showCursorClickEffectAdvanced ? (
-								<div className="grid gap-1.5">
+							{advanced ? (
+								<div className="grid gap-3">
 									<div className="grid gap-1">
 										<div className="text-xs text-muted-foreground">
 											{tSettings(
@@ -3193,38 +3173,46 @@ export function SettingsPanel({
 								formatValue={(v) => `${v.toFixed(2)}×`}
 								parseInput={(text) => parseFloat(text.replace(/×$/, ""))}
 							/>
-							<SliderControl
-								label={tSettings(
-									"effects.cursorClickBounceDuration",
-									"Bounce Speed",
-								)}
-								value={cursorClickBounceDuration}
-								defaultValue={DEFAULT_CURSOR_CLICK_BOUNCE_DURATION}
-								min={60}
-								max={500}
-								step={5}
-								onChange={(v) => onCursorClickBounceDurationChange?.(v)}
-								formatValue={(v) => `${Math.round(v)} ms`}
-								parseInput={(text) => parseFloat(text.replace(/ms$/i, "").trim())}
-							/>
-							<SliderControl
-								label={tSettings("effects.cursorSway")}
-								value={toCursorSwaySliderValue(cursorSway)}
-								defaultValue={toCursorSwaySliderValue(DEFAULT_CURSOR_SWAY)}
-								min={0}
-								max={toCursorSwaySliderValue(2)}
-								step={toCursorSwaySliderValue(0.05)}
-								onChange={(v) => onCursorSwayChange?.(fromCursorSwaySliderValue(v))}
-								formatValue={(v) =>
-									v <= 0 ? tSettings("effects.off") : `${v.toFixed(2)}×`
-								}
-								parseInput={(text) => {
-									const normalized = text.trim().toLowerCase();
-									if (normalized === "off") return 0;
-									return parseFloat(text.replace(/×$/, ""));
-								}}
-							/>
-							{showDevMotionControls ? (
+							{advanced && (
+								<SliderControl
+									label={tSettings(
+										"effects.cursorClickBounceDuration",
+										"Bounce Speed",
+									)}
+									value={cursorClickBounceDuration}
+									defaultValue={DEFAULT_CURSOR_CLICK_BOUNCE_DURATION}
+									min={60}
+									max={500}
+									step={5}
+									onChange={(v) => onCursorClickBounceDurationChange?.(v)}
+									formatValue={(v) => `${Math.round(v)} ms`}
+									parseInput={(text) =>
+										parseFloat(text.replace(/ms$/i, "").trim())
+									}
+								/>
+							)}
+							{advanced && (
+								<SliderControl
+									label={tSettings("effects.cursorSway")}
+									value={toCursorSwaySliderValue(cursorSway)}
+									defaultValue={toCursorSwaySliderValue(DEFAULT_CURSOR_SWAY)}
+									min={0}
+									max={toCursorSwaySliderValue(2)}
+									step={toCursorSwaySliderValue(0.05)}
+									onChange={(v) =>
+										onCursorSwayChange?.(fromCursorSwaySliderValue(v))
+									}
+									formatValue={(v) =>
+										v <= 0 ? tSettings("effects.off") : `${v.toFixed(2)}×`
+									}
+									parseInput={(text) => {
+										const normalized = text.trim().toLowerCase();
+										if (normalized === "off") return 0;
+										return parseFloat(text.replace(/×$/, ""));
+									}}
+								/>
+							)}
+							{advanced && showDevMotionControls ? (
 								<div className="rounded-lg border border-foreground/10 bg-foreground/[0.03] px-3 py-2">
 									<div className="text-xs text-muted-foreground">
 										{tSettings(
@@ -3239,9 +3227,11 @@ export function SettingsPanel({
 				);
 			case "webcam":
 				return (
-					<section className="flex flex-col gap-2">
+					<section className="flex flex-col gap-4">
 						<div className="flex items-center justify-between gap-3">
-							<SectionLabel>{tSettings("sections.webcam", "Webcam")}</SectionLabel>
+							<SectionLabel>
+								{tSettings("sections.appearance", "Appearance")}
+							</SectionLabel>
 							<Button
 								variant="ghost"
 								size="sm"
@@ -3252,7 +3242,7 @@ export function SettingsPanel({
 								{t("common.actions.reset", "Reset")}
 							</Button>
 						</div>
-						<div className="flex flex-col gap-1.5">
+						<div className="flex flex-col gap-3">
 							<div className="flex items-center justify-between py-2">
 								<span className="text-xs text-muted-foreground">
 									{tSettings("effects.show", "Show")}
@@ -3294,98 +3284,109 @@ export function SettingsPanel({
 								formatValue={(v) => `${Math.round(v)}%`}
 								parseInput={(text) => parseFloat(text.replace(/%$/, ""))}
 							/>
-							<SliderControl
-								label={tSettings("effects.webcamHeight", "Webcam Height")}
-								value={webcamHeight}
-								defaultValue={DEFAULT_WEBCAM_SIZE}
-								min={10}
-								max={100}
-								step={1}
-								onChange={(v) => updateWebcam({ height: v })}
-								formatValue={(v) => `${Math.round(v)}%`}
-								parseInput={(text) => parseFloat(text.replace(/%$/, ""))}
-							/>
-							<div className="py-2">
-								<div className="mb-2 flex items-center justify-between gap-2">
-									<div className="text-xs text-muted-foreground">
-										{tSettings("effects.webcamCrop", "Crop")}
-									</div>
-									<Button
-										variant="ghost"
-										type="button"
-										onClick={() =>
-											updateWebcam({ cropRegion: DEFAULT_CROP_REGION })
-										}
-									>
-										{t("common.actions.reset", "Reset")}
-									</Button>
-								</div>
-								<WebcamCropControl
-									cropRegion={webcamCrop}
-									mirrored={webcam?.mirror ?? true}
-									previewSrc={webcamPreviewSrc}
-									previewCurrentTime={webcamPreviewCurrentTime}
-									previewPlaying={webcamPreviewPlaying}
-									previewTimeOffsetMs={webcam?.timeOffsetMs}
-									onCropChange={(cropRegion, previewFrame) =>
-										updateWebcam({
-											cropRegion,
-											height: previewFrame
-												? getCropMatchedWebcamHeightPercent(
-														webcamWidth,
-														webcamHeight,
-														previewFrame.width,
-														previewFrame.height,
-														cropRegion,
-													)
-												: webcamHeight,
-										})
-									}
+							{advanced && (
+								<SliderControl
+									label={tSettings("effects.webcamHeight", "Webcam Height")}
+									value={webcamHeight}
+									defaultValue={DEFAULT_WEBCAM_SIZE}
+									min={10}
+									max={100}
+									step={1}
+									onChange={(v) => updateWebcam({ height: v })}
+									formatValue={(v) => `${Math.round(v)}%`}
+									parseInput={(text) => parseFloat(text.replace(/%$/, ""))}
 								/>
-							</div>
+							)}
+							{advanced && (
+								<div className="py-2">
+									<div className="mb-2 flex items-center justify-between gap-2">
+										<div className="text-xs text-muted-foreground">
+											{tSettings("effects.webcamCrop", "Crop")}
+										</div>
+										<Button
+											variant="ghost"
+											type="button"
+											onClick={() =>
+												updateWebcam({ cropRegion: DEFAULT_CROP_REGION })
+											}
+										>
+											{t("common.actions.reset", "Reset")}
+										</Button>
+									</div>
+									<div className="mx-auto w-full max-w-56">
+										<WebcamCropControl
+											cropRegion={webcamCrop}
+											mirrored={webcam?.mirror ?? true}
+											previewSrc={webcamPreviewSrc}
+											previewCurrentTime={webcamPreviewCurrentTime}
+											previewPlaying={webcamPreviewPlaying}
+											previewTimeOffsetMs={webcam?.timeOffsetMs}
+											onCropChange={(cropRegion, previewFrame) =>
+												updateWebcam({
+													cropRegion,
+													height: previewFrame
+														? getCropMatchedWebcamHeightPercent(
+																webcamWidth,
+																webcamHeight,
+																previewFrame.width,
+																previewFrame.height,
+																cropRegion,
+															)
+														: webcamHeight,
+												})
+											}
+										/>
+									</div>
+								</div>
+							)}
 							<div className="py-2">
 								<div className="mb-2 text-xs text-muted-foreground">
 									{tSettings("effects.webcamPosition", "Position")}
 								</div>
-								<div className="grid grid-cols-3 gap-1.5">
-									{WEBCAM_POSITION_PRESETS.map((option) => {
-										const isActive = webcamPositionPreset === option.preset;
-										return (
-											<ToggleButton
-												isSelected={isActive}
-												key={option.preset}
-												onClick={() =>
-													applyWebcamPositionPreset(option.preset)
-												}
-												className={cn("h-8 px-0 text-sm")}
-											>
-												{option.label}
-											</ToggleButton>
-										);
-									})}
-								</div>
-								<div className="mt-2 flex items-center justify-between rounded-lg bg-black/10 px-2.5 py-1.5">
-									<span className="text-xs text-muted-foreground">
-										{tSettings(
-											"effects.webcamCustomPosition",
-											"Custom position",
-										)}
-									</span>
-									<Switch
-										aria-label={tSettings(
-											"effects.webcamCustomPosition",
-											"Custom position",
-										)}
-										checked={webcamPositionPreset === "custom"}
-										onCheckedChange={(checked) =>
-											applyWebcamPositionPreset(
-												checked ? "custom" : DEFAULT_WEBCAM_POSITION_PRESET,
-											)
-										}
-									/>
-								</div>
+								<ChoiceGroup
+									aria-label={tSettings("effects.webcamPosition", "Position")}
+									value={webcamPositionPreset}
+									onValueChange={(value) =>
+										applyWebcamPositionPreset(value as WebcamPositionPreset)
+									}
+									className="grid grid-cols-3 gap-2"
+								>
+									{WEBCAM_POSITION_PRESETS.map((option) => (
+										<ChoiceItem
+											key={option.preset}
+											value={option.preset}
+											textValue={option.preset}
+										>
+											{option.label}
+										</ChoiceItem>
+									))}
+								</ChoiceGroup>
+								{advanced && (
+									<div className="mt-2 flex items-center justify-between py-3">
+										<span className="text-xs text-muted-foreground">
+											{tSettings(
+												"effects.webcamCustomPosition",
+												"Custom position",
+											)}
+										</span>
+										<Switch
+											aria-label={tSettings(
+												"effects.webcamCustomPosition",
+												"Custom position",
+											)}
+											checked={webcamPositionPreset === "custom"}
+											onCheckedChange={(checked) =>
+												applyWebcamPositionPreset(
+													checked
+														? "custom"
+														: DEFAULT_WEBCAM_POSITION_PRESET,
+												)
+											}
+										/>
+									</div>
+								)}
 							</div>
-							{webcamPositionPreset === "custom" ? (
+							{advanced && webcamPositionPreset === "custom" ? (
 								<>
 									<SliderControl
 										label={tSettings("effects.webcamHorizontal", "Horizontal")}
@@ -3421,17 +3422,19 @@ export function SettingsPanel({
 									/>
 								</>
 							) : null}
-							<SliderControl
-								label={tSettings("effects.webcamMargin", "Margin")}
-								value={webcam?.margin ?? DEFAULT_WEBCAM_MARGIN}
-								defaultValue={DEFAULT_WEBCAM_MARGIN}
-								min={0}
-								max={96}
-								step={1}
-								onChange={(v) => updateWebcam({ margin: v })}
-								formatValue={(v) => `${Math.round(v)}px`}
-								parseInput={(text) => parseFloat(text.replace(/px$/, ""))}
-							/>
+							{advanced && (
+								<SliderControl
+									label={tSettings("effects.webcamMargin", "Margin")}
+									value={webcam?.margin ?? DEFAULT_WEBCAM_MARGIN}
+									defaultValue={DEFAULT_WEBCAM_MARGIN}
+									min={0}
+									max={96}
+									step={1}
+									onChange={(v) => updateWebcam({ margin: v })}
+									formatValue={(v) => `${Math.round(v)}px`}
+									parseInput={(text) => parseFloat(text.replace(/px$/, ""))}
+								/>
+							)}
 							<SliderControl
 								label={tSettings("effects.webcamRoundness")}
 								value={webcam?.roundness ?? DEFAULT_WEBCAM_ROUNDNESS}
@@ -3443,19 +3446,21 @@ export function SettingsPanel({
 								formatValue={(v) => `${Math.round(v)}%`}
 								parseInput={(text) => parseFloat(text.replace(/%$/, ""))}
 							/>
-							<SliderControl
-								label={tSettings("effects.webcamShadow")}
-								value={webcam?.shadow ?? DEFAULT_WEBCAM_SHADOW}
-								defaultValue={DEFAULT_WEBCAM_SHADOW}
-								min={0}
-								max={1}
-								step={0.01}
-								onChange={(v) => updateWebcam({ shadow: v })}
-								formatValue={(v) => `${Math.round(v * 100)}%`}
-								parseInput={(text) => parseFloat(text.replace(/%$/, "")) / 100}
-							/>
+							{advanced && (
+								<SliderControl
+									label={tSettings("effects.webcamShadow")}
+									value={webcam?.shadow ?? DEFAULT_WEBCAM_SHADOW}
+									defaultValue={DEFAULT_WEBCAM_SHADOW}
+									min={0}
+									max={1}
+									step={0.01}
+									onChange={(v) => updateWebcam({ shadow: v })}
+									formatValue={(v) => `${Math.round(v * 100)}%`}
+									parseInput={(text) => parseFloat(text.replace(/%$/, "")) / 100}
+								/>
+							)}
 							<div className="py-2">
-								<div className="flex flex-col gap-2">
+								<div className="flex flex-col gap-4">
 									<div className="min-w-0">
 										<div className="text-xs text-muted-foreground">
 											{tSettings("effects.webcamFootage")}
@@ -3470,7 +3475,7 @@ export function SettingsPanel({
 											type="button"
 											variant="outline"
 											onClick={onUploadWebcam}
-											className="h-7 min-w-0 gap-1.5 px-2"
+											className="h-10 min-w-0 gap-2 px-3"
 										>
 											<Upload className="h-3 w-3" />
 											<span className="min-w-0 truncate">
@@ -3484,7 +3489,7 @@ export function SettingsPanel({
 												type="button"
 												variant="outline"
 												onClick={onClearWebcam}
-												className="h-7 min-w-0 gap-1.5 px-2"
+												className="h-10 min-w-0 gap-2 px-3"
 											>
 												<Trash2 className="h-3 w-3" />
 												<span className="min-w-0 truncate">
@@ -3507,7 +3512,7 @@ export function SettingsPanel({
 	return (
 		<Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-none bg-transparent p-0 shadow-none">
 			<div
-				className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4"
+				className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-5 pb-6 pt-1"
 				style={{ scrollbarGutter: "stable" }}
 			>
 				<AnimatePresence mode="wait" initial={false}>
@@ -3525,7 +3530,7 @@ export function SettingsPanel({
 
 			<div
 				className={cn(
-					"flex-shrink-0 border-t border-foreground/10 bg-editor-panel p-4 pt-3",
+					"shrink-0 px-5 py-4",
 					(() => {
 						if (activeEffectSection === "clip" && selectedClipId) return false;
 						if (activeEffectSection === "zoom" && selectedZoomId) return false;
@@ -3542,7 +3547,7 @@ export function SettingsPanel({
 						}}
 						variant="destructive-soft"
 						size="sm"
-						className="h-8 w-full gap-2 text-xs"
+						className="h-10 w-full gap-2 text-xs"
 					>
 						<Trash2 className="h-3 w-3" />
 						{tSettings("clip.delete", "Delete Clip")}
@@ -3555,7 +3560,7 @@ export function SettingsPanel({
 						}}
 						variant="destructive-soft"
 						size="sm"
-						className="h-8 w-full gap-2 text-xs"
+						className="h-10 w-full gap-2 text-xs"
 					>
 						<Trash2 className="h-3 w-3" />
 						{tSettings("zoom.deleteZoom", "Delete Zoom")}
@@ -3568,7 +3573,7 @@ export function SettingsPanel({
 						}}
 						variant="destructive-soft"
 						size="sm"
-						className="h-8 w-full gap-2 text-xs"
+						className="h-10 w-full gap-2 text-xs"
 					>
 						<Trash2 className="h-3 w-3" />
 						{tSettings("audio.deleteRegion", "Delete Audio")}
@@ -3582,7 +3587,7 @@ export function SettingsPanel({
 						}}
 						variant="destructive-soft"
 						size="sm"
-						className="h-8 w-full gap-2 text-xs"
+						className="h-10 w-full gap-2 text-xs"
 					>
 						<Trash2 className="h-3 w-3" />
 						{tSettings("annotation.delete", "Delete Annotation")}

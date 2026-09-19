@@ -6,7 +6,6 @@ import {
 	AlignLeft,
 	AlignRight,
 	TextB as Bold,
-	CaretDown as ChevronDown,
 	ImageSquare as ImageIcon,
 	Info,
 	TextItalic as Italic,
@@ -20,7 +19,7 @@ import { ColorControl, ColorPalette } from "@/components/ui/color-picker";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
 import {
 	Select,
 	SelectContent,
@@ -143,7 +142,7 @@ export function AnnotationSettingsPanel({
 
 	return (
 		<Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-none bg-transparent p-0 shadow-none">
-			<div className="flex-1 min-h-0 p-4 overflow-y-auto custom-scrollbar">
+			<div className="flex-1 min-h-0 px-5 pb-6 pt-1 overflow-y-auto custom-scrollbar">
 				<div className="mb-6">
 					{/* Type Selector */}
 					<Tabs
@@ -183,9 +182,9 @@ export function AnnotationSettingsPanel({
 						</TabsList>
 
 						{/* Text Content */}
-						<TabsContent value="text" className="mt-0 space-y-4">
+						<TabsContent value="text" className="mt-0 space-y-4 p-0">
 							<div>
-								<label className="text-xs font-medium text-foreground mb-2 block">
+								<label className="text-sm font-medium text-foreground mb-2 block">
 									{t("annotations.textContent")}
 								</label>
 								<TextArea
@@ -202,7 +201,7 @@ export function AnnotationSettingsPanel({
 								{/* Font Family & Size */}
 								<div className="grid grid-cols-2 gap-2">
 									<div>
-										<label className="text-xs font-medium text-foreground mb-2 block">
+										<label className="text-sm font-medium text-foreground mb-2 block">
 											{t("annotations.fontStyle")}
 										</label>
 										<Select
@@ -248,7 +247,7 @@ export function AnnotationSettingsPanel({
 										</Select>
 									</div>
 									<div>
-										<label className="text-xs font-medium text-foreground mb-2 block">
+										<label className="text-sm font-medium text-foreground mb-2 block">
 											{t("annotations.size")}
 										</label>
 										<Select
@@ -383,110 +382,40 @@ export function AnnotationSettingsPanel({
 								{/* Colors */}
 								<div className="grid grid-cols-2 gap-4">
 									<div>
-										<label className="text-xs font-medium text-foreground mb-2 block">
+										<label className="text-sm font-medium text-foreground mb-2 block">
 											{t("annotations.textColor")}
 										</label>
-										<Popover>
-											<PopoverTrigger asChild>
-												<Button
-													variant="outline"
-													className="w-full h-9 justify-start gap-2 px-2"
-												>
-													<div
-														className="w-4 h-4 rounded-full border border-foreground/20"
-														style={{
-															backgroundColor: annotation.style.color,
-														}}
-													/>
-													<span className="text-xs text-muted-foreground truncate flex-1 text-left">
-														{annotation.style.color}
-													</span>
-													<ChevronDown className="h-3 w-3 opacity-50" />
-												</Button>
-											</PopoverTrigger>
-											<PopoverContent className="w-[260px] p-3">
-												<ColorPalette
-													color={annotation.style.color}
-													colors={colorPalette}
-													onChange={(color) => {
-														onStyleChange({ color: color.hex });
-													}}
-													style={{
-														borderRadius: "8px",
-													}}
-												/>
-											</PopoverContent>
-										</Popover>
+										<ColorControl
+											value={annotation.style.color}
+											label={t("annotations.textColor")}
+											onChange={(color) => onStyleChange({ color })}
+											colors={colorPalette}
+											compact
+										/>
 									</div>
 									<div>
-										<label className="text-xs font-medium text-foreground mb-2 block">
+										<label className="text-sm font-medium text-foreground mb-2 block">
 											{t("annotations.background")}
 										</label>
-										<Popover>
-											<PopoverTrigger asChild>
-												<Button
-													variant="outline"
-													className="w-full h-9 justify-start gap-2 px-2"
-												>
-													<div className="w-4 h-4 rounded-full border border-foreground/20 relative overflow-hidden">
-														<div className="absolute inset-0 checkerboard-bg opacity-50" />
-														<div
-															className="absolute inset-0"
-															style={{
-																backgroundColor:
-																	annotation.style
-																		.backgroundColor,
-															}}
-														/>
-													</div>
-													<span className="text-xs text-muted-foreground truncate flex-1 text-left">
-														{annotation.style.backgroundColor ===
-														"transparent"
-															? t("annotations.none")
-															: "Color"}
-													</span>
-													<ChevronDown className="h-3 w-3 opacity-50" />
-												</Button>
-											</PopoverTrigger>
-											<PopoverContent className="w-[260px] p-3">
-												<ColorPalette
-													color={
-														annotation.style.backgroundColor ===
-														"transparent"
-															? "#000000"
-															: annotation.style.backgroundColor
-													}
-													colors={colorPalette}
-													onChange={(color) => {
-														onStyleChange({
-															backgroundColor: color.hex,
-														});
-													}}
-													style={{
-														borderRadius: "8px",
-													}}
-												/>
-												<Button
-													variant="ghost"
-													size="sm"
-													className="w-full mt-2 text-xs h-7"
-													onClick={() => {
-														onStyleChange({
-															backgroundColor: "transparent",
-														});
-													}}
-												>
-													{t("annotations.clearBackground")}
-												</Button>
-											</PopoverContent>
-										</Popover>
+										<ColorControl
+											value={annotation.style.backgroundColor}
+											label={t("annotations.background")}
+											onChange={(color) =>
+												onStyleChange({ backgroundColor: color })
+											}
+											colors={colorPalette}
+											compact
+											onClear={() =>
+												onStyleChange({ backgroundColor: "transparent" })
+											}
+										/>
 									</div>
 								</div>
 							</div>
 						</TabsContent>
 
 						{/* Image Upload */}
-						<TabsContent value="image" className="mt-0 space-y-4">
+						<TabsContent value="image" className="mt-0 space-y-4 p-0">
 							<input
 								type="file"
 								ref={fileInputRef}
@@ -518,9 +447,9 @@ export function AnnotationSettingsPanel({
 							</p>
 						</TabsContent>
 
-						<TabsContent value="figure" className="mt-0 space-y-4">
+						<TabsContent value="figure" className="mt-0 space-y-4 p-0">
 							<div>
-								<label className="text-xs font-medium text-foreground mb-3 block">
+								<label className="text-sm font-medium text-foreground mb-3 block">
 									{t("annotations.arrowDirection")}
 								</label>
 								<div className="grid grid-cols-4 gap-2">
@@ -576,7 +505,7 @@ export function AnnotationSettingsPanel({
 							</div>
 
 							<div>
-								<label className="text-xs font-medium text-foreground mb-2 block">
+								<label className="text-sm font-medium text-foreground mb-2 block">
 									{t("annotations.strokeWidth", undefined, {
 										width: annotation.figureData?.strokeWidth || 4,
 									})}
@@ -596,58 +525,31 @@ export function AnnotationSettingsPanel({
 									min={1}
 									max={6}
 									step={1}
-									className="w-full"
+									className="my-3 w-full"
 								/>
 							</div>
 
 							<div>
-								<label className="text-xs font-medium text-foreground mb-2 block">
+								<label className="text-sm font-medium text-foreground mb-2 block">
 									{t("annotations.arrowColor")}
 								</label>
-								<Popover>
-									<PopoverTrigger asChild>
-										<Button
-											variant="outline"
-											className="w-full h-10 justify-start gap-2"
-										>
-											<div
-												className="w-5 h-5 rounded-full border border-foreground/20"
-												style={{
-													backgroundColor:
-														annotation.figureData?.color || "#2563EB",
-												}}
-											/>
-											<span className="text-xs text-muted-foreground truncate flex-1 text-left">
-												{annotation.figureData?.color || "#2563EB"}
-											</span>
-											<ChevronDown className="h-3 w-3 opacity-50" />
-										</Button>
-									</PopoverTrigger>
-									<PopoverContent className="w-[260px] p-3">
-										<ColorPalette
-											color={annotation.figureData?.color || "#2563EB"}
-											colors={colorPalette}
-											onChange={(color) => {
-												const newFigureData: FigureData = {
-													...annotation.figureData!,
-													color: color.hex,
-												};
-												onFigureDataChange?.(newFigureData);
-											}}
-											style={{
-												borderRadius: "8px",
-											}}
-										/>
-									</PopoverContent>
-								</Popover>
+								<ColorControl
+									value={annotation.figureData?.color || "#2563EB"}
+									label={t("annotations.arrowColor")}
+									onChange={(color) =>
+										onFigureDataChange?.({ ...annotation.figureData!, color })
+									}
+									colors={colorPalette}
+									compact
+								/>
 							</div>
 						</TabsContent>
 
-						<TabsContent value="blur" className="mt-0 space-y-4">
-							<div className="p-4 bg-foreground/5 rounded-xl border border-foreground/10 flex flex-col items-center">
-								<div className="w-full space-y-3">
+						<TabsContent value="blur" className="mt-0 space-y-4 p-0">
+							<div className="flex flex-col items-center">
+								<div className="w-full space-y-5">
 									<div className="flex items-center justify-between">
-										<span className="text-xs font-medium text-foreground">
+										<span className="text-sm font-medium text-foreground">
 											{t("annotations.blurStrength", undefined, {
 												strength: annotation.blurIntensity ?? 20,
 											})}
@@ -666,9 +568,9 @@ export function AnnotationSettingsPanel({
 									/>
 								</div>
 
-								<div className="w-full space-y-3 mt-4">
+								<div className="w-full space-y-5 mt-4">
 									<div className="flex items-center justify-between">
-										<span className="text-xs font-medium text-foreground">
+										<span className="text-sm font-medium text-foreground">
 											{t(
 												"annotations.solidColor",
 												"Solid Color (Censorship)",
@@ -717,7 +619,7 @@ export function AnnotationSettingsPanel({
 					</div>
 				</div>
 			</div>
-			<div className="flex-shrink-0 border-t border-foreground/10 bg-editor-panel p-4 pt-3">
+			<div className="shrink-0 px-5 py-4">
 				<Button
 					onClick={onDelete}
 					variant="destructive-soft"

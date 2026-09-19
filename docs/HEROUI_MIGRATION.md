@@ -19,20 +19,24 @@ helper installation. The dependency lockfile belongs to this branch.
 
 To go back, close the development app and run `npm run dev` from the original
 `recordly` directory. No reset, stash, or file restoration is needed. You can
-keep both checkouts while comparing them. If this commit is merged later,
-`git revert <migration-commit>` reverses the migration without rewriting history.
+keep both checkouts while comparing them. To undo just the UI refinement pass,
+use `git revert <refinement-commit>`. To undo the entire migration after merging,
+revert the branch commits newest-first, including the original `93be193` migration.
 
 ## UI approach
 
 The controls use HeroUI React 3.2.6 and its default light/dark theme, following
 [the official component demos](https://heroui.com/en/docs/react/components).
-This includes buttons, fields, switches, sliders, tabs, toggle groups, radios,
+This includes buttons, fields, switches, sliders, tabs, tag groups, toggle groups, radios,
 selects, modals, popovers, menus, tooltips, color pickers, progress indicators,
 skeletons, and toasts. React 19 and Tailwind 4 satisfy HeroUI v3 requirements.
 The former Radix, Sonner, and third-party color picker dependencies are removed.
 
-The editor uses docked surfaces, a fixed-width inspector, aligned toolbars,
-consistent spacing, and restrained selection colors. Floating layers keep one
+The editor uses a floating inspector card, an open canvas and timeline, aligned
+toolbars, consistent spacing, and restrained selection colors. Advanced controls
+live behind a per-section switch; changing views preserves project values.
+Background types and other exclusive choices use TagGroup. The header follows
+native fullscreen state and keeps project titles centered at narrow widths. Floating layers keep one
 surface instead of nesting cards and shadows. Timeline colors follow the theme
 and retain the distinction between clip types. The recorder keeps its compact
 desktop layout.
@@ -60,7 +64,8 @@ Browser tests use an explicit mocked Electron bridge and a generated six-second
 video fixture; they never start a real screen recording. They cover control
 callbacks and keyboard behavior, modal focus, export settings, presets, cropping,
 annotation formatting/undo, project menus, recorder popovers, countdown and update
-windows, theme switching, and a smaller desktop layout. Screenshots and failure
+windows, theme switching, Advanced state, color editing, and header/playback
+alignment from 800–1440px with and without macOS window controls. Screenshots and failure
 traces go to the ignored `test-results/` directory.
 
 `npm run dev:ui` starts only Vite for browser inspection; the component fixture

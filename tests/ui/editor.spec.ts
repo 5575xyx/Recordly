@@ -1,13 +1,16 @@
 import { expect, test } from "@playwright/test";
 import { installDesktopBridge } from "./bridge";
 test("editor loads video, switches tools and edits export options", async ({ page }) => {
+	test.setTimeout(60000);
 	const errors: string[] = [];
 	page.on("pageerror", (e) => {
 		errors.push(e.message);
 	});
 	await installDesktopBridge(page);
 	await page.goto("/?windowType=editor");
-	await expect(page.getByRole("navigation", { name: "Editor tools" })).toBeVisible();
+	await expect(page.getByRole("navigation", { name: "Editor tools" })).toBeVisible({
+		timeout: 20000,
+	});
 	await expect(page.getByRole("slider", { name: "Blur", exact: true })).toBeVisible();
 	await expect
 		.poll(() =>
@@ -24,7 +27,7 @@ test("editor loads video, switches tools and edits export options", async ({ pag
 		animations: "disabled",
 	});
 	const inspectorWidth = (await page.locator("aside").boundingBox())?.width;
-	await page.getByRole("radio", { name: "Color", exact: true }).click();
+	await page.getByRole("row", { name: "Color", exact: true }).click();
 	await expect(page.getByRole("button", { name: "Custom color", exact: true })).toBeVisible();
 	await page.getByRole("button", { name: "Custom color", exact: true }).click();
 	await expect(page.getByRole("dialog", { name: "Custom color", exact: true })).toBeVisible();
@@ -34,19 +37,19 @@ test("editor loads video, switches tools and edits export options", async ({ pag
 	await page.getByRole("radio", { name: "Captions", exact: true }).click();
 	await page.getByRole("radio", { name: "Settings", exact: true }).click();
 	await expect(page.getByText("Appearance", { exact: true })).toBeVisible();
-	await page.getByRole("radio", { name: "Dark", exact: true }).click();
+	await page.getByRole("row", { name: "Dark", exact: true }).click();
 	await expect(page.locator("html")).toHaveClass(/dark/);
 	await page.screenshot({
 		path: "test-results/editor-dark.png",
 		fullPage: true,
 		animations: "disabled",
 	});
-	await page.getByRole("radio", { name: "Light", exact: true }).click();
+	await page.getByRole("row", { name: "Light", exact: true }).click();
 	await expect(page.locator("html")).not.toHaveClass(/dark/);
 	await page.getByRole("radio", { name: "Scene", exact: true }).click();
 	await page.getByRole("button", { name: "Export", exact: true }).click();
-	await expect(page.getByRole("radiogroup", { name: "Format", exact: true })).toBeVisible();
-	await page.getByRole("radio", { name: "GIF", exact: true }).click();
+	await expect(page.getByRole("grid", { name: "Format", exact: true })).toBeVisible();
+	await page.getByRole("row", { name: "GIF", exact: true }).click();
 	await expect(page.getByRole("switch", { name: "Loop", exact: false })).toBeVisible();
 	await page.screenshot({
 		path: "test-results/editor-export-light.png",

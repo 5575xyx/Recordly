@@ -1,5 +1,5 @@
 import { DownloadSimple as Download, FilmSlate as Film, Image } from "@phosphor-icons/react";
-import { Card, Label, Description, ToggleButtonGroup, ToggleButton } from "@heroui/react";
+import { Card, Label, Description, TagGroup, Tag } from "@heroui/react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -51,37 +51,45 @@ function Choices<T extends string | number>({
 }: {
 	label: string;
 	value: T;
-	options: { value: T; label: ReactNode; description?: string }[];
+	options: { value: T; label: ReactNode; textValue?: string; description?: string }[];
 	onChange?: (value: T) => void;
 }) {
 	return (
 		<div className="flex flex-col gap-2">
 			<Label>{label}</Label>
-			<ToggleButtonGroup
+			<TagGroup
 				aria-label={label}
 				selectionMode="single"
 				disallowEmptySelection
 				selectedKeys={[String(value)]}
 				onSelectionChange={(keys) => {
+					if (keys === "all") return;
 					const selected = options.find((option) => keys.has(String(option.value)));
 					if (selected) onChange?.(selected.value);
 				}}
-				fullWidth
-				size="sm"
+				size="lg"
 			>
-				{options.map((option) => (
-					<ToggleButton
-						key={option.value}
-						id={String(option.value)}
-						className="h-auto min-h-9 flex-1 flex-col gap-0.5 py-2"
-					>
-						{option.label}
-						{option.description && (
-							<span className="text-[10px] opacity-70">{option.description}</span>
-						)}
-					</ToggleButton>
-				))}
-			</ToggleButtonGroup>
+				<TagGroup.List className="flex gap-2">
+					{options.map((option) => (
+						<Tag
+							key={option.value}
+							id={String(option.value)}
+							textValue={
+								option.textValue ??
+								(typeof option.label === "string"
+									? option.label
+									: String(option.value))
+							}
+							className="h-auto min-h-10 flex-1 justify-center flex-col gap-0.5 py-2"
+						>
+							{option.label}
+							{option.description && (
+								<span className="text-[10px] opacity-70">{option.description}</span>
+							)}
+						</Tag>
+					))}
+				</TagGroup.List>
+			</TagGroup>
 		</div>
 	);
 }
@@ -128,6 +136,7 @@ export function ExportSettingsMenu({
 					options={[
 						{
 							value: "mp4",
+							textValue: tSettings("export.mp4"),
 							label: (
 								<span className="flex items-center gap-2">
 									<Film />
@@ -137,6 +146,7 @@ export function ExportSettingsMenu({
 						},
 						{
 							value: "gif",
+							textValue: tSettings("export.gif"),
 							label: (
 								<span className="flex items-center gap-2">
 									<Image />
@@ -170,7 +180,12 @@ export function ExportSettingsMenu({
 							onChange={onExportEncodingModeChange}
 							options={(["fast", "balanced", "quality"] as const).map((value) => ({
 								value,
-								label: tSettings(`export.encoding.${value}`),
+								label: tSettings(
+									`export.encoding.${value}`,
+									{ fast: "Fast", balanced: "Balanced", quality: "Quality" }[
+										value
+									],
+								),
 							}))}
 						/>
 						<Choices

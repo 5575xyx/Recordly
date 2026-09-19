@@ -7,10 +7,10 @@ import {
 	FrameCorners,
 	UserCircle,
 } from "@phosphor-icons/react";
-import { ToggleButtonGroup, ToggleButton, Tooltip } from "@heroui/react";
+import { ToggleButtonGroup, ToggleButton, Tooltip, Card, Switch, Label } from "@heroui/react";
 import { Button } from "@/components/ui/button";
 import type { ComponentProps, Dispatch, SetStateAction } from "react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "@/components/ui/toast";
 import type { useI18n } from "@/contexts/I18nContext";
 import ExtensionManager from "../ExtensionManager";
@@ -25,6 +25,13 @@ type Props = {
 };
 
 export function EditorSidebar({ t, activeSection, setActiveSection, settingsPanelProps }: Props) {
+	const [advancedSections, setAdvancedSections] = useState<Record<string, boolean>>({});
+	const advanced = advancedSections[activeSection] ?? false;
+	const hasAdvanced =
+		!settingsPanelProps.selectedAnnotationId &&
+		["scene", "frame", "crop", "cursor", "webcam", "captions", "settings", "zoom"].includes(
+			activeSection,
+		);
 	const sections = useMemo(
 		() => [
 			{
@@ -53,10 +60,10 @@ export function EditorSidebar({ t, activeSection, setActiveSection, settingsPane
 		[t],
 	);
 	return (
-		<div className="flex min-h-0 flex-shrink-0 border-r border-separator bg-surface">
+		<div className="flex min-h-0 shrink-0 gap-2 pb-3 pr-2">
 			<nav
 				aria-label={t("settings.sections.title", "Editor tools")}
-				className="flex w-14 flex-col items-center gap-3 border-r border-separator py-3"
+				className="flex w-14 flex-col items-center gap-3 py-2.5"
 			>
 				<ToggleButtonGroup
 					orientation="vertical"
@@ -97,22 +104,46 @@ export function EditorSidebar({ t, activeSection, setActiveSection, settingsPane
 				</Button>
 			</nav>
 			<aside className="flex w-[320px] min-h-0 flex-col">
-				<header className="flex h-11 shrink-0 items-center border-b border-separator px-4">
-					<h2 className="text-sm font-medium">
-						{settingsPanelProps.selectedAnnotationId
-							? t("timeline.annotation.label", "Annotation")
-							: (sections.find((section) => section.id === activeSection)?.label ??
-								t(
-									`settings.sections.${activeSection}`,
-									activeSection.charAt(0).toUpperCase() + activeSection.slice(1),
-								))}
-					</h2>
-				</header>
-				{activeSection === "extensions" ? (
-					<ExtensionManager />
-				) : (
-					<SettingsPanel {...settingsPanelProps} />
-				)}
+				<Card className="min-h-0 flex-1 gap-0 overflow-hidden p-0">
+					<header className="flex min-h-14 shrink-0 items-center justify-between gap-3 px-5 py-3">
+						<Card.Title>
+							{settingsPanelProps.selectedAnnotationId
+								? t("timeline.annotation.label", "Annotation")
+								: (sections.find((section) => section.id === activeSection)
+										?.label ??
+									t(
+										`settings.sections.${activeSection}`,
+										activeSection.charAt(0).toUpperCase() +
+											activeSection.slice(1),
+									))}
+						</Card.Title>
+						{hasAdvanced && (
+							<Switch
+								size="sm"
+								isSelected={advanced}
+								onChange={(value) =>
+									setAdvancedSections((current) => ({
+										...current,
+										[activeSection]: value,
+									}))
+								}
+								aria-label="Advanced settings"
+							>
+								<Switch.Content>
+									<Label>Advanced</Label>
+									<Switch.Control>
+										<Switch.Thumb />
+									</Switch.Control>
+								</Switch.Content>
+							</Switch>
+						)}
+					</header>
+					{activeSection === "extensions" ? (
+						<ExtensionManager />
+					) : (
+						<SettingsPanel {...settingsPanelProps} advanced={advanced} />
+					)}
+				</Card>
 			</aside>
 		</div>
 	);

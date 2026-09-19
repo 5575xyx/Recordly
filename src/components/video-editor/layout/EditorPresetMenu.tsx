@@ -32,11 +32,11 @@ export function EditorPresetMenu({ t, presets }: Props) {
 					type="button"
 					title={t("editor.presets.open", "Open presets")}
 					aria-label={t("editor.presets.open", "Open presets")}
-					className="inline-flex items-center gap-1.5 p-0 text-sm"
+					className="inline-flex h-9 min-w-0 max-w-40 items-center gap-2 px-3 text-sm"
 				>
-					<span className="flex items-center gap-1.5">
+					<span className="flex min-w-0 items-center gap-2">
 						<BookmarkSimple weight="fill" className="h-4 w-4" />
-						<span>
+						<span className="truncate">
 							{currentEditorPreset?.name ?? t("editor.presets.label", "Presets")}
 						</span>
 					</span>

@@ -31,7 +31,7 @@ const CONTACT_EMAIL = "youngchen3442@gmail.com";
 export const APP_HEADER_ACTION_BUTTON_CLASS =
 	"h-7 px-2 text-xs text-muted-foreground hover:bg-foreground/10 hover:text-foreground transition-all gap-1.5";
 export const APP_HEADER_ICON_BUTTON_CLASS =
-	"h-7 w-7 p-0 text-muted-foreground hover:bg-foreground/10 hover:text-foreground transition-all";
+	"h-9 w-9 min-w-9 p-0 text-muted-foreground hover:bg-foreground/10 hover:text-foreground transition-all";
 
 interface KeyboardShortcutsDialogProps {
 	triggerLabel?: string;

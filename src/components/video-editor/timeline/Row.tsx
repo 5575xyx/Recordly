@@ -1,8 +1,10 @@
 import type { RowDefinition } from "dnd-timeline";
 import { useRow } from "dnd-timeline";
+import { TIMELINE_CLIP_ROW_HEIGHT_PX } from "./timelineLayout";
 
 interface RowProps extends RowDefinition {
 	compact?: boolean;
+	filmstrip?: boolean;
 	children: React.ReactNode;
 	label?: string;
 	hint?: string;
@@ -18,6 +20,7 @@ interface RowProps extends RowDefinition {
 export default function Row({
 	id,
 	compact = false,
+	filmstrip = false,
 	children,
 	label,
 	hint,
@@ -37,8 +40,9 @@ export default function Row({
 			style={{
 				...rowWrapperStyle,
 				marginBottom: 2,
-				flexGrow: compact ? 0 : 1,
-				flexBasis: compact ? 32 : undefined,
+				flexGrow: compact || filmstrip ? 0 : 1,
+				flexShrink: 0,
+				flexBasis: filmstrip ? TIMELINE_CLIP_ROW_HEIGHT_PX : compact ? 32 : undefined,
 			}}
 		>
 			{label && (

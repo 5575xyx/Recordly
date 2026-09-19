@@ -1,3 +1,4 @@
+import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import {
 	CaretDown,
@@ -65,6 +66,7 @@ type Props = {
 	handleSaveAutoCaptionEdit: (target: CaptionEditTarget, text: string) => void;
 	handleSelectAnnotation: (id: string | null) => void;
 	setDuration: Dispatch<SetStateAction<number>>;
+	isPreviewReady: boolean;
 	setIsPreviewReady: Dispatch<SetStateAction<boolean>>;
 	setCurrentTime: Dispatch<SetStateAction<number>>;
 	setIsPlaying: Dispatch<SetStateAction<boolean>>;
@@ -107,6 +109,7 @@ export function EditorPreviewPanel(props: Props) {
 		handleSaveAutoCaptionEdit,
 		handleSelectAnnotation,
 		setDuration,
+		isPreviewReady,
 		setIsPreviewReady,
 		setCurrentTime,
 		setIsPlaying,
@@ -179,6 +182,12 @@ export function EditorPreviewPanel(props: Props) {
 									boxSizing: "border-box",
 								}}
 							>
+								{videoPath && !isPreviewReady && (
+									<Skeleton
+										aria-label="Loading preview"
+										className="pointer-events-none absolute inset-0 z-20 h-full w-full rounded-xl"
+									/>
+								)}
 								<EditorVideoPreview
 									videoPath={videoPath}
 									previewVersion={previewVersion}

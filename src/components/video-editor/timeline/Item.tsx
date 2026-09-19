@@ -1,5 +1,4 @@
 import {
-	FilmSlate as Film,
 	Gauge,
 	ChatCircle as MessageSquare,
 	MusicNotes as Music,
@@ -125,7 +124,7 @@ export default function Item({
 	const clipSpeedLabel = isClip ? formatClipSpeedLabel(speedValue ?? 1) : null;
 
 	const glassClass = isZoom
-		? glassStyles.glassPurple
+		? glassStyles.glassBlue
 		: isTrim
 			? glassStyles.glassRed
 			: isClip
@@ -158,6 +157,11 @@ export default function Item({
 			{...attributes}
 			data-timeline-item="true"
 			data-variant={variant}
+			aria-label={
+				isClip
+					? `Clip${clipSpeedLabel ? ` ${clipSpeedLabel}` : ""} · ${timeLabel}`
+					: undefined
+			}
 			onPointerDownCapture={handleSelect}
 			className="group h-full"
 		>
@@ -195,12 +199,20 @@ export default function Item({
 						/>
 					)}
 					<div
-						className={cn(glassStyles.zoomEndCap, glassStyles.left)}
+						className={cn(
+							glassStyles.zoomEndCap,
+							glassStyles.left,
+							isClip && glassStyles.clipHandle,
+						)}
 						style={{ cursor: "col-resize", pointerEvents: "auto" }}
 						title="Resize left"
 					/>
 					<div
-						className={cn(glassStyles.zoomEndCap, glassStyles.right)}
+						className={cn(
+							glassStyles.zoomEndCap,
+							glassStyles.right,
+							isClip && glassStyles.clipHandle,
+						)}
 						style={{ cursor: "col-resize", pointerEvents: "auto" }}
 						title="Resize right"
 					/>
@@ -220,54 +232,47 @@ export default function Item({
 							<SpeakerX className="w-3 h-3 text-red-300/90 shrink-0" />
 						</div>
 					)}
-					{/* Content */}
-					<div
-						title={`${isZoom ? `${ZOOM_LABELS[zoomDepth]} ${zoomMode === "manual" ? "Manual" : "Auto"}` : typeof children === "string" ? children : "Clip"} · ${timeLabel}`}
-						className={cn(
-							"relative z-10 flex max-w-full items-center justify-center gap-1 px-1 text-[11px] font-medium text-black/70 dark:text-white/90 select-none overflow-hidden",
-							isClip && "rounded bg-black/65 px-2 py-1 text-white dark:text-white",
-						)}
-					>
-						{isZoom ? (
-							<>
-								<ZoomIn className="zoom-icon size-3 shrink-0" />
-								<span className="zoom-value whitespace-nowrap">
-									{ZOOM_LABELS[zoomDepth] || `${zoomDepth}×`}
-									<span className="zoom-mode ml-1 font-normal">
-										{zoomMode === "manual" ? "Manual" : "Auto"}
+					{/* Normal-speed clips show only the filmstrip and resize handles. */}
+					{(!isClip || clipSpeedLabel) && (
+						<div
+							title={`${isZoom ? `${ZOOM_LABELS[zoomDepth]} ${zoomMode === "manual" ? "Manual" : "Auto"}` : typeof children === "string" ? children : "Clip"} · ${timeLabel}`}
+							className={cn(
+								"relative z-10 flex max-w-full items-center justify-center gap-1 px-1 text-[11px] font-medium text-black/70 dark:text-white/90 select-none overflow-hidden",
+								isClip &&
+									"rounded bg-black/65 px-2 py-1 text-white dark:text-white",
+								isZoom && "text-white dark:text-white",
+							)}
+						>
+							{isClip ? (
+								clipSpeedLabel
+							) : isZoom ? (
+								<>
+									<ZoomIn className="zoom-icon size-3 shrink-0" />
+									<span className="zoom-value whitespace-nowrap">
+										{ZOOM_LABELS[zoomDepth] || `${zoomDepth}×`}
+										<span className="zoom-mode ml-1 font-normal">
+											{zoomMode === "manual" ? "Manual" : "Auto"}
+										</span>
 									</span>
-								</span>
-							</>
-						) : (
-							<>
-								{isClip ? (
-									<Film className="size-3 shrink-0" />
-								) : isTrim ? (
-									<Scissors className="size-3 shrink-0" />
-								) : isSpeed ? (
-									<Gauge className="size-3 shrink-0" />
-								) : isAudio ? (
-									<Music className="size-3 shrink-0" />
-								) : (
-									<MessageSquare className="size-3 shrink-0" />
-								)}
-								<span className="truncate">
-									{isClip
-										? "Clip"
-										: isTrim
-											? "Trim"
-											: isSpeed
-												? `${speedValue}×`
-												: children}
-								</span>
-								{clipSpeedLabel && (
-									<span className="shrink-0 text-[10px] tabular-nums">
-										{clipSpeedLabel}
+								</>
+							) : (
+								<>
+									{isTrim ? (
+										<Scissors className="size-3 shrink-0" />
+									) : isSpeed ? (
+										<Gauge className="size-3 shrink-0" />
+									) : isAudio ? (
+										<Music className="size-3 shrink-0" />
+									) : (
+										<MessageSquare className="size-3 shrink-0" />
+									)}
+									<span className="truncate">
+										{isTrim ? "Trim" : isSpeed ? `${speedValue}×` : children}
 									</span>
-								)}
-							</>
-						)}
-					</div>
+								</>
+							)}
+						</div>
+					)}
 				</div>
 			</div>
 		</div>

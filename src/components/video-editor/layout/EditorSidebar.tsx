@@ -60,15 +60,15 @@ export function EditorSidebar({ t, activeSection, setActiveSection, settingsPane
 		[t],
 	);
 	return (
-		<div className="flex min-h-0 shrink-0 gap-2 pb-3 pr-2">
+		<div className="flex min-h-0 shrink-0 pb-3 pr-2">
 			<nav
 				aria-label={t("settings.sections.title", "Editor tools")}
-				className="flex w-14 flex-col items-center gap-3 py-2.5"
+				className="flex w-16 shrink-0 flex-col items-center gap-3 py-2.5"
 			>
 				<ToggleButtonGroup
 					orientation="vertical"
 					isDetached
-					className="gap-2"
+					className="w-full items-center gap-2"
 					selectionMode="single"
 					disallowEmptySelection
 					selectedKeys={[activeSection]}

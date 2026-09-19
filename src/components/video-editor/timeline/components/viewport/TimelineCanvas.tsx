@@ -538,7 +538,7 @@ const TimelineCanvasRows = memo(function TimelineCanvasRows({
 
 	return (
 		<>
-			<Row id={CLIP_ROW_ID} isEmpty={clipItems.length === 0} hint={HINT_CLIP}>
+			<Row filmstrip id={CLIP_ROW_ID} isEmpty={clipItems.length === 0} hint={HINT_CLIP}>
 				{clipItems.map((item) => (
 					<Item
 						id={item.id}
@@ -616,7 +616,7 @@ const TimelineCanvasRows = memo(function TimelineCanvasRows({
 						>
 							<div
 								className={cn(
-									glassStyles.glassPurple,
+									glassStyles.glassBlue,
 									"w-full h-full overflow-hidden flex items-center justify-center cursor-default relative opacity-80",
 								)}
 							>

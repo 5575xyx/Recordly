@@ -1,5 +1,6 @@
 export const TIMELINE_AXIS_HEIGHT_PX = 32;
-export const TIMELINE_ROW_MIN_HEIGHT_PX = 28;
+export const TIMELINE_ROW_MIN_HEIGHT_PX = 32;
+export const TIMELINE_CLIP_ROW_HEIGHT_PX = TIMELINE_ROW_MIN_HEIGHT_PX * 2;
 export const TIMELINE_VISIBLE_ROW_COUNT = 3;
 
 function normalizeRowCount(rowCount: number) {
@@ -11,7 +12,11 @@ function normalizeRowCount(rowCount: number) {
 }
 
 export function getTimelineRowsMinHeightPx(rowCount: number) {
-	return normalizeRowCount(rowCount) * TIMELINE_ROW_MIN_HEIGHT_PX;
+	const count = normalizeRowCount(rowCount);
+	// The first lane is a double-height filmstrip; reserve its extra space.
+	return count
+		? TIMELINE_CLIP_ROW_HEIGHT_PX + (count - 1) * TIMELINE_ROW_MIN_HEIGHT_PX + count * 2
+		: 0;
 }
 
 export function getTimelineContentMinHeightPx(rowCount: number) {

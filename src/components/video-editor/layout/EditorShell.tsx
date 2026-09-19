@@ -17,6 +17,7 @@ import type { useProjectState } from "../state/useProjectState";
 import type { useTimelineState } from "../state/useTimelineState";
 import { CropEditorDialog } from "./CropEditorDialog";
 import { EditorDialogs } from "./EditorDialogs";
+import { EditorLoadingSkeleton } from "./EditorLoadingSkeleton";
 import { EditorHeader } from "./EditorHeader";
 import { EditorPreviewPanel } from "./EditorPreviewPanel";
 import { EditorSidebar } from "./EditorSidebar";
@@ -120,11 +121,11 @@ export function EditorShell(props: Props) {
 	);
 	if (project.loading)
 		return (
-			<div className="flex h-screen items-center justify-center bg-background">
-				<div className="text-foreground">Loading video...</div>
+			<>
+				<EditorLoadingSkeleton />
 				{editorDialogs}
 				<Toaster className="pointer-events-auto" />
-			</div>
+			</>
 		);
 	if (project.error)
 		return (
@@ -217,6 +218,7 @@ export function EditorShell(props: Props) {
 						handleSaveAutoCaptionEdit={autoCaption.handleSaveAutoCaptionEdit}
 						handleSelectAnnotation={handleSelectAnnotation}
 						setDuration={ui.setDuration}
+						isPreviewReady={ui.isPreviewReady}
 						setIsPreviewReady={ui.setIsPreviewReady}
 						setCurrentTime={ui.setCurrentTime}
 						setIsPlaying={ui.setIsPlaying}

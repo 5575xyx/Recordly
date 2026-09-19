@@ -1,3 +1,4 @@
+import { Skeleton } from "@/components/ui/skeleton";
 import { useTimelineContext, type Span } from "dnd-timeline";
 import { useEffect, useRef, useState } from "react";
 import { filmstripSampleTimes } from "../../core/filmstrip";
@@ -16,6 +17,7 @@ export function ClipFilmstrip({
 	const ref = useRef<HTMLDivElement>(null);
 	const [count, setCount] = useState(0);
 	const [frames, setFrames] = useState<string[]>([]);
+	const [loading, setLoading] = useState(true);
 	useEffect(() => {
 		const node = ref.current;
 		if (!node) return;
@@ -41,6 +43,7 @@ export function ClipFilmstrip({
 			{ start, end },
 			count,
 		);
+		setLoading(times.length > 0);
 		if (times.length) {
 			void extractFilmstrip(path, times, controller.signal)
 				.then((images) => {
@@ -48,6 +51,9 @@ export function ClipFilmstrip({
 				})
 				.catch(() => {
 					/* Keep the clip's color when a source cannot be decoded. */
+				})
+				.finally(() => {
+					if (!controller.signal.aborted) setLoading(false);
 				});
 		}
 		return () => controller.abort();
@@ -59,6 +65,7 @@ export function ClipFilmstrip({
 			className="pointer-events-none absolute inset-0 flex overflow-hidden"
 			aria-hidden="true"
 		>
+			{loading && <Skeleton className="h-full w-full rounded-none" />}
 			{frames.map((frame, index) => (
 				<img
 					key={index}

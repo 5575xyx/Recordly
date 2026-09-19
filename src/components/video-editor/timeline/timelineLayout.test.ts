@@ -3,6 +3,7 @@ import {
 	getTimelineContentMinHeightPx,
 	getTimelineRowsMinHeightPx,
 	getTimelineViewportStretchFactor,
+	TIMELINE_CLIP_ROW_HEIGHT_PX,
 	TIMELINE_AXIS_HEIGHT_PX,
 	TIMELINE_ROW_MIN_HEIGHT_PX,
 	TIMELINE_VISIBLE_ROW_COUNT,
@@ -10,9 +11,14 @@ import {
 
 describe("timelineLayout", () => {
 	it("reserves vertical space for every rendered timeline row", () => {
-		expect(getTimelineRowsMinHeightPx(5)).toBe(5 * TIMELINE_ROW_MIN_HEIGHT_PX);
+		expect(getTimelineRowsMinHeightPx(5)).toBe(
+			TIMELINE_CLIP_ROW_HEIGHT_PX + 4 * TIMELINE_ROW_MIN_HEIGHT_PX + 10,
+		);
 		expect(getTimelineContentMinHeightPx(5)).toBe(
-			TIMELINE_AXIS_HEIGHT_PX + 5 * TIMELINE_ROW_MIN_HEIGHT_PX,
+			TIMELINE_AXIS_HEIGHT_PX +
+				TIMELINE_CLIP_ROW_HEIGHT_PX +
+				4 * TIMELINE_ROW_MIN_HEIGHT_PX +
+				10,
 		);
 	});
 
@@ -25,9 +31,11 @@ describe("timelineLayout", () => {
 	});
 
 	it("floors fractional row counts", () => {
-		expect(getTimelineRowsMinHeightPx(2.9)).toBe(2 * TIMELINE_ROW_MIN_HEIGHT_PX);
+		expect(getTimelineRowsMinHeightPx(2.9)).toBe(
+			TIMELINE_CLIP_ROW_HEIGHT_PX + TIMELINE_ROW_MIN_HEIGHT_PX + 4,
+		);
 		expect(getTimelineContentMinHeightPx(2.9)).toBe(
-			TIMELINE_AXIS_HEIGHT_PX + 2 * TIMELINE_ROW_MIN_HEIGHT_PX,
+			TIMELINE_AXIS_HEIGHT_PX + TIMELINE_CLIP_ROW_HEIGHT_PX + TIMELINE_ROW_MIN_HEIGHT_PX + 4,
 		);
 	});
 

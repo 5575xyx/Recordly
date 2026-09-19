@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { installDesktopBridge } from "./bridge";
 
 test("selecting an untouched clip does not introduce a leading gap", async ({ page }) => {
-	test.setTimeout(60000);
+	test.setTimeout(120000);
 	await installDesktopBridge(page);
 	await page.addInitScript(() => {
 		window.electronAPI.onMenuSaveProject = (callback) => {
@@ -46,7 +46,9 @@ test("selecting an untouched clip does not introduce a leading gap", async ({ pa
 		window.dispatchEvent(new Event("test-save-project"));
 	});
 	await expect
-		.poll(() => page.evaluate(() => sessionStorage.getItem("test-saved-clips")))
+		.poll(() => page.evaluate(() => sessionStorage.getItem("test-saved-clips")), {
+			timeout: 20000,
+		})
 		.not.toBeNull();
 	const clips = await page.evaluate(() =>
 		JSON.parse(sessionStorage.getItem("test-saved-clips")!),

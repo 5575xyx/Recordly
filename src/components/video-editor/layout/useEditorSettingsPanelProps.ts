@@ -1,5 +1,6 @@
 import type { ComponentProps, Dispatch, SetStateAction } from "react";
 import type { AspectRatio } from "@/utils/aspectRatioUtils";
+import { useClipAudioReset } from "../audio/useClipAudioReset";
 import type { useAutoCaptionController } from "../captions/useAutoCaptionController";
 import type { useAnnotationRegionCommands } from "../hooks/useAnnotationRegionCommands";
 import type { useAudioRegionCommands } from "../hooks/useAudioRegionCommands";
@@ -75,7 +76,10 @@ export function useEditorSettingsPanelProps(input: Input): ComponentProps<typeof
 		(region) => region.id === timeline.selectedAudioId,
 	);
 
+	const clipAudioReset = useClipAudioReset(timeline);
+
 	return {
+		...clipAudioReset,
 		panelMode: "editor",
 		activeEffectSection,
 		selected: appearance.wallpaper,

@@ -20,6 +20,7 @@
 	"clip": {
 		"title": "Клип",
 		"mute": "Отключить звук клипа",
+		"resetAudioSettings": "Сбросить настройки звука",
 		"mutedState": "Звук выключен",
 		"unmutedState": "Звук включен",
 		"separateClipFromAudio": "Отделить аудио от клипа",

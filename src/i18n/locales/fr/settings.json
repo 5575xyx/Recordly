@@ -20,6 +20,7 @@
 	"clip": {
 		"title": "Clip",
 		"mute": "Couper le son du clip",
+		"resetAudioSettings": "Réinitialiser les réglages audio",
 		"mutedState": "Le son est coupé",
 		"unmutedState": "Le son est activé",
 		"separateClipFromAudio": "Séparer le clip de l'audio",

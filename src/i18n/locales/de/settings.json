@@ -20,6 +20,7 @@
 	"clip": {
 		"title": "Clip",
 		"mute": "Clip stummschalten",
+		"resetAudioSettings": "Audioeinstellungen zurücksetzen",
 		"mutedState": "Audio ist stummgeschaltet",
 		"unmutedState": "Audio wird wiedergegeben",
 		"separateClipFromAudio": "Clip vom Audio trennen",

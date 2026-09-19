@@ -523,6 +523,8 @@ interface SettingsPanelProps {
 	selectedClipId?: string | null;
 	selectedClipSpeed?: number | null;
 	selectedClipMuted?: boolean | null;
+	hasClipAudioOverrides?: boolean;
+	onResetClipAudio?: () => void;
 	onClipSpeedChange?: (speed: number) => void;
 	onClipMutedChange?: (muted: boolean) => void;
 	onClipDelete?: (id: string) => void;
@@ -976,6 +978,8 @@ export function SettingsPanel({
 	selectedClipId,
 	selectedClipSpeed,
 	selectedClipMuted,
+	hasClipAudioOverrides = false,
+	onResetClipAudio,
 	onClipSpeedChange,
 	onClipMutedChange,
 	onClipDelete,
@@ -3037,6 +3041,11 @@ export function SettingsPanel({
 						className="data-[state=checked]:bg-[#06b6d4] scale-75"
 					/>
 				</label>
+				{hasClipAudioOverrides && onResetClipAudio && (
+					<Button type="button" variant="ghost" onClick={onResetClipAudio}>
+						{tSettings("clip.resetAudioSettings", "Reset audio settings")}
+					</Button>
+				)}
 			</section>
 		);
 

@@ -20,6 +20,7 @@
 	"clip": {
 		"title": "Clip",
 		"mute": "Clip dempen",
+		"resetAudioSettings": "Audio-instellingen resetten",
 		"mutedState": "Audio is gedempt",
 		"unmutedState": "Audio wordt afgespeeld",
 		"separateClipFromAudio": "Clip van audio scheiden",

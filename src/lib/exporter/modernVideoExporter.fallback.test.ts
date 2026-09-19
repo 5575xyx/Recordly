@@ -1,4 +1,5 @@
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { AudioProcessor } from "./audioEncoder";
 import type { ModernVideoExporter as ModernVideoExporterClass } from "./modernVideoExporter";
 
 const mocks = vi.hoisted(() => {
@@ -518,5 +519,223 @@ describe("ModernVideoExporter native fallback routing", () => {
 				cursorClickEffectDurationMs: 720,
 			}),
 		);
+	});
+
+	describe("browser source audio routing", () => {
+		const videoUrl = "file:///C:/recordly/recording.mp4";
+		const micPath = "C:\\recordly\\recording.mic.wav";
+		const browserExportConfig = {
+			videoUrl,
+			width: 1920,
+			height: 1080,
+			frameRate: 30,
+			bitrate: 8_000_000,
+			wallpaper: "#101010",
+			padding: 0,
+			borderRadius: 0,
+			backgroundBlur: 0,
+			shadowIntensity: 0,
+			showShadow: false,
+			cropRegion: { x: 0, y: 0, width: 1, height: 1 },
+			backendPreference: "webcodecs",
+			sourceAudioFallbackPaths: [micPath],
+		} as never;
+
+		let processAudio: ReturnType<typeof vi.spyOn>;
+
+		beforeEach(() => {
+			vi.stubGlobal("AudioEncoder", {
+				isConfigSupported: vi.fn(async () => ({ supported: true })),
+			});
+			mocks.streamingDecoderGetEffectiveDuration.mockReturnValue(1);
+			processAudio = vi.spyOn(AudioProcessor.prototype, "process").mockResolvedValue();
+		});
+
+		afterEach(() => {
+			processAudio.mockRestore();
+			mocks.streamingDecoderLoadMetadata.mockImplementation(async () => mocks.videoInfo);
+			mocks.streamingDecoderGetDemuxer.mockReturnValue(null);
+		});
+
+		function stubEmbeddedDesktopAudio() {
+			mocks.streamingDecoderLoadMetadata.mockResolvedValue({
+				...mocks.videoInfo,
+				hasAudio: true,
+				audioCodec: "aac",
+				audioSampleRate: 48_000,
+			});
+		}
+
+		function createBrowserExporter(overrides: Record<string, unknown> = {}) {
+			return new ModernVideoExporter({
+				...browserExportConfig,
+				...overrides,
+			} as never) as unknown as {
+				export: () => Promise<{ success: boolean; blob?: Blob; error?: string }>;
+				initializeEncoder: () => Promise<unknown>;
+				tryStartNativeVideoExport: () => Promise<boolean>;
+				finishNativeVideoExport: () => Promise<unknown>;
+			};
+		}
+
+		async function exportWithWebCodecs(
+			overrides: Record<string, unknown> = {},
+			exporter = createBrowserExporter(overrides),
+		) {
+			vi.spyOn(exporter, "initializeEncoder").mockResolvedValue({
+				codec: "avc1.640034",
+				hardwareAcceleration: "prefer-hardware",
+			});
+			return { exporter, result: await exporter.export() };
+		}
+
+		it("passes embedded desktop audio and a WAV microphone sidecar into browser export mixing", async () => {
+			stubEmbeddedDesktopAudio();
+
+			const { result } = await exportWithWebCodecs();
+
+			expect(result.success).toBe(true);
+			expect(processAudio).toHaveBeenCalledTimes(1);
+			expect(processAudio).toHaveBeenCalledWith(
+				null,
+				expect.anything(),
+				videoUrl,
+				undefined,
+				undefined,
+				undefined,
+				undefined,
+				[expect.stringMatching(/recording\.mp4$/i), micPath],
+				undefined,
+				undefined,
+				undefined,
+			);
+		});
+
+		it("preserves companion delay, edits, and source settings when normalizing browser audio sources", async () => {
+			stubEmbeddedDesktopAudio();
+			const trimRegions = [{ id: "trim-1", startMs: 1_000, endMs: 2_000 }];
+			const speedRegions = [{ id: "speed-1", startMs: 3_000, endMs: 4_000, speed: 1.5 }];
+			const sourceAudioFallbackStartDelayMsByPath = { [micPath]: 250 };
+			const sourceAudioTrackSettings = {
+				mic: { volume: 0.8, normalize: false },
+				system: { volume: 1, normalize: false },
+			};
+			const clipRegions = [
+				{ id: "clip", startMs: 0, endMs: 1_000, sourceStartMs: 0, speed: 1, muted: true },
+			];
+
+			const { result } = await exportWithWebCodecs({
+				trimRegions,
+				speedRegions,
+				sourceAudioFallbackStartDelayMsByPath,
+				sourceAudioTrackSettings,
+				clipRegions,
+			});
+
+			expect(result.success).toBe(true);
+			expect(processAudio).toHaveBeenCalledTimes(1);
+			expect(processAudio).toHaveBeenCalledWith(
+				null,
+				expect.anything(),
+				videoUrl,
+				trimRegions,
+				speedRegions,
+				undefined,
+				undefined,
+				[expect.stringMatching(/recording\.mp4$/i), micPath],
+				sourceAudioFallbackStartDelayMsByPath,
+				sourceAudioTrackSettings,
+				clipRegions,
+			);
+		});
+
+		it("retries native export once in the browser without dropping the embedded desktop source", async () => {
+			vi.stubGlobal("navigator", { platform: "Win32" });
+			stubEmbeddedDesktopAudio();
+			const log = vi.spyOn(console, "error").mockImplementation(() => {});
+			const exporter = createBrowserExporter({ backendPreference: "auto" });
+			const startNative = vi
+				.spyOn(exporter, "tryStartNativeVideoExport")
+				.mockResolvedValue(true);
+			const initializeEncoder = vi.spyOn(exporter, "initializeEncoder").mockResolvedValue({
+				codec: "avc1.640034",
+				hardwareAcceleration: "prefer-hardware",
+			});
+			vi.spyOn(exporter, "finishNativeVideoExport").mockResolvedValue({
+				success: false,
+				error: "Native finish failed",
+			});
+
+			const result = await exporter.export();
+
+			expect(result.success).toBe(true);
+			expect(startNative).toHaveBeenCalledTimes(1);
+			expect(initializeEncoder).toHaveBeenCalledTimes(1);
+			expect(processAudio).toHaveBeenCalledTimes(1);
+			expect(processAudio).toHaveBeenCalledWith(
+				null,
+				expect.anything(),
+				videoUrl,
+				undefined,
+				undefined,
+				undefined,
+				undefined,
+				[expect.stringMatching(/recording\.mp4$/i), micPath],
+				undefined,
+				undefined,
+				undefined,
+			);
+			expect(log).toHaveBeenCalledWith(
+				expect.stringContaining("restarting once with WebCodecs"),
+			);
+		});
+
+		it("does not add the local video twice when it is already present as a Windows path or file URL", async () => {
+			stubEmbeddedDesktopAudio();
+
+			const { result } = await exportWithWebCodecs({
+				sourceAudioFallbackPaths: [
+					"C:\\recordly\\recording.mp4",
+					"file:///C:/recordly/recording.mp4",
+					micPath,
+				],
+			});
+
+			expect(result.success).toBe(true);
+			expect(processAudio.mock.calls[0]?.[7]).toEqual([
+				expect.stringMatching(/recording\.mp4$/i),
+				micPath,
+			]);
+		});
+
+		it("keeps a microphone-only sidecar list when the source video has no embedded audio", async () => {
+			const { result } = await exportWithWebCodecs();
+
+			expect(result.success).toBe(true);
+			expect(processAudio).toHaveBeenCalledTimes(1);
+			expect(processAudio.mock.calls[0]?.[7]).toEqual([micPath]);
+		});
+
+		it("keeps embedded-only browser export on the source demuxer without inventing companion paths", async () => {
+			stubEmbeddedDesktopAudio();
+			mocks.streamingDecoderGetDemuxer.mockReturnValue({});
+
+			const { result } = await exportWithWebCodecs({
+				sourceAudioFallbackPaths: undefined,
+			});
+
+			expect(result.success).toBe(true);
+			expect(processAudio).toHaveBeenCalledTimes(1);
+			expect(processAudio.mock.calls[0]?.[7]).toEqual([]);
+		});
+
+		it("skips browser audio processing for a genuinely silent source video", async () => {
+			const { result } = await exportWithWebCodecs({
+				sourceAudioFallbackPaths: undefined,
+			});
+
+			expect(result.success).toBe(true);
+			expect(processAudio).not.toHaveBeenCalled();
+		});
 	});
 });

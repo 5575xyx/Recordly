@@ -13,8 +13,8 @@ export default function TimelineAxis({ videoDurationMs, currentTimeMs }: Timelin
 	const sideProperty = direction === "rtl" ? "right" : "left";
 
 	const { intervalMs } = useMemo(
-		() => calculateAxisScale(range.end - range.start),
-		[range.end, range.start],
+		() => calculateAxisScale(range.end - range.start, valueToPixels(range.end - range.start)),
+		[range.end, range.start, valueToPixels],
 	);
 
 	const markers = useMemo(() => {
@@ -32,11 +32,8 @@ export default function TimelineAxis({ videoDurationMs, currentTimeMs }: Timelin
 			markerTimes.add(Math.round(time));
 		}
 
-		if (visibleStart <= maxTime) markerTimes.add(Math.round(visibleStart));
-		if (videoDurationMs > 0) markerTimes.add(Math.round(videoDurationMs));
-
 		const sorted = Array.from(markerTimes)
-			.filter((time) => time <= maxTime)
+			.filter((time) => time >= visibleStart && time <= visibleEnd)
 			.sort((a, b) => a - b);
 
 		const minorTicks: number[] = [];
@@ -54,7 +51,7 @@ export default function TimelineAxis({ videoDurationMs, currentTimeMs }: Timelin
 
 	return (
 		<div
-			className="h-8 bg-editor-bg border-b border-foreground/10 relative overflow-hidden select-none"
+			className="timeline-axis h-8 bg-editor-bg relative overflow-hidden select-none"
 			style={{
 				[sideProperty === "right" ? "marginRight" : "marginLeft"]: `${sidebarWidth}px`,
 			}}
@@ -80,7 +77,16 @@ export default function TimelineAxis({ videoDurationMs, currentTimeMs }: Timelin
 					flexDirection: "row",
 					alignItems: "flex-end",
 					[sideProperty]: `${offset}px`,
-					transform: direction === "rtl" ? "translateX(50%)" : "translateX(-50%)",
+					transform:
+						offset < 30
+							? "none"
+							: offset > valueToPixels(range.end - range.start) - 30
+								? direction === "rtl"
+									? "translateX(100%)"
+									: "translateX(-100%)"
+								: direction === "rtl"
+									? "translateX(50%)"
+									: "translateX(-50%)",
 				};
 
 				return (
@@ -91,7 +97,7 @@ export default function TimelineAxis({ videoDurationMs, currentTimeMs }: Timelin
 								className={cn(
 									"text-[10px] font-medium tabular-nums tracking-tight",
 									Math.abs(marker.time - currentTimeMs) < 1
-										? "text-[#2563EB]"
+										? "text-red-500"
 										: "text-foreground/40",
 								)}
 							>

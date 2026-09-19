@@ -319,7 +319,7 @@ export const SourceSelector = React.memo(function SourceSelector({
 	const { onMouseEnter } = useHudInteraction();
 
 	return (
-		<Popover open={open} onOpenChange={onOpenChange} modal={false}>
+		<Popover open={open} onOpenChange={onOpenChange} modal={true}>
 			<PopoverTrigger asChild>{trigger}</PopoverTrigger>
 			<PopoverContent
 				className="launch-theme w-80 p-0 source-selector-popover"

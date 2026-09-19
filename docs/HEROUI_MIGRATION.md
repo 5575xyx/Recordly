@@ -41,8 +41,17 @@ surface instead of nesting cards and shadows. Timeline blocks retain the origina
 Recordly palette in both themes. Inspector controls use compact 12–13px text and
 32–36px controls, with 14px section titles. Image and video wallpaper grids share
 a plus tile for importing and a small remove control on custom tiles, revealed
-on hover or keyboard focus. The recorder keeps its compact
-desktop layout.
+on hover or keyboard focus. The background gallery slides left/right with tab order.
+
+The clip lane samples real source frames with a bounded cache and one background
+video decoder. Sampling follows clip source offsets, speed, and the visible timeline
+range; it never seeks the playback element. Zooms use a compact lane with labels
+that adapt to block width. The ruler chooses tick density from available width,
+and the red playhead has a white centre line. Webcam roundness defaults to 69%;
+existing saved values remain intact. Three compact timeline tracks fit before
+vertical scrolling. Popovers support outside-click and Escape dismissal and
+share one padding layer. Project and preset names truncate inside their rows.
+The recorder keeps its compact desktop layout.
 
 The adapters in `src/components/ui` translate existing Recordly state/callback
 props to HeroUI APIs. The timeline geometry, crop handles, video canvas, caption
@@ -64,7 +73,8 @@ The production build includes both the renderer and Electron main/preload
 bundles. It is not an installer packaging run.
 
 Browser tests use an explicit mocked Electron bridge and a generated six-second
-video fixture; they never start a real screen recording. They cover control
+video fixture; they never start a real screen recording. A second changing-frame
+fixture verifies that timeline thumbnails decode distinct source frames. They cover control
 callbacks and keyboard behavior, modal focus, export settings, presets, cropping,
 annotation formatting/undo, project menus, recorder popovers, countdown and update
 windows, theme switching, Advanced state, color editing, wallpaper uploads and

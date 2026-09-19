@@ -117,7 +117,7 @@ export function EditorPreviewPanel(props: Props) {
 		<div className="flex min-h-0 min-w-0 flex-1 flex-col">
 			<div className="flex min-h-0 flex-1 flex-col">
 				<div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-					<div className="flex h-14 shrink-0 items-center justify-center gap-3">
+					<div className="flex h-10 shrink-0 items-center justify-center gap-3">
 						<DropdownMenu>
 							<DropdownMenuTrigger asChild>
 								<Button
@@ -161,7 +161,7 @@ export function EditorPreviewPanel(props: Props) {
 						</Button>
 					</div>
 					<div
-						className="flex min-h-0 w-full flex-1 items-stretch px-6 py-5"
+						className="flex min-h-0 w-full flex-1 items-stretch px-4 py-3"
 						style={{ flex: "1 1 auto", margin: 0 }}
 					>
 						<div

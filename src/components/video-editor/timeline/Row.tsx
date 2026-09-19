@@ -2,6 +2,7 @@ import type { RowDefinition } from "dnd-timeline";
 import { useRow } from "dnd-timeline";
 
 interface RowProps extends RowDefinition {
+	compact?: boolean;
 	children: React.ReactNode;
 	label?: string;
 	hint?: string;
@@ -16,6 +17,7 @@ interface RowProps extends RowDefinition {
 
 export default function Row({
 	id,
+	compact = false,
 	children,
 	label,
 	hint,
@@ -32,7 +34,12 @@ export default function Row({
 	return (
 		<div
 			className="bg-transparent relative flex-1 min-h-[26px]"
-			style={{ ...rowWrapperStyle, marginBottom: 2 }}
+			style={{
+				...rowWrapperStyle,
+				marginBottom: 2,
+				flexGrow: compact ? 0 : 1,
+				flexBasis: compact ? 32 : undefined,
+			}}
 		>
 			{label && (
 				<div

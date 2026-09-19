@@ -1,9 +1,8 @@
 import { Button, ToggleButton } from "@heroui/react";
-import { Plus, X } from "@phosphor-icons/react";
+import { Check, Plus, X } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { getRenderableVideoUrl } from "@/lib/assetPath";
 import { isVideoWallpaperSource } from "@/lib/wallpapers";
-import { cn } from "@/lib/utils";
 
 interface WallpaperTile {
 	key: string;
@@ -48,10 +47,7 @@ export function WallpaperGrid({
 							isSelected={selected}
 							aria-label={item.label}
 							onChange={() => onSelect(item.value)}
-							className={cn(
-								"relative aspect-[4/3] h-auto w-full min-w-0 overflow-hidden rounded-md p-0",
-								selected && "ring-2 ring-accent ring-offset-2 ring-offset-surface",
-							)}
+							className="relative aspect-[4/3] h-auto w-full min-w-0 overflow-hidden rounded-md p-0"
 						>
 							{isVideoWallpaperSource(item.previewUrl) ? (
 								<WallpaperVideoPreview src={item.previewUrl} />
@@ -62,6 +58,11 @@ export function WallpaperGrid({
 									draggable={false}
 									className="absolute inset-0 h-full w-full select-none object-cover"
 								/>
+							)}
+							{selected && (
+								<span className="absolute bottom-1 left-1 flex size-4 items-center justify-center rounded-full bg-black/65 text-white">
+									<Check className="size-3" />
+								</span>
 							)}
 						</ToggleButton>
 						{item.removable && (

@@ -1133,6 +1133,7 @@ export function SettingsPanel({
 	);
 	const removeBackgroundEnabled = aspectRatio === "native" && isZeroPadding(padding);
 
+	const [backgroundDirection, setBackgroundDirection] = useState(1);
 	const [backgroundTab, setBackgroundTab] = useState<BackgroundTab>(() =>
 		getBackgroundTabForWallpaper(selected),
 	);
@@ -1341,7 +1342,7 @@ export function SettingsPanel({
 	const wallpaperTileClass = (isSelected: boolean) =>
 		cn(
 			"group relative aspect-[4/3] h-auto w-full min-w-0 overflow-hidden rounded-md p-1",
-			isSelected && "ring-2 ring-accent",
+			isSelected && "opacity-70",
 		);
 
 	const crop = cropRegion ?? {
@@ -1620,7 +1621,13 @@ export function SettingsPanel({
 					type="single"
 					value={backgroundTab}
 					onValueChange={(value) => {
-						if (value) setBackgroundTab(value as typeof backgroundTab);
+						if (value) {
+							const order = ["image", "video", "color", "gradient"];
+							setBackgroundDirection(
+								order.indexOf(value) > order.indexOf(backgroundTab) ? 1 : -1,
+							);
+							setBackgroundTab(value as typeof backgroundTab);
+						}
 					}}
 					aria-label={tSettings("background.title", "Background type")}
 					className="grid w-full grid-cols-4 gap-2"
@@ -1643,13 +1650,25 @@ export function SettingsPanel({
 					))}
 				</ChoiceGroup>
 
-				<div className="pt-4">
-					<AnimatePresence mode="wait" initial={false}>
+				<div className="pt-4 overflow-hidden">
+					<AnimatePresence mode="wait" initial={false} custom={backgroundDirection}>
 						<motion.div
 							key={backgroundTab}
-							initial={{ opacity: 0, y: 10, filter: "blur(8px)" }}
-							animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-							exit={{ opacity: 0, y: -8, filter: "blur(6px)" }}
+							custom={backgroundDirection}
+							variants={{
+								enter: (direction: number) => ({
+									x: `${direction * 100}%`,
+									opacity: 0,
+								}),
+								center: { x: 0, opacity: 1 },
+								exit: (direction: number) => ({
+									x: `${direction * -100}%`,
+									opacity: 0,
+								}),
+							}}
+							initial="enter"
+							animate="center"
+							exit="exit"
 							transition={{ duration: 0.2, ease: "easeOut" }}
 						>
 							{backgroundTab === "image" || backgroundTab === "video" ? (
@@ -2027,16 +2046,18 @@ export function SettingsPanel({
 			</div>
 
 			<div className="py-2 space-y-3">
-				<div>
-					<Button
-						type="button"
-						variant="outline"
-						onClick={onPickWhisperModel}
-						className="h-9 w-full px-4 text-sm"
-					>
-						{tSettings("captions.selectModel", "Select Model")}
-					</Button>
-				</div>
+				{advanced && (
+					<div>
+						<Button
+							type="button"
+							variant="outline"
+							onClick={onPickWhisperModel}
+							className="h-9 w-full px-4 text-sm"
+						>
+							{tSettings("captions.useCustomModel", "Use custom")}
+						</Button>
+					</div>
+				)}
 				<div className="flex items-center justify-between gap-3">
 					<div className="text-sm font-medium text-foreground">
 						{tSettings("captions.language", "Language")}
@@ -2057,8 +2078,32 @@ export function SettingsPanel({
 						</SelectContent>
 					</Select>
 				</div>
+				<div className="flex items-center justify-between gap-3">
+					<div className="text-sm font-medium text-foreground">
+						{tSettings("captions.animation", "Animation")}
+					</div>
+					<Select
+						value={autoCaptionSettings.animationStyle}
+						onValueChange={(value) =>
+							updateAutoCaptionSettings({
+								animationStyle: value as AutoCaptionAnimation,
+							})
+						}
+					>
+						<SelectTrigger className="h-9 w-[180px] text-sm">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{CAPTION_ANIMATION_OPTIONS.map((option) => (
+								<SelectItem key={option.value} value={option.value}>
+									{option.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
 				<div className="flex flex-wrap items-center gap-2">
-					<div className="grid w-full grid-cols-2 gap-2">
+					<div className="grid w-full grid-cols-1 gap-2">
 						{whisperModelDownloadStatus === "downloading" ? (
 							<Button type="button" disabled className="h-9 w-full px-4 text-sm">
 								{tSettings("captions.downloading", "Downloading...")}{" "}
@@ -2133,57 +2178,24 @@ export function SettingsPanel({
 			</div>
 
 			<div className="flex flex-col gap-3">
-				<div className="flex items-center justify-between gap-3 py-2">
-					<div className="text-xs text-muted-foreground">
-						{tSettings("captions.animation", "Animation")}
-					</div>
-					<Select
-						value={autoCaptionSettings.animationStyle}
-						onValueChange={(value) =>
-							updateAutoCaptionSettings({
-								animationStyle: value as AutoCaptionAnimation,
-							})
-						}
-					>
-						<SelectTrigger className="h-9 w-[160px] text-sm">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{CAPTION_ANIMATION_OPTIONS.map((option) => (
-								<SelectItem key={option.value} value={option.value}>
-									{option.label}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
-				<div className="flex items-center justify-between gap-3 py-2">
-					{advanced && (
+				{advanced && (
+					<div className="flex items-center justify-between gap-3 py-2">
 						<div className="text-xs text-muted-foreground">
 							{tSettings("captions.timelineQuickAdd", "Hover to add on timeline")}
 						</div>
-					)}
-					<Switch
-						checked={autoCaptionSettings.timelineQuickAdd}
-						onCheckedChange={(timelineQuickAdd) =>
-							updateAutoCaptionSettings({ timelineQuickAdd })
-						}
-						aria-label={tSettings(
-							"captions.timelineQuickAdd",
-							"Hover to add on timeline",
-						)}
-					/>
-				</div>
-				<label className="flex items-center justify-between py-2">
-					<span className="text-xs text-muted-foreground">
-						{tSettings("captions.textColor", "Text color")}
-					</span>
-					<ColorControl
-						label={tSettings("captions.textColor", "Text color")}
-						value={autoCaptionSettings.textColor}
-						onChange={(color) => updateAutoCaptionSettings({ textColor: color })}
-					/>
-				</label>
+						<Switch
+							checked={autoCaptionSettings.timelineQuickAdd}
+							onCheckedChange={(timelineQuickAdd) =>
+								updateAutoCaptionSettings({ timelineQuickAdd })
+							}
+							aria-label={tSettings(
+								"captions.timelineQuickAdd",
+								"Hover to add on timeline",
+							)}
+						/>
+					</div>
+				)}
+
 				<div className="mb-1 text-sm font-medium text-foreground">
 					{tSettings("captions.fontSettings", "Font Settings")}
 				</div>
@@ -2198,6 +2210,17 @@ export function SettingsPanel({
 					formatValue={(value) => `${Math.round(value)}px`}
 					parseInput={(text) => parseFloat(text.replace(/px$/, ""))}
 				/>
+				<div className="flex items-center justify-between py-2">
+					<span className="text-sm font-medium text-foreground">
+						{tSettings("captions.textColor", "Text color")}
+					</span>
+					<ColorControl
+						compact
+						label={tSettings("captions.textColor", "Text color")}
+						value={autoCaptionSettings.textColor}
+						onChange={(color) => updateAutoCaptionSettings({ textColor: color })}
+					/>
+				</div>
 				{advanced && (
 					<SliderControl
 						label={tSettings("captions.rowCount", "Rows")}
@@ -2604,18 +2627,7 @@ export function SettingsPanel({
 			<section className="flex flex-col gap-4">
 				{selectedZoomId && (
 					<>
-						<div className="flex items-center justify-between gap-3">
-							<SectionLabel>{tSettings("sections.zoom", "Zoom")}</SectionLabel>
-							{selectedZoomDepth && (
-								<span className="rounded-full bg-[#2563EB]/10 px-2 py-0.5 text-xs font-medium uppercase tracking-wider text-[#2563EB]">
-									{
-										ZOOM_DEPTH_OPTIONS.find(
-											(o) => o.depth === selectedZoomDepth,
-										)?.label
-									}
-								</span>
-							)}
-						</div>
+						<SectionLabel>{tSettings("zoom.mode", "Mode")}</SectionLabel>
 						<div className="mb-1">
 							<ChoiceGroup
 								aria-label="Zoom mode"
@@ -2642,6 +2654,7 @@ export function SettingsPanel({
 										)}
 							</p>
 						</div>
+						<SectionLabel>{tSettings("zoom.amount", "Amount")}</SectionLabel>
 						<ChoiceGroup
 							aria-label="Zoom level"
 							value={String(selectedZoomDepth)}
@@ -2656,7 +2669,6 @@ export function SettingsPanel({
 								</ChoiceItem>
 							))}
 						</ChoiceGroup>
-						<div className="h-px bg-foreground/[0.06] my-1" />
 					</>
 				)}
 				<div className="flex items-center justify-between gap-3">
@@ -2859,24 +2871,26 @@ export function SettingsPanel({
 									{t("common.actions.reset", "Reset")}
 								</Button>
 							</div>
-							<div className="flex items-center justify-between gap-3">
-								<label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-									<span>{tSettings("effects.showCursor")}</span>
-									<Switch
-										aria-label={tSettings("effects.showCursor")}
-										checked={showCursor}
-										onCheckedChange={onShowCursorChange}
-									/>
-								</label>
-								<label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-									<span>{tSettings("effects.loopCursor")}</span>
-									<Switch
-										aria-label={tSettings("effects.loopCursor")}
-										checked={loopCursor}
-										onCheckedChange={onLoopCursorChange}
-									/>
-								</label>
-							</div>
+							{advanced && (
+								<div className="flex flex-col gap-3">
+									<label className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+										<span>{tSettings("effects.showCursor")}</span>
+										<Switch
+											aria-label={tSettings("effects.showCursor")}
+											checked={showCursor}
+											onCheckedChange={onShowCursorChange}
+										/>
+									</label>
+									<label className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+										<span>{tSettings("effects.loopCursor")}</span>
+										<Switch
+											aria-label={tSettings("effects.loopCursor")}
+											checked={loopCursor}
+											onCheckedChange={onLoopCursorChange}
+										/>
+									</label>
+								</div>
+							)}
 						</div>
 						<div className="flex flex-col gap-3">
 							<div className="space-y-1.5">
@@ -3099,26 +3113,37 @@ export function SettingsPanel({
 									onCheckedChange={(enabled) => updateWebcam({ enabled })}
 								/>
 							</div>
-							<div className="flex items-center justify-between py-2">
-								<span className="text-xs text-muted-foreground">
-									{tSettings("effects.webcamReactToZoom")}
-								</span>
-								<Switch
-									aria-label={tSettings("effects.webcamReactToZoom")}
-									checked={webcam?.reactToZoom ?? DEFAULT_WEBCAM_REACT_TO_ZOOM}
-									onCheckedChange={(reactToZoom) => updateWebcam({ reactToZoom })}
-								/>
-							</div>
-							<div className="flex items-center justify-between py-2">
-								<span className="text-xs text-muted-foreground">
-									{tSettings("effects.webcamMirror", "Mirror webcam")}
-								</span>
-								<Switch
-									aria-label={tSettings("effects.webcamMirror", "Mirror webcam")}
-									checked={webcam?.mirror ?? true}
-									onCheckedChange={(mirror) => updateWebcam({ mirror })}
-								/>
-							</div>
+							{advanced && (
+								<>
+									<div className="flex items-center justify-between py-2">
+										<span className="text-xs text-muted-foreground">
+											{tSettings("effects.webcamReactToZoom")}
+										</span>
+										<Switch
+											aria-label={tSettings("effects.webcamReactToZoom")}
+											checked={
+												webcam?.reactToZoom ?? DEFAULT_WEBCAM_REACT_TO_ZOOM
+											}
+											onCheckedChange={(reactToZoom) =>
+												updateWebcam({ reactToZoom })
+											}
+										/>
+									</div>
+									<div className="flex items-center justify-between py-2">
+										<span className="text-xs text-muted-foreground">
+											{tSettings("effects.webcamMirror", "Mirror webcam")}
+										</span>
+										<Switch
+											aria-label={tSettings(
+												"effects.webcamMirror",
+												"Mirror webcam",
+											)}
+											checked={webcam?.mirror ?? true}
+											onCheckedChange={(mirror) => updateWebcam({ mirror })}
+										/>
+									</div>
+								</>
+							)}
 							<SliderControl
 								label={tSettings("effects.webcamWidth", "Webcam Width")}
 								value={webcamWidth}
@@ -3318,12 +3343,12 @@ export function SettingsPanel({
 												tSettings("effects.webcamFootageDescription")}
 										</div>
 									</div>
-									<div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+									<div className="grid grid-cols-1 gap-2">
 										<Button
 											type="button"
 											variant="outline"
 											onClick={onUploadWebcam}
-											className="h-9 min-w-0 gap-2 px-3"
+											className="h-9 w-full min-w-0 justify-start gap-2 px-3"
 										>
 											<Upload className="h-3 w-3" />
 											<span className="min-w-0 truncate">
@@ -3337,7 +3362,7 @@ export function SettingsPanel({
 												type="button"
 												variant="outline"
 												onClick={onClearWebcam}
-												className="h-9 min-w-0 gap-2 px-3"
+												className="h-9 w-full min-w-0 justify-start gap-2 px-3"
 											>
 												<Trash2 className="h-3 w-3" />
 												<span className="min-w-0 truncate">

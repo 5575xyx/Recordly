@@ -30,7 +30,10 @@ export default function PlaybackCursor({
 		const handleMouseMove = (e: MouseEvent) => {
 			if (!timelineRef.current || !onSeek) return;
 			const rect = timelineRef.current.getBoundingClientRect();
-			const clickX = e.clientX - rect.left - sidebarWidth;
+			const clickX =
+				direction === "rtl"
+					? rect.right - sidebarWidth - e.clientX
+					: e.clientX - rect.left - sidebarWidth;
 			const relativeMs = pixelsToValue(clickX);
 			let absoluteMs = Math.max(0, Math.min(range.start + relativeMs, videoDurationMs));
 
@@ -70,6 +73,7 @@ export default function PlaybackCursor({
 		videoDurationMs,
 		pixelsToValue,
 		keyframes,
+		direction,
 	]);
 
 	if (videoDurationMs <= 0 || currentTimeMs < 0) return null;
@@ -80,6 +84,7 @@ export default function PlaybackCursor({
 
 	return (
 		<div
+			data-testid="timeline-playhead"
 			className="absolute top-0 bottom-0 z-50 group/cursor"
 			style={{
 				[sideProperty === "right" ? "marginRight" : "marginLeft"]: `${sidebarWidth - 1}px`,
@@ -87,7 +92,7 @@ export default function PlaybackCursor({
 			}}
 		>
 			<div
-				className="absolute top-0 bottom-0 w-[2px] bg-accent cursor-ew-resize pointer-events-auto"
+				className="absolute top-0 bottom-0 w-px bg-white shadow-[0_0_0_1px_#ef4444] cursor-ew-resize pointer-events-auto"
 				style={{ [sideProperty]: `${offset}px` }}
 				onMouseDown={(e) => {
 					e.stopPropagation();
@@ -98,7 +103,7 @@ export default function PlaybackCursor({
 					className="absolute -top-1 left-1/2 -translate-x-1/2 hover:scale-125 transition-transform"
 					style={{ width: "16px", height: "16px" }}
 				>
-					<div className="w-3 h-3 mx-auto mt-[2px] bg-accent rotate-45 rounded-sm" />
+					<div className="w-3 h-3 mx-auto mt-[2px] bg-red-500 rotate-45 rounded-sm" />
 				</div>
 				<div
 					className={cn(

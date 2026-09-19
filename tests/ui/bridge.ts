@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
-export async function installDesktopBridge(page: Page) {
-	await page.addInitScript(() => {
+export async function installDesktopBridge(page: Page, videoFixture = "preview.mp4") {
+	await page.addInitScript((videoFixture) => {
 		const success = async () => ({ success: true });
 		const subscribe = () => () => undefined;
 		const source = {
@@ -34,7 +34,7 @@ export async function installDesktopBridge(page: Page) {
 				getCurrentRecordingSession: async () => ({ success: true, session: null }),
 				getCurrentVideoPath: async () => ({
 					success: true,
-					path: `${location.origin}/tests/ui/fixtures/preview.mp4`,
+					path: `${location.origin}/tests/ui/fixtures/${videoFixture}`,
 				}),
 				getCursorTelemetry: async () => ({ success: true, samples: [] }),
 				getVideoAudioFallbackPaths: async () => ({ success: true, paths: [] }),
@@ -99,5 +99,5 @@ export async function installDesktopBridge(page: Page) {
 				},
 			},
 		});
-	});
+	}, videoFixture);
 }

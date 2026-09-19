@@ -1,18 +1,28 @@
 import { Popover as HeroPopover } from "@heroui/react";
-import { createContext, useContext, type ComponentProps, type ReactNode } from "react";
+import { createContext, useContext, useState, type ComponentProps, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 const ModalContext = createContext(true);
+const CloseContext = createContext<(() => void) | undefined>(undefined);
 export function Popover({
 	open,
+	defaultOpen,
+	onOpenChange,
 	modal = true,
 	children,
 	...props
 }: Omit<ComponentProps<typeof HeroPopover>, "isOpen"> & { open?: boolean; modal?: boolean }) {
+	const [internalOpen, setInternalOpen] = useState(defaultOpen ?? false);
+	const changeOpen = (value: boolean) => {
+		setInternalOpen(value);
+		onOpenChange?.(value);
+	};
 	return (
 		<ModalContext.Provider value={modal}>
-			<HeroPopover {...props} isOpen={open}>
-				{children}
-			</HeroPopover>
+			<CloseContext.Provider value={() => changeOpen(false)}>
+				<HeroPopover {...props} isOpen={open ?? internalOpen} onOpenChange={changeOpen}>
+					{children}
+				</HeroPopover>
+			</CloseContext.Provider>
 		</ModalContext.Provider>
 	);
 }
@@ -46,6 +56,7 @@ export function PopoverContent({
 	...props
 }: ContentProps) {
 	const modal = useContext(ModalContext);
+	const close = useContext(CloseContext);
 	const placement = (align === "center" ? side : `${side} ${align}`) as ComponentProps<
 		typeof HeroPopover.Content
 	>["placement"];
@@ -61,10 +72,31 @@ export function PopoverContent({
 			UNSTABLE_portalContainer={
 				usePortal ? undefined : (document.getElementById("root") ?? undefined)
 			}
-			className={cn("max-w-[calc(100vw-24px)]", className)}
+			className="max-w-[calc(100vw-24px)]"
 		>
-			<HeroPopover.Dialog aria-label={props["aria-label"] ?? "Options"}>
-				{children}
+			<HeroPopover.Dialog
+				aria-label={props["aria-label"] ?? "Options"}
+				className={cn("max-w-full max-h-[min(80vh,640px)] overflow-y-auto p-4", className)}
+			>
+				<div
+					className="contents"
+					onKeyDownCapture={(event) => {
+						// Choice groups can consume Escape; dismiss before their keyboard handler.
+						// A nested portalled menu handles its own Escape first.
+						if (
+							event.key === "Escape" &&
+							!event.defaultPrevented &&
+							!props.isKeyboardDismissDisabled &&
+							event.currentTarget.contains(event.target as Node)
+						) {
+							event.preventDefault();
+							event.stopPropagation();
+							close?.();
+						}
+					}}
+				>
+					{children}
+				</div>
 			</HeroPopover.Dialog>
 		</HeroPopover.Content>
 	);

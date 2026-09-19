@@ -480,6 +480,7 @@ const TimelineEditor = forwardRef<TimelineEditorHandle, TimelineEditorProps>(
 							timelineRef={timelineContainerRef}
 						/>
 						<TimelineCanvas
+							videoPath={videoPath}
 							items={timelineItems}
 							videoDurationMs={totalMs}
 							currentTimeMs={currentTimeMs}

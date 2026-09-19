@@ -42,7 +42,6 @@ import {
 	TIMELINE_AXIS_HEIGHT_PX,
 } from "../../timelineLayout";
 import TimelineAxis from "../axis/TimelineAxis";
-import ClipMarkerOverlay from "../overlays/ClipMarkerOverlay";
 import PlaybackCursor from "../playhead/PlaybackCursor";
 
 const HINT_CLIP = "Press C to split clip";
@@ -50,6 +49,7 @@ const HINT_ANNOTATION = "Press A to add annotation";
 const HINT_AUDIO = "Click music icon to add audio";
 
 interface TimelineCanvasProps {
+	videoPath?: string | null;
 	items: TimelineRenderItem[];
 	videoDurationMs: number;
 	currentTimeMs: number;
@@ -359,6 +359,7 @@ function useTimelineHover({
 }
 
 interface TimelineCanvasRowsProps {
+	videoPath?: string | null;
 	items: TimelineRenderItem[];
 	videoDurationMs: number;
 	selectAllBlocksActive: boolean;
@@ -438,8 +439,8 @@ function AudioItemWithWaveform({
 }
 
 const TimelineCanvasRows = memo(function TimelineCanvasRows({
+	videoPath,
 	items,
-	videoDurationMs,
 	selectAllBlocksActive,
 	selectedZoomId,
 	selectedClipId,
@@ -538,7 +539,6 @@ const TimelineCanvasRows = memo(function TimelineCanvasRows({
 	return (
 		<>
 			<Row id={CLIP_ROW_ID} isEmpty={clipItems.length === 0} hint={HINT_CLIP}>
-				<ClipMarkerOverlay videoDurationMs={videoDurationMs} />
 				{clipItems.map((item) => (
 					<Item
 						id={item.id}
@@ -548,6 +548,8 @@ const TimelineCanvasRows = memo(function TimelineCanvasRows({
 						isSelected={item.id === selectedClipId}
 						onSelectId={onSelectClip}
 						variant="clip"
+						videoPath={videoPath}
+						sourceSpan={item.sourceSpan ?? item.span}
 						speedValue={item.speedValue}
 					>
 						{item.label}
@@ -588,6 +590,7 @@ const TimelineCanvasRows = memo(function TimelineCanvasRows({
 
 			<Row
 				id={ZOOM_ROW_ID}
+				compact
 				isEmpty={zoomItems.length === 0}
 				onMouseEnter={onZoomRowMouseEnter}
 				onMouseMove={onZoomRowMouseMove}
@@ -747,6 +750,7 @@ const TimelineCanvasRows = memo(function TimelineCanvasRows({
 });
 
 export default function TimelineCanvas({
+	videoPath,
 	items,
 	videoDurationMs,
 	currentTimeMs,
@@ -1032,6 +1036,7 @@ export default function TimelineCanvas({
 				style={{ minHeight: timelineRowsMinHeightPx }}
 			>
 				<TimelineCanvasRows
+					videoPath={videoPath}
 					items={items}
 					videoDurationMs={videoDurationMs}
 					selectAllBlocksActive={selectAllBlocksActive}

@@ -90,7 +90,7 @@ export function HudPopover({
 }) {
 	const { onMouseEnter } = useHudInteraction();
 	return (
-		<Popover open={open} onOpenChange={onOpenChange} modal={false}>
+		<Popover open={open} onOpenChange={onOpenChange} modal={true}>
 			<PopoverTrigger asChild>{trigger}</PopoverTrigger>
 			<PopoverContent
 				className={`launch-theme ${styles.menuCard} ${styles.electronNoDrag}`}

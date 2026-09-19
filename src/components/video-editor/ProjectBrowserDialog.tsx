@@ -1,4 +1,4 @@
-import { Card, Chip, Popover } from "@heroui/react";
+import { Card, Popover } from "@heroui/react";
 import { useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { toFileUrl } from "./projectPersistence";
@@ -55,9 +55,9 @@ export default function ProjectBrowserDialog({
 	const content = (
 		<Card
 			ref={panelRef}
-			className="w-[300px] max-w-[calc(100vw-24px)] rounded-none bg-transparent p-1 shadow-none"
+			className="w-[340px] max-w-[calc(100vw-24px)] rounded-none bg-transparent p-4 shadow-none"
 		>
-			<Card.Header className="flex-row items-center justify-between">
+			<Card.Header className="flex-row items-center justify-between gap-3">
 				<Card.Title>Projects</Card.Title>
 				{onImportFile && (
 					<Button size="sm" variant="secondary" onClick={onImportFile}>
@@ -65,19 +65,23 @@ export default function ProjectBrowserDialog({
 					</Button>
 				)}
 			</Card.Header>
-			<Card.Content className="max-h-80 overflow-auto">
+			<Card.Content className="max-h-80 overflow-auto min-w-0">
 				{visibleEntries.length ? (
-					<div className="grid grid-cols-2 gap-3">
+					<div className="space-y-1">
 						{visibleEntries.map((entry) => (
 							<Button
 								key={entry.path}
 								variant="ghost"
-								onClick={() => onOpenProject(entry.path)}
+								onClick={() => {
+									onOpenProject(entry.path);
+									onOpenChange(false);
+								}}
 								aria-label={entry.name}
 								aria-current={entry.isCurrent ? "true" : undefined}
-								className="h-auto min-w-0 flex-col items-stretch gap-2 p-2"
+								title={entry.name}
+								className="h-auto w-full min-w-0 justify-start gap-3 rounded-lg p-2"
 							>
-								<div className="relative aspect-video overflow-hidden rounded-lg bg-default">
+								<div className="relative aspect-video w-18 shrink-0 overflow-hidden rounded-md bg-default">
 									{entry.thumbnailPath ? (
 										<img
 											src={toFileUrl(entry.thumbnailPath)}
@@ -86,21 +90,19 @@ export default function ProjectBrowserDialog({
 											className="h-full w-full object-cover"
 										/>
 									) : (
-										<span className="flex h-full items-center justify-center text-xs text-muted">
-											No preview yet
+										<span className="flex h-full items-center justify-center text-[10px] text-muted">
+											No preview
 										</span>
 									)}
-									{entry.isCurrent && (
-										<Chip
-											size="sm"
-											color="accent"
-											className="absolute right-1 top-1"
-										>
-											Current
-										</Chip>
-									)}
 								</div>
-								<span className="truncate text-left text-xs">{entry.name}</span>
+								<span className="flex min-w-0 flex-1 flex-col gap-1 text-left">
+									<span className="truncate text-[13px]">{entry.name}</span>
+									<span className="text-[11px] text-muted">
+										{entry.isCurrent
+											? "Current project"
+											: new Date(entry.updatedAt).toLocaleDateString()}
+									</span>
+								</span>
 							</Button>
 						))}
 					</div>
@@ -116,8 +118,7 @@ export default function ProjectBrowserDialog({
 		<Popover isOpen={open} onOpenChange={onOpenChange}>
 			<Popover.Content
 				triggerRef={anchorRef}
-				placement={preferredDirection === "up" ? "top end" : "bottom end"}
-				isNonModal
+				placement={preferredDirection === "up" ? "top end" : "bottom start"}
 			>
 				<Popover.Dialog aria-label="Projects" className="p-0">
 					{content}

@@ -126,3 +126,32 @@
 		display: none;
 	}
 }
+
+/* highlight rings look ugly — keep them transparent; keyboard focus gets an inset underline. */
+:root,
+.dark {
+	--focus: transparent;
+}
+[data-focus-visible="true"] {
+	box-shadow: inset 0 -2px 0 color-mix(in oklab, var(--foreground) 45%, transparent);
+}
+
+@container (max-width: 110px) {
+	.zoom-mode {
+		display: none;
+	}
+}
+@container (max-width: 48px) {
+	.zoom-icon {
+		display: none;
+	}
+}
+
+@container (max-width: 28px) {
+	.zoom-value {
+		display: none;
+	}
+	.zoom-icon {
+		display: block;
+	}
+}

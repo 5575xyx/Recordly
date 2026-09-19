@@ -57,6 +57,7 @@ test("editor loads video, switches tools and edits export options", async ({ pag
 		animations: "disabled",
 	});
 	await page.keyboard.press("Escape");
+	await expect(page.getByRole("grid", { name: "Format", exact: true })).toHaveCount(0);
 	await page.screenshot({
 		path: "test-results/editor-light.png",
 		fullPage: true,
@@ -91,6 +92,10 @@ test("editor loads video, switches tools and edits export options", async ({ pag
 	await expect(bold).toHaveAttribute("aria-pressed", "false");
 	await page.getByRole("button", { name: "Undo", exact: true }).click();
 	await expect(bold).toHaveAttribute("aria-pressed", "true");
+	const annotationBlock = page.locator('[data-variant="annotation"] .timeline-block');
+	await expect(annotationBlock).toBeVisible();
+	const blockBounds = (await annotationBlock.boundingBox())!;
+	expect(blockBounds.y + blockBounds.height).toBeLessThan(page.viewportSize()!.height - 12);
 	await page.screenshot({
 		path: "test-results/editor-annotation.png",
 		fullPage: true,

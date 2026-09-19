@@ -99,7 +99,7 @@ export function EditorExportMenu(props: Props) {
 				if (open) handleOpenExportDropdown();
 				else setShowExportDropdown(false);
 			}}
-			modal={false}
+			modal={true}
 		>
 			<PopoverTrigger asChild>
 				<Button

@@ -374,6 +374,17 @@ export function segmentCuesIntoPhrases(
 		return [];
 	}
 
+	// Keep untimed segments separate: merging them into timed segments would
+	// rebuild the text from words and silently discard the untimed speech.
+	if (!hasWordTimings(cues) && cues.some((cue) => (cue.words?.length ?? 0) > 0)) {
+		const segmented = cues.flatMap((cue) => segmentCuesIntoPhrases([cue], silences, options));
+		segmented.sort((a, b) => a.startMs - b.startMs || a.endMs - b.endMs);
+		for (let index = 0; index < segmented.length - 1; index++) {
+			segmented[index].endMs = Math.min(segmented[index].endMs, segmented[index + 1].startMs);
+		}
+		return renumberCues(segmented.filter((cue) => cue.endMs > cue.startMs));
+	}
+
 	// No word timings (SRT path): the silence-only segmenter trims/merges by acoustic
 	// silence but can't see sentence boundaries, so a continuous paragraph would collapse
 	// into one caption. Re-segment by silence first, then split each cue on its sentence

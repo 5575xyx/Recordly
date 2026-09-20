@@ -113,6 +113,7 @@ function CaptionEditor({
 					{t("captions.editor.text", "Text")}
 				</span>
 				<TextArea
+					data-caption-text-editor
 					value={draftText}
 					rows={3}
 					// Freshly-added captions start empty — focus the field so the

@@ -753,6 +753,7 @@ interface Window {
 		getCurrentVideoPath: () => Promise<{ success: boolean; path?: string }>;
 		clearCurrentVideoPath: () => Promise<{ success: boolean }>;
 		getRecordingThumbnail: (filePath: string) => Promise<import("../src/types/recordingLibrary").LibraryResult<string>>;
+		cancelRecordingImport: () => Promise<{ success: boolean }>;
 		listRecordings: () => Promise<
 			import("../src/types/recordingLibrary").LibraryResult<
 				import("../src/types/recordingLibrary").RecordingLibraryEntry[]

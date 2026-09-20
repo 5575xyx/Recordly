@@ -19,15 +19,15 @@ import type {
 } from "../../../src/types/recordingLibrary";
 
 const run = promisify(execFile);
-async function ffmpeg(args: string[]) {
+async function ffmpeg(args: string[], signal?: AbortSignal) {
 	await run(
 		getFfmpegBinaryPath(),
 		["-hide_banner", "-loglevel", "error", "-nostdin", "-y", ...args],
-		{ timeout: 60 * 60 * 1000, maxBuffer: 1024 * 1024, windowsHide: true },
+		{ signal, timeout: 60 * 60 * 1000, maxBuffer: 1024 * 1024, windowsHide: true },
 	);
 }
-async function probe(file: string) {
-	const meta = await probeNativeVideoMetadata(getFfmpegBinaryPath(), file);
+async function probe(file: string, signal?: AbortSignal) {
+	const meta = await probeNativeVideoMetadata(getFfmpegBinaryPath(), file, signal);
 	return {
 		width: meta.width,
 		height: meta.height,
@@ -39,8 +39,14 @@ async function probe(file: string) {
 type Format = { width: number; height: number; fps: number };
 
 /** Normalize new media once. Existing sequence video is copied, avoiding generation loss. */
-async function normalize(file: string, out: string, format: Format, copyVideo: boolean) {
-	const meta = await probe(file);
+async function normalize(
+	file: string,
+	out: string,
+	format: Format,
+	copyVideo: boolean,
+	signal?: AbortSignal,
+) {
+	const meta = await probe(file, signal);
 	const candidates = await getUsableCompanionAudioCandidates(file);
 	const companion = candidates[0];
 	const system = companion?.usablePaths.includes(companion.systemPath)
@@ -96,7 +102,7 @@ async function normalize(file: string, out: string, format: Format, copyVideo: b
 	);
 	if (!copyVideo) args.push("-preset", "fast", "-crf", "18");
 	args.push("-c:a", "pcm_s16le", "-t", String(meta.duration), out);
-	await ffmpeg(args);
+	await ffmpeg(args, signal);
 }
 
 /** The editor and export share one immutable source, with stable offsets across imports. */
@@ -104,6 +110,7 @@ export async function importRecording(
 	currentPath: string,
 	recordingPath: string,
 	currentWebcam?: RecordingWebcamSource,
+	signal?: AbortSignal,
 ): Promise<RecordingImportResult> {
 	const entry = (await listRecordings()).find((entry) => entry.path === recordingPath);
 	if (!entry) throw new Error("Recording is no longer in Videos");
@@ -113,7 +120,7 @@ export async function importRecording(
 	if (!server) throw new Error("Media server is not ready");
 	const root = path.join(await getRecordingsDir(), ".recordly-media");
 	await fs.mkdir(root, { recursive: true });
-	const base = await probe(current);
+	const base = await probe(current, signal);
 	const format = {
 		width: Math.ceil(base.width / 2) * 2,
 		height: Math.ceil(base.height / 2) * 2,
@@ -135,59 +142,65 @@ export async function importRecording(
 		const normalizedNew = path.join(work, "new.mkv");
 		// Only our own normalized source format may be copied across appends.
 		const copyVideo = isLibrarySequenceSource(current);
-		await normalize(current, normalizedBase, format, copyVideo);
-		await normalize(entry.path, normalizedNew, format, false);
-		const baseMeta = await probe(normalizedBase);
-		const newMeta = await probe(normalizedNew);
+		await normalize(current, normalizedBase, format, copyVideo, signal);
+		await normalize(entry.path, normalizedNew, format, false, signal);
+		const baseMeta = await probe(normalizedBase, signal);
+		const newMeta = await probe(normalizedNew, signal);
 		await fs.writeFile(path.join(work, "list.txt"), "file 'base.mkv'\nfile 'new.mkv'\n");
 		const combined = path.join(work, "combined.mkv");
-		await ffmpeg([
-			"-f",
-			"concat",
-			"-safe",
-			"1",
-			"-i",
-			path.join(work, "list.txt"),
-			"-map",
-			"0",
-			"-c",
-			"copy",
-			combined,
-		]);
-		await ffmpeg([
-			"-i",
-			combined,
-			"-filter_complex",
-			"[0:a:0][0:a:1]amix=inputs=2:normalize=0[mix]",
-			"-map",
-			"0:v:0",
-			"-map",
-			"[mix]",
-			"-c:v",
-			"copy",
-			"-c:a",
-			"aac",
-			"-b:a",
-			"192k",
-			"-movflags",
-			"+faststart",
-			output,
-			"-map",
-			"0:a:0",
-			"-c:a",
-			"pcm_s16le",
-			`${stem}.system.wav`,
-			"-map",
-			"0:a:1",
-			"-c:a",
-			"pcm_s16le",
-			`${stem}.mic.wav`,
-		]);
+		await ffmpeg(
+			[
+				"-f",
+				"concat",
+				"-safe",
+				"1",
+				"-i",
+				path.join(work, "list.txt"),
+				"-map",
+				"0",
+				"-c",
+				"copy",
+				combined,
+			],
+			signal,
+		);
+		await ffmpeg(
+			[
+				"-i",
+				combined,
+				"-filter_complex",
+				"[0:a:0][0:a:1]amix=inputs=2:normalize=0[mix]",
+				"-map",
+				"0:v:0",
+				"-map",
+				"[mix]",
+				"-c:v",
+				"copy",
+				"-c:a",
+				"aac",
+				"-b:a",
+				"192k",
+				"-movflags",
+				"+faststart",
+				output,
+				"-map",
+				"0:a:0",
+				"-c:a",
+				"pcm_s16le",
+				`${stem}.system.wav`,
+				"-map",
+				"0:a:1",
+				"-c:a",
+				"pcm_s16le",
+				`${stem}.mic.wav`,
+			],
+			signal,
+		);
 		const sourceStartMs = Math.round(baseMeta.duration * 1000);
 		const samples = [];
 		for (const [file, offset, meta] of [
 			[current, 0, base],
-			[entry.path, sourceStartMs, await probe(entry.path)],
+			[entry.path, sourceStartMs, await probe(entry.path, signal)],
 		] as const) {
 			let points: ReturnType<typeof normalizeCursorTelemetrySamples> = [];
 			try {
@@ -221,7 +234,9 @@ export async function importRecording(
 			sourceStartMs,
 			Math.round(newMeta.duration * 1000),
 			currentWebcam,
+			signal,
 		);
+		signal?.throwIfAborted();
 		await rememberApprovedLocalReadPath(output);
 		return {
 			path: output,

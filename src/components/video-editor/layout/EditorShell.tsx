@@ -158,7 +158,7 @@ export function EditorShell(props: Props) {
 			setNativeCaptureUnavailableModalOpen={ui.setNativeCaptureUnavailableModalOpen}
 		/>
 	);
-	if (project.loading)
+	if (project.loading && !project.error)
 		return (
 			<>
 				<EditorLoadingSkeleton />
@@ -179,7 +179,9 @@ export function EditorShell(props: Props) {
 		return (
 			<div className="flex h-screen items-center justify-center bg-background">
 				<div className="flex flex-col items-center gap-3">
-					<div className="text-destructive">{project.error}</div>
+					<div role="alert" className="max-w-xl break-words text-center text-destructive">
+						{project.error}
+					</div>
 					<Button
 						variant="ghost"
 						ref={ui.projectBrowserFallbackTriggerRef}
@@ -379,6 +381,15 @@ export function EditorShell(props: Props) {
 						<p className="mt-2 text-sm text-muted-foreground">
 							Preparing footage and audio for your timeline.
 						</p>
+						<Button
+							className="mt-4"
+							variant="ghost"
+							size="sm"
+							disabled={library.cancelling}
+							onClick={() => void library.cancelImport()}
+						>
+							{t("common.actions.cancel", "Cancel")}
+						</Button>
 					</div>
 				</div>
 			)}

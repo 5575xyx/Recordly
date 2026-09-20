@@ -9,10 +9,12 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({ root: "", approved: new Set<string>() }));
 vi.mock("electron", () => ({
 	app: { getPath: () => state.root },
-	shell: { trashItem: vi.fn(async (file: string) => {
-		await fs.mkdir(path.join(state.root, ".test-trash"), { recursive: true });
-		await fs.rename(file, path.join(state.root, ".test-trash", path.basename(file)));
-	}) },
+	shell: {
+		trashItem: vi.fn(async (file: string) => {
+			await fs.mkdir(path.join(state.root, ".test-trash"), { recursive: true });
+			await fs.rename(file, path.join(state.root, ".test-trash", path.basename(file)));
+		}),
+	},
 }));
 vi.mock("../../appPaths", () => ({
 	USER_DATA_PATH: "/tmp/recordly-test",
@@ -81,7 +83,9 @@ it("lists recordings, moves recordings and their companions to Trash with revers
 	await setRecordingsRemoved([first, second], false);
 	expect(await listRecordings()).toHaveLength(2);
 	expect(await fs.readFile(first, "utf8")).toBe("fixture");
-	expect(await fs.readFile(path.join(state.root, "recording-new.mic.wav"), "utf8")).toBe("fixture");
+	expect(await fs.readFile(path.join(state.root, "recording-new.mic.wav"), "utf8")).toBe(
+		"fixture",
+	);
 	await expect(setRecordingsRemoved(["/tmp/outside.mp4"], true)).rejects.toThrow("outside");
 });
 
@@ -122,13 +126,39 @@ it("imports different-sized recordings with playable video, separate audio, stab
 		added,
 	]);
 	const webcam = added.replace(".mp4", "-webcam.mp4");
-	await run(ffmpeg, ["-v", "error", "-f", "lavfi", "-i", "color=c=lime:s=80x60:r=30:d=0.8", "-c:v", "libx264", "-pix_fmt", "yuv420p", webcam]);
-	await fs.writeFile(added.replace(".mp4", ".recordly-session.json"), JSON.stringify({ version: 2, webcamFileName: path.basename(webcam), timeOffsetMs: 200 }));
-	await fs.writeFile(`${added}.cursor.json`, JSON.stringify({ samples: [
-		{ timeMs: 200, cx: 0.2, cy: 0.4, interactionType: "click", cursorType: "pointer" },
-		{ timeMs: 260, cx: 0.2, cy: 0.4, interactionType: "mouseup", cursorType: "pointer" },
-		{ timeMs: 600, cx: 0.4, cy: 0.5, interactionType: "right-click" },
-	] }));
+	await run(ffmpeg, [
+		"-v",
+		"error",
+		"-f",
+		"lavfi",
+		"-i",
+		"color=c=lime:s=80x60:r=30:d=0.8",
+		"-c:v",
+		"libx264",
+		"-pix_fmt",
+		"yuv420p",
+		webcam,
+	]);
+	await fs.writeFile(
+		added.replace(".mp4", ".recordly-session.json"),
+		JSON.stringify({ version: 2, webcamFileName: path.basename(webcam), timeOffsetMs: 200 }),
+	);
+	await fs.writeFile(
+		`${added}.cursor.json`,
+		JSON.stringify({
+			samples: [
+				{ timeMs: 200, cx: 0.2, cy: 0.4, interactionType: "click", cursorType: "pointer" },
+				{
+					timeMs: 260,
+					cx: 0.2,
+					cy: 0.4,
+					interactionType: "mouseup",
+					cursorType: "pointer",
+				},
+				{ timeMs: 600, cx: 0.4, cy: 0.5, interactionType: "right-click" },
+			],
+		}),
+	);
 	const original = await fs.readFile(base);
 	await listRecordings();
 	const thumbnail = await getRecordingThumbnail(base);
@@ -142,10 +172,39 @@ it("imports different-sized recordings with playable video, separate audio, stab
 	expect(result.durationMs).toBeCloseTo(1000, -1);
 	expect(result.webcam?.visibleRanges).toEqual([{ startMs: 1200, endMs: 2000 }]);
 	const cursor = JSON.parse(await fs.readFile(`${result.path}.cursor.json`, "utf8")).samples;
-	expect(cursor.map((point: { timeMs: number; interactionType: string }) => [point.timeMs, point.interactionType])).toEqual([[1200, "click"], [1260, "mouseup"], [1600, "right-click"]]);
+	expect(
+		cursor.map((point: { timeMs: number; interactionType: string }) => [
+			point.timeMs,
+			point.interactionType,
+		]),
+	).toEqual([
+		[1200, "click"],
+		[1260, "mouseup"],
+		[1600, "right-click"],
+	]);
 	expect(cursor[0].cursorType).toBe("pointer");
 	expect(cursor[0].cx).toBeCloseTo(0.405078125);
-	const webcamPixels = await run(ffmpeg, ["-v", "error", "-ss", "1.5", "-i", result.webcam!.sourcePath!, "-vf", "crop=2:2:40:30", "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], { encoding: "buffer" });
+	const webcamPixels = await run(
+		ffmpeg,
+		[
+			"-v",
+			"error",
+			"-ss",
+			"1.5",
+			"-i",
+			result.webcam!.sourcePath!,
+			"-vf",
+			"crop=2:2:40:30",
+			"-frames:v",
+			"1",
+			"-f",
+			"rawvideo",
+			"-pix_fmt",
+			"rgb24",
+			"-",
+		],
+		{ encoding: "buffer" },
+	);
 	expect(webcamPixels.stdout[1]).toBeGreaterThan(200);
 	const companions = await getCompanionAudioFallbackInfo(result.path);
 	expect(companions.paths).toHaveLength(2);
@@ -175,7 +234,10 @@ it("imports different-sized recordings with playable video, separate audio, stab
 	expect(pixels.stdout[2]).toBeGreaterThan(200); // blue centre survives aspect-ratio fitting
 	const second = await importRecording(result.path, added);
 	expect(second.sourceStartMs).toBeCloseTo(2000, -1);
-	expect(second.webcam?.visibleRanges).toEqual([{ startMs: 1200, endMs: 2000 }, { startMs: 2200, endMs: 3000 }]);
+	expect(second.webcam?.visibleRanges).toEqual([
+		{ startMs: 1200, endMs: 2000 },
+		{ startMs: 2200, endMs: 3000 },
+	]);
 	expect(await fs.readFile(base)).toEqual(original);
 	expect((await listRecordings()).map((entry) => entry.path).sort()).toEqual(
 		[base, added].sort(),
@@ -184,7 +246,6 @@ it("imports different-sized recordings with playable video, separate audio, stab
 		"no longer available",
 	);
 }, 60000);
-
 
 it("restores every original when the OS refuses to trash the bundle", async () => {
 	const { shell } = await import("electron");
@@ -202,4 +263,37 @@ it("undo never overwrites a new file at the original location", async () => {
 	await fs.writeFile(file, "new recording");
 	await expect(setRecordingsRemoved([file], false)).rejects.toThrow("already exists");
 	expect(await fs.readFile(file, "utf8")).toBe("new recording");
+});
+
+it("cancels an active import and removes partial outputs without changing originals", async () => {
+	const base = path.join(state.root, "recording-base.mp4");
+	const added = path.join(state.root, "recording-added.mp4");
+	await run(ffmpeg, [
+		"-v",
+		"error",
+		"-f",
+		"lavfi",
+		"-i",
+		"color=c=red:s=640x480:r=30:d=10",
+		"-c:v",
+		"libx264",
+		"-pix_fmt",
+		"yuv420p",
+		base,
+	]);
+	await fs.copyFile(base, added);
+	state.approved.add(base);
+	const original = await fs.readFile(base);
+	const controller = new AbortController();
+	const importing = importRecording(base, added, undefined, controller.signal);
+	const rejected = expect(importing).rejects.toMatchObject({ name: "AbortError" });
+	await vi.waitFor(async () => {
+		const files = await fs.readdir(path.join(state.root, ".recordly-media"));
+		expect(files.some((name) => name.startsWith("import-"))).toBe(true);
+	});
+	controller.abort();
+	await rejected;
+	expect(await fs.readdir(path.join(state.root, ".recordly-media"))).toEqual([]);
+	expect(await fs.readFile(base)).toEqual(original);
+	expect(await fs.readFile(added)).toEqual(original);
 });

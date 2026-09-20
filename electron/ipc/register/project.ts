@@ -214,9 +214,17 @@ async function ensureNamedProjectSaveDoesNotOverwriteDifferentProject(
 }
 
 export function registerProjectHandlers() {
+	const imports = new Map<number, AbortController>();
+	ipcMain.handle("cancel-recording-import", (event) => {
+		imports.get(event.sender.id)?.abort();
+		return { success: true };
+	});
 	ipcMain.handle("get-recording-thumbnail", async (_, file: string) => {
-		try { return { success: true, value: await getRecordingThumbnail(file) }; }
-		catch (error) { return { success: false, error: String(error) }; }
+		try {
+			return { success: true, value: await getRecordingThumbnail(file) };
+		} catch (error) {
+			return { success: false, error: String(error) };
+		}
 	});
 	ipcMain.handle("list-recordings", async () => {
 		try {
@@ -233,13 +241,36 @@ export function registerProjectHandlers() {
 			return { success: false, error: String(error) };
 		}
 	});
-	ipcMain.handle("import-recording", async (_, currentPath: string, recordingPath: string, webcam?: import("../../../src/types/recordingLibrary").RecordingWebcamSource) => {
-		try {
-			return { success: true, value: await importRecording(currentPath, recordingPath, webcam) };
-		} catch (error) {
-			return { success: false, error: String(error) };
-		}
-	});
+	ipcMain.handle(
+		"import-recording",
+		async (
+			event,
+			currentPath: string,
+			recordingPath: string,
+			webcam?: import("../../../src/types/recordingLibrary").RecordingWebcamSource,
+		) => {
+			const owner = event.sender.id;
+			if (imports.has(owner))
+				return { success: false, error: "An import is already running" };
+			const controller = new AbortController();
+			imports.set(owner, controller);
+			try {
+				return {
+					success: true,
+					value: await importRecording(
+						currentPath,
+						recordingPath,
+						webcam,
+						controller.signal,
+					),
+				};
+			} catch (error) {
+				return { success: false, error: String(error) };
+			} finally {
+				imports.delete(owner);
+			}
+		},
+	);
 	ipcMain.handle("reveal-in-folder", async (_, filePath: string) => {
 		try {
 			// shell.showItemInFolder doesn't return a value, it throws on error

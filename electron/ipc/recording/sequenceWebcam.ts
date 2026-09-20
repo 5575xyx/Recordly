@@ -30,11 +30,11 @@ async function linked(video: string): Promise<RecordingWebcamSource | undefined>
 	}
 	return { sourcePath: webcamPath, timeOffsetMs: session.timeOffsetMs ?? 0, visibleRanges };
 }
-async function ffmpeg(args: string[]) {
+async function ffmpeg(args: string[], signal?: AbortSignal) {
 	await run(
 		getFfmpegBinaryPath(),
 		["-hide_banner", "-loglevel", "error", "-nostdin", "-y", ...args],
-		{ timeout: 60 * 60 * 1000, maxBuffer: 1024 * 1024 },
+		{ signal, timeout: 60 * 60 * 1000, maxBuffer: 1024 * 1024 },
 	);
 }
 
@@ -47,6 +47,7 @@ export async function composeSequenceWebcam(
 	baseDurationMs: number,
 	addedDurationMs: number,
 	currentWebcam?: RecordingWebcamSource,
+	signal?: AbortSignal,
 ) {
 	const base = currentWebcam === undefined ? await linked(current) : currentWebcam;
 	if (currentWebcam?.sourcePath) {
@@ -57,7 +58,7 @@ export async function composeSequenceWebcam(
 	const next = await linked(added);
 	const firstPath = base?.sourcePath || next?.sourcePath;
 	if (!firstPath) return undefined;
-	const meta = await probeNativeVideoMetadata(getFfmpegBinaryPath(), firstPath);
+	const meta = await probeNativeVideoMetadata(getFfmpegBinaryPath(), firstPath, signal);
 	const width = Math.ceil(meta.width / 2) * 2;
 	const height = Math.ceil(meta.height / 2) * 2;
 	const ranges: Range[] = [];
@@ -69,7 +70,11 @@ export async function composeSequenceWebcam(
 		const args: string[] = [];
 		let filter = `scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30,format=yuv420p`;
 		if (source?.sourcePath) {
-			const info = await probeNativeVideoMetadata(getFfmpegBinaryPath(), source.sourcePath);
+			const info = await probeNativeVideoMetadata(
+				getFfmpegBinaryPath(),
+				source.sourcePath,
+				signal,
+			);
 			const delayMs = Number.isFinite(source.timeOffsetMs) ? source.timeOffsetMs : 0;
 			args.push("-i", source.sourcePath);
 			filter = `trim=start=${Math.max(0, -delayMs) / 1000},setpts=PTS-STARTPTS,${filter},tpad=start_mode=add:start_duration=${Math.max(0, delayMs) / 1000}:stop_mode=add:stop_duration=${duration},trim=duration=${duration}`;
@@ -89,41 +94,47 @@ export async function composeSequenceWebcam(
 		} else {
 			args.push("-f", "lavfi", "-i", `color=c=black:s=${width}x${height}:r=30:d=${duration}`);
 		}
-		await ffmpeg([
-			...args,
-			"-an",
-			"-vf",
-			filter,
-			"-t",
-			String(duration),
-			"-c:v",
-			"libx264",
-			"-preset",
-			"fast",
-			"-crf",
-			"18",
-			path.join(work, `webcam-${index}.mp4`),
-		]);
+		await ffmpeg(
+			[
+				...args,
+				"-an",
+				"-vf",
+				filter,
+				"-t",
+				String(duration),
+				"-c:v",
+				"libx264",
+				"-preset",
+				"fast",
+				"-crf",
+				"18",
+				path.join(work, `webcam-${index}.mp4`),
+			],
+			signal,
+		);
 	}
 	await fs.writeFile(
 		path.join(work, "webcam-list.txt"),
 		"file 'webcam-0.mp4'\nfile 'webcam-1.mp4'\n",
 	);
 	const webcamPath = sequenceWebcamOutputs(output)[0];
-	await ffmpeg([
-		"-f",
-		"concat",
-		"-safe",
-		"1",
-		"-i",
-		path.join(work, "webcam-list.txt"),
-		"-an",
-		"-c:v",
-		"copy",
-		"-movflags",
-		"+faststart",
-		webcamPath,
-	]);
+	await ffmpeg(
+		[
+			"-f",
+			"concat",
+			"-safe",
+			"1",
+			"-i",
+			path.join(work, "webcam-list.txt"),
+			"-an",
+			"-c:v",
+			"copy",
+			"-movflags",
+			"+faststart",
+			webcamPath,
+		],
+		signal,
+	);
 	await persistRecordingSessionManifest({ videoPath: output, webcamPath, timeOffsetMs: 0 });
 	await fs.writeFile(rangesPath(output), JSON.stringify(ranges));
 	await rememberApprovedLocalReadPath(webcamPath);

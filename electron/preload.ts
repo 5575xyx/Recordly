@@ -788,6 +788,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		return ipcRenderer.invoke("clear-current-video-path");
 	},
 	getRecordingThumbnail: (filePath: string) => ipcRenderer.invoke("get-recording-thumbnail", filePath),
+	cancelRecordingImport: () => ipcRenderer.invoke("cancel-recording-import"),
 	listRecordings: () => ipcRenderer.invoke("list-recordings"),
 	setRecordingsRemoved: (paths: string[], removed: boolean) =>
 		ipcRenderer.invoke("set-recordings-removed", paths, removed),

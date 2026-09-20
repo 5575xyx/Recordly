@@ -100,15 +100,18 @@ export function parseNativeVideoMetadataProbeOutput(
 export async function probeNativeVideoMetadata(
 	ffmpegPath: string,
 	inputPath: string,
+	signal?: AbortSignal,
 ): Promise<NativeVideoMetadataProbe> {
 	let output = "";
 	try {
 		const result = await execFileAsync(ffmpegPath, ["-hide_banner", "-i", inputPath], {
+			signal,
 			timeout: 30_000,
 			maxBuffer: 4 * 1024 * 1024,
 		});
 		output = `${result.stdout}\n${result.stderr}`;
 	} catch (error) {
+		signal?.throwIfAborted();
 		const processOutput = error as { stdout?: unknown; stderr?: unknown };
 		output = [processOutput.stdout, processOutput.stderr]
 			.filter((value): value is string => typeof value === "string")

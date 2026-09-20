@@ -90,10 +90,23 @@ export function useRecordingLibrary(
 		}
 	};
 	const [importing, setImporting] = useState(false);
+	const cancelled = useRef(false);
+	const [cancelling, setCancelling] = useState(false);
+	const cancelImport = async () => {
+		cancelled.current = true;
+		setCancelling(true);
+		try {
+			await window.electronAPI.cancelRecordingImport();
+		} catch (error) {
+			toast.error(`Could not stop import processing: ${String(error)}`);
+		}
+	};
 	const addToTimeline = async (paths: string | string[], index?: number) => {
 		const source = current.current.project.videoSourcePath;
 		if (lock.current || !source) return;
 		lock.current = true;
+		cancelled.current = false;
+		setCancelling(false);
 		setImporting(true);
 		current.current.ui.videoPlaybackRef.current?.pause();
 		current.current.ui.setIsPlaying(false);
@@ -108,6 +121,7 @@ export function useRecordingLibrary(
 			const addedZooms: ZoomRegion[] = [];
 			let id = "";
 			for (const path of [...new Set(typeof paths === "string" ? [paths] : paths)]) {
+				if (cancelled.current) return;
 				const result = await window.electronAPI.importRecording(sourcePath, path, webcam);
 				if (!result.success) throw new Error(result.error);
 				if (current.current.project.videoSourcePath !== source)
@@ -160,7 +174,7 @@ export function useRecordingLibrary(
 					);
 				}
 			}
-			if (!media) return;
+			if (!media || cancelled.current) return;
 			const { project, timeline, ui, appearance } = current.current;
 			if (project.videoSourcePath !== source)
 				throw new Error("The project changed while importing. Add the recordings again.");
@@ -193,10 +207,11 @@ export function useRecordingLibrary(
 					: `${paths.length} videos added to timeline`,
 			);
 		} catch (error) {
-			toast.error(`Could not add video: ${String(error)}`);
+			if (!cancelled.current) toast.error(`Could not add video: ${String(error)}`);
 		} finally {
 			lock.current = false;
 			setImporting(false);
+			setCancelling(false);
 		}
 	};
 	return {
@@ -213,6 +228,8 @@ export function useRecordingLibrary(
 		undo,
 		canUndo: removed.length > 0,
 		importing,
+		cancelling,
+		cancelImport,
 		addToTimeline,
 	};
 }

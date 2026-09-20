@@ -1375,7 +1375,8 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 
 		useEffect(() => {
 			zoomInOverlapMsRef.current = zoomInOverlapMs;
-		}, [zoomInOverlapMs]);
+			requestPausedFrameRefresh();
+		}, [zoomInOverlapMs, requestPausedFrameRefresh]);
 
 		useEffect(() => {
 			zoomOutDurationMsRef.current = zoomOutDurationMs;
@@ -1384,23 +1385,28 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 
 		useEffect(() => {
 			connectedZoomGapMsRef.current = connectedZoomGapMs;
-		}, [connectedZoomGapMs]);
+			requestPausedFrameRefresh();
+		}, [connectedZoomGapMs, requestPausedFrameRefresh]);
 
 		useEffect(() => {
 			connectedZoomDurationMsRef.current = connectedZoomDurationMs;
-		}, [connectedZoomDurationMs]);
+			requestPausedFrameRefresh();
+		}, [connectedZoomDurationMs, requestPausedFrameRefresh]);
 
 		useEffect(() => {
 			zoomInEasingRef.current = zoomInEasing;
-		}, [zoomInEasing]);
+			requestPausedFrameRefresh();
+		}, [zoomInEasing, requestPausedFrameRefresh]);
 
 		useEffect(() => {
 			zoomOutEasingRef.current = zoomOutEasing;
-		}, [zoomOutEasing]);
+			requestPausedFrameRefresh();
+		}, [zoomOutEasing, requestPausedFrameRefresh]);
 
 		useEffect(() => {
 			connectedZoomEasingRef.current = connectedZoomEasing;
-		}, [connectedZoomEasing]);
+			requestPausedFrameRefresh();
+		}, [connectedZoomEasing, requestPausedFrameRefresh]);
 
 		useEffect(() => {
 			cursorTelemetryRef.current = cursorTelemetry;
@@ -1414,43 +1420,53 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 
 		useEffect(() => {
 			cursorStyleRef.current = cursorStyle;
-		}, [cursorStyle]);
+			requestPausedFrameRefresh();
+		}, [cursorStyle, requestPausedFrameRefresh]);
 
 		useEffect(() => {
 			cursorSizeRef.current = cursorSize;
-		}, [cursorSize]);
+			requestPausedFrameRefresh();
+		}, [cursorSize, requestPausedFrameRefresh]);
 
 		useEffect(() => {
 			cursorSmoothingRef.current = cursorSmoothing;
-		}, [cursorSmoothing]);
+			requestPausedFrameRefresh();
+		}, [cursorSmoothing, requestPausedFrameRefresh]);
 
 		useEffect(() => {
 			cursorSpringStiffnessMultiplierRef.current = cursorSpringStiffnessMultiplier;
-		}, [cursorSpringStiffnessMultiplier]);
+			requestPausedFrameRefresh();
+		}, [cursorSpringStiffnessMultiplier, requestPausedFrameRefresh]);
 
 		useEffect(() => {
 			cursorSpringDampingMultiplierRef.current = cursorSpringDampingMultiplier;
-		}, [cursorSpringDampingMultiplier]);
+			requestPausedFrameRefresh();
+		}, [cursorSpringDampingMultiplier, requestPausedFrameRefresh]);
 
 		useEffect(() => {
 			cursorSpringMassMultiplierRef.current = cursorSpringMassMultiplier;
-		}, [cursorSpringMassMultiplier]);
+			requestPausedFrameRefresh();
+		}, [cursorSpringMassMultiplier, requestPausedFrameRefresh]);
 
 		useEffect(() => {
 			cameraSpringStiffnessMultiplierRef.current = cameraSpringStiffnessMultiplier;
-		}, [cameraSpringStiffnessMultiplier]);
+			requestPausedFrameRefresh();
+		}, [cameraSpringStiffnessMultiplier, requestPausedFrameRefresh]);
 
 		useEffect(() => {
 			cameraSpringDampingMultiplierRef.current = cameraSpringDampingMultiplier;
-		}, [cameraSpringDampingMultiplier]);
+			requestPausedFrameRefresh();
+		}, [cameraSpringDampingMultiplier, requestPausedFrameRefresh]);
 
 		useEffect(() => {
 			cameraSpringMassMultiplierRef.current = cameraSpringMassMultiplier;
-		}, [cameraSpringMassMultiplier]);
+			requestPausedFrameRefresh();
+		}, [cameraSpringMassMultiplier, requestPausedFrameRefresh]);
 
 		useEffect(() => {
 			zoomSmoothnessRef.current = zoomSmoothness;
-		}, [zoomSmoothness]);
+			requestPausedFrameRefresh();
+		}, [zoomSmoothness, requestPausedFrameRefresh]);
 
 		useEffect(() => {
 			zoomMotionBlurRef.current = zoomMotionBlur;
@@ -1481,39 +1497,48 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 
 		useEffect(() => {
 			cursorMotionBlurRef.current = cursorMotionBlur;
-		}, [cursorMotionBlur]);
+			requestPausedFrameRefresh();
+		}, [cursorMotionBlur, requestPausedFrameRefresh]);
 
 		useEffect(() => {
 			cursorClickEffectRef.current = cursorClickEffect;
-		}, [cursorClickEffect]);
+			requestPausedFrameRefresh();
+		}, [cursorClickEffect, requestPausedFrameRefresh]);
 
 		useEffect(() => {
 			cursorClickEffectColorRef.current = cursorClickEffectColor;
-		}, [cursorClickEffectColor]);
+			requestPausedFrameRefresh();
+		}, [cursorClickEffectColor, requestPausedFrameRefresh]);
 
 		useEffect(() => {
 			cursorClickEffectScaleRef.current = cursorClickEffectScale;
-		}, [cursorClickEffectScale]);
+			requestPausedFrameRefresh();
+		}, [cursorClickEffectScale, requestPausedFrameRefresh]);
 
 		useEffect(() => {
 			cursorClickEffectOpacityRef.current = cursorClickEffectOpacity;
-		}, [cursorClickEffectOpacity]);
+			requestPausedFrameRefresh();
+		}, [cursorClickEffectOpacity, requestPausedFrameRefresh]);
 
 		useEffect(() => {
 			cursorClickEffectDurationMsRef.current = cursorClickEffectDurationMs;
-		}, [cursorClickEffectDurationMs]);
+			requestPausedFrameRefresh();
+		}, [cursorClickEffectDurationMs, requestPausedFrameRefresh]);
 
 		useEffect(() => {
 			cursorClickBounceRef.current = cursorClickBounce;
-		}, [cursorClickBounce]);
+			requestPausedFrameRefresh();
+		}, [cursorClickBounce, requestPausedFrameRefresh]);
 
 		useEffect(() => {
 			cursorClickBounceDurationRef.current = cursorClickBounceDuration;
-		}, [cursorClickBounceDuration]);
+			requestPausedFrameRefresh();
+		}, [cursorClickBounceDuration, requestPausedFrameRefresh]);
 
 		useEffect(() => {
 			cursorSwayRef.current = cursorSway;
-		}, [cursorSway]);
+			requestPausedFrameRefresh();
+		}, [cursorSway, requestPausedFrameRefresh]);
 
 		useEffect(() => {
 			const timeMs = currentTime * 1000;
@@ -2130,7 +2155,7 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 
 		useEffect(() => {
 			const overlay = cursorOverlayRef.current;
-			if (!overlay) {
+			if (!pixiReady || !overlay) {
 				return;
 			}
 
@@ -2167,12 +2192,15 @@ const VideoPlayback = forwardRef<VideoPlaybackRef, VideoPlaybackProps>(
 
 				overlay.setStyle(cursorStyle);
 				overlay.reset();
+				requestPausedFrameRefresh();
 			})();
 
 			return () => {
 				cancelled = true;
 			};
 		}, [
+			pixiReady,
+			requestPausedFrameRefresh,
 			cursorStyle,
 			cursorSize,
 			cursorSmoothing,

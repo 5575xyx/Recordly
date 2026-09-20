@@ -4,8 +4,11 @@ import { installDesktopBridge } from "./bridge";
 async function seek(page: Page, clip: Locator, timeMs: number) {
 	const end = Number(await clip.getAttribute("data-end-ms"));
 	const box = (await clip.locator(".timeline-block").boundingBox())!;
-	const row = (await page.locator('[data-timeline-row="row-clip"]').boundingBox())!;
-	await page.mouse.click(box.x + (box.width * timeMs) / end, row.y - 8);
+	const cap = (await page.getByTestId("playhead-cap").boundingBox())!;
+	await page.mouse.move(cap.x + cap.width / 2, cap.y + cap.height / 2);
+	await page.mouse.down();
+	await page.mouse.move(box.x + (box.width * timeMs) / end, cap.y + cap.height / 2);
+	await page.mouse.up();
 }
 
 test("captions render in preview and remain synchronized at 1x, 2x and 4x", async ({ page }) => {
@@ -100,6 +103,13 @@ test("captions render in preview and remain synchronized at 1x, 2x and 4x", asyn
 	await seek(page, clip, 0);
 	await page.getByRole("button", { name: "Play", exact: true }).click();
 	await expect(visibleCaption).toBeVisible();
+	await expect
+		.poll(() =>
+			page
+				.locator('video[aria-hidden="true"]')
+				.evaluate((video: HTMLVideoElement) => video.currentTime * 1000),
+		)
+		.toBeGreaterThan(sourceEnd);
 	await expect(visibleCaption).toHaveCount(0);
 	expect(errors).toEqual([]);
 });

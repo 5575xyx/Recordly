@@ -340,7 +340,9 @@ export async function generateAutoCaptionsFromVideo(options: {
 	const candidates = await resolveCaptionAudioCandidates(options.videoPath);
 	const microphone = candidates.filter((source) => source.label === "microphone audio sidecar");
 	const system = candidates.filter((source) => source.label === "system audio sidecar");
-	const recording = candidates.filter((source) => source.label === "recording");
+	const secondary = candidates.filter(
+		(source) => !microphone.includes(source) && !system.includes(source),
+	);
 	if (microphone.length === 0) {
 		return generateCaptionsForSource({ ...options, candidates: [...system, ...candidates] });
 	}
@@ -355,7 +357,7 @@ export async function generateAutoCaptionsFromVideo(options: {
 		}
 	};
 	const micCues = await transcribeTrack(microphone);
-	const systemCues = await transcribeTrack([...system, ...recording]);
+	const systemCues = await transcribeTrack([...system, ...secondary]);
 	if (micCues === null && systemCues === null)
 		throw new NoCaptionAudioError("No audio could be extracted from the recording.");
 	return {

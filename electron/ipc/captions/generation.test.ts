@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
 	rm: vi.fn(),
 	companions: vi.fn(),
 	delay: vi.fn(),
+	session: vi.fn(),
 }));
 vi.mock("node:child_process", () => ({
 	execFile: (...args: unknown[]) => {
@@ -29,7 +30,7 @@ vi.mock("node:fs/promises", () => ({
 vi.mock("electron", () => ({ app: { getPath: () => "/tmp" } }));
 vi.mock("../ffmpeg/binary", () => ({ getFfmpegBinaryPath: () => "/ffmpeg" }));
 vi.mock("../paths/binaries", () => ({ getBundledWhisperExecutableCandidates: () => ["/whisper"] }));
-vi.mock("../project/session", () => ({ resolveRecordingSession: vi.fn().mockResolvedValue(null) }));
+vi.mock("../project/session", () => ({ resolveRecordingSession: mocks.session }));
 vi.mock("../recording/diagnostics", () => ({
 	getUsableCompanionAudioCandidates: mocks.companions,
 	getCompanionAudioStartDelayMs: mocks.delay,
@@ -55,6 +56,7 @@ const json = JSON.stringify({
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	mocks.session.mockReset().mockResolvedValue(null);
 	mocks.companions.mockReset().mockResolvedValue([]);
 	mocks.delay.mockReset().mockResolvedValue(null);
 	mocks.exec.mockReset().mockResolvedValue({ stderr: "" });
@@ -134,4 +136,31 @@ describe("caption generation pipeline", () => {
 		});
 		expect((await generateAutoCaptionsFromVideo(options)).cues[0].text).toBe("Hello world.");
 	});
+});
+
+it("falls back to linked webcam audio when mic exists and other secondary sources fail", async () => {
+	mocks.session.mockResolvedValue({ webcamPath: "/webcam.mp4" });
+	mocks.companions.mockResolvedValue([
+		{
+			platform: "mac",
+			micPath: "/video.mic.wav",
+			systemPath: "/video.system.wav",
+			usablePaths: ["/video.mic.wav", "/video.system.wav"],
+		},
+	]);
+	mocks.exec.mockImplementation(async (file: string, args: string[]) => {
+		if (file === "/ffmpeg" && args.includes("pcm_s16le")) {
+			const source = args[args.indexOf("-i") + 1];
+			if (source === "/video.mp4" || source === "/video.system.wav")
+				throw new Error("No audio");
+		}
+		return { stderr: "" };
+	});
+	const result = await generateAutoCaptionsFromVideo(options);
+	expect(result.cues.length).toBeGreaterThan(0);
+	expect(
+		mocks.exec.mock.calls.some(
+			([file, args]) => file === "/ffmpeg" && args.includes("/webcam.mp4"),
+		),
+	).toBe(true);
 });

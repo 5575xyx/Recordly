@@ -73,3 +73,22 @@ it("preserves untimed speech next to timed words", async () => {
 	);
 	expect(result.map((c) => c.text).join(" ")).toContain("There is a timeline editor.");
 });
+
+it("preserves system speech between timed microphone words", () => {
+	const result = mergeCaptionSources(
+		[
+			{
+				id: "mic",
+				startMs: 0,
+				endMs: 3000,
+				text: "Hello again",
+				words: [
+					{ text: "Hello", startMs: 0, endMs: 600 },
+					{ text: "again", startMs: 2400, endMs: 3000 },
+				],
+			},
+		],
+		[{ id: "system", startMs: 1000, endMs: 1800, text: "In the gap" }],
+	);
+	expect(result.map((cue) => cue.text)).toContain("In the gap");
+});

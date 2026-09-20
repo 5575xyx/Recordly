@@ -104,11 +104,10 @@ export function useProjectLifecycle(input: Input) {
 		current.setCurrentTime(0);
 		current.setDuration(0);
 		project.setError(null);
-		project.setVideoSourcePath(sourcePath);
-		project.setCurrentProjectPath(path ?? null);
+
 		refs.pendingFreshRecordingAutoZoomPathRef.current = null;
 		if (editor.webcam.sourcePath) {
-			await window.electronAPI.setCurrentRecordingSession?.(
+			const result = await window.electronAPI.setCurrentRecordingSession?.(
 				{
 					videoPath: sourcePath,
 					webcamPath: editor.webcam.sourcePath,
@@ -116,15 +115,20 @@ export function useProjectLifecycle(input: Input) {
 				},
 				{ preserveProjectPath: Boolean(path) },
 			);
+			if (result && !result.success) throw new Error("Could not load project media");
 			const session = await window.electronAPI.getCurrentRecordingSession?.();
 			current.applySessionPresentation(session?.success ? session.session : null);
 		} else {
-			await window.electronAPI.setCurrentVideoPath(sourcePath, {
+			const result = await window.electronAPI.setCurrentVideoPath(sourcePath, {
 				preserveProjectPath: Boolean(path),
 			});
+			if (!result.success) throw new Error("Could not load project media");
 			current.applySessionPresentation(null);
 		}
-		project.setVideoPath(await resolveVideoUrl(sourcePath));
+		const videoUrl = await resolveVideoUrl(sourcePath);
+		project.setVideoSourcePath(sourcePath);
+		project.setCurrentProjectPath(path ?? null);
+		project.setVideoPath(videoUrl);
 
 		appearance.setWallpaper(editor.wallpaper);
 		appearance.setShadowIntensity(editor.shadowIntensity);

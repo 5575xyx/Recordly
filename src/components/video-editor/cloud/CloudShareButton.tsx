@@ -12,9 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const DEFAULT_CLOUD_ENDPOINT = import.meta.env.DEV
-	? "http://localhost:8787/api/upload"
-	: "https://videos.recordly.dev/api/upload";
+const DEFAULT_CLOUD_ENDPOINT = "http://localhost:8787/api/upload";
 
 type Props = {
 	filePath?: string;

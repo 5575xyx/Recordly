@@ -1,0 +1,27 @@
+<!doctype html>
+<html><head><meta charset="UTF-8"><title>Recordly window states</title></head>
+<body><div id="root"></div><script type="module">
+import {installDesktopBridge} from '/tests/ui/bridge.ts';
+await installDesktopBridge({addInitScript:async(fn,arg)=>fn(arg)},'filmstrip.mp4');
+const query = new URLSearchParams(location.search);
+const windowType = query.get('windowType');
+const state = query.get('state') || 'available';
+const style = document.createElement('style');
+const [width, height] = windowType === 'update-toast' ? [420, 172] : windowType === 'countdown' ? [420, 320] : [1440, 1000];
+style.textContent = `html,body,#root{width:${width}px!important;min-width:${width}px!important;height:${height}px!important;min-height:${height}px!important}`;
+document.head.append(style);
+if (windowType === 'update-toast') {
+  const phase = state.endsWith('error') ? 'error' : ['downloading','ready'].includes(state) ? state : 'available';
+  window.electronAPI.getCurrentUpdateToastPayload = async () => ({
+    version:'1.5.0',
+    detail: phase === 'error' ? 'Check your connection and try again.' : phase === 'ready' ? 'Your update is ready to install.' : 'A new version of Recordly is available.',
+    phase, delayMs: 3600000,
+    isPreview: state === 'preview',
+    isExperimental: state === 'experimental',
+    progressPercent: 42, transferredBytes: 44040192, totalBytes: 104857600, bytesPerSecond: 3145728,
+    primaryAction: state === 'check-error' ? 'retry-check' : 'install-and-restart',
+  });
+}
+if (windowType === 'countdown') window.electronAPI.getActiveCountdown = async () => ({success:true, seconds:Number(query.get('seconds') || 3)});
+await import('/src/main.tsx');
+</script><script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script></body></html>

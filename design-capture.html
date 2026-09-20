@@ -1,0 +1,5 @@
+<!doctype html><html><head><meta charset="UTF-8"><title>Recordly design transfer</title><style>html,body,#root{min-width:1440px!important;width:1440px!important;height:1000px!important;min-height:1000px!important}</style></head><body><div id="root"></div><script type="module">
+import {installDesktopBridge} from '/tests/ui/bridge.ts';
+await installDesktopBridge({addInitScript:async(fn,arg)=>fn(arg)},'filmstrip.mp4');
+await import('/src/main.tsx');
+</script><script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script></body></html>

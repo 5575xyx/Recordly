@@ -120,10 +120,15 @@ export function useRecordingLibrary(
 			let insertAt = Math.min(before.length, Math.max(0, index ?? before.length));
 			const addedZooms: ZoomRegion[] = [];
 			let id = "";
+			let completed = 0;
 			for (const path of [...new Set(typeof paths === "string" ? [paths] : paths)]) {
-				if (cancelled.current) return;
+				if (cancelled.current) break;
 				const result = await window.electronAPI.importRecording(sourcePath, path, webcam);
-				if (!result.success) throw new Error(result.error);
+				if (!result.success) {
+					if (cancelled.current) break;
+					throw new Error(result.error);
+				}
+				completed++;
 				if (current.current.project.videoSourcePath !== source)
 					throw new Error(
 						"The project changed while importing. Add the recordings again.",
@@ -174,7 +179,7 @@ export function useRecordingLibrary(
 					);
 				}
 			}
-			if (!media || cancelled.current) return;
+			if (!media) return;
 			const { project, timeline, ui, appearance } = current.current;
 			if (project.videoSourcePath !== source)
 				throw new Error("The project changed while importing. Add the recordings again.");
@@ -202,9 +207,9 @@ export function useRecordingLibrary(
 			ui.setIsPreviewReady(false);
 			ui.setPreviewVersion((version) => version + 1);
 			toast.success(
-				typeof paths === "string"
+				completed === 1
 					? "Video added to timeline"
-					: `${paths.length} videos added to timeline`,
+					: `${completed} videos added to timeline`,
 			);
 		} catch (error) {
 			if (!cancelled.current) toast.error(`Could not add video: ${String(error)}`);

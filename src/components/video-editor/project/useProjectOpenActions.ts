@@ -121,9 +121,10 @@ export function useProjectOpenActions({
 			}
 
 			const sourcePath = fromFileUrl(result.path);
-			await window.electronAPI.setCurrentVideoPath(sourcePath, {
+			const setPathResult = await window.electronAPI.setCurrentVideoPath(sourcePath, {
 				preserveProjectPath: false,
 			});
+			if (!setPathResult.success) throw new Error("Could not load media");
 			const sourceVideoUrl = await resolveVideoUrl(sourcePath);
 			try {
 				videoPlaybackRef.current?.pause();

@@ -47,6 +47,7 @@ export function useExportDialogActions({
 		session.setShowExportDropdown(true);
 		session.setExportProgress(null);
 		session.setExportError(null);
+		session.setExportedFilePath(undefined);
 	}, [videoPath, session]);
 
 	const resolveCurrentSettings = useCallback(

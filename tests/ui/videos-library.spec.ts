@@ -359,3 +359,44 @@ for (const enabled of [true, false]) {
 		}
 	});
 }
+
+test("cancelling a batch keeps completed clips and stops the remaining import", async ({
+	page,
+}) => {
+	await setup(page);
+	await page.evaluate(() => {
+		let count = 0;
+		let finish: ((result: { success: false; error: string }) => void) | undefined;
+		window.electronAPI.importRecording = async () => {
+			count++;
+			if (count === 1)
+				return {
+					success: true,
+					value: {
+						path: "/sequence-first.mp4",
+						url: `${location.origin}/tests/ui/fixtures/filmstrip.mp4`,
+						sourceStartMs: 6000,
+						durationMs: 1000,
+						totalDurationMs: 7000,
+					},
+				};
+			document.documentElement.dataset.pendingImport = "true";
+			return new Promise((resolve) => {
+				finish = resolve;
+			});
+		};
+		window.electronAPI.cancelRecordingImport = async () => {
+			finish?.({ success: false, error: "Cancelled" });
+			return { success: true };
+		};
+	});
+	const panel = page.getByRole("complementary", { name: "Videos" });
+	await panel.locator('[data-slot="checkbox-control"]').first().click();
+	await panel
+		.locator('[data-recording-path="/recordings/second.mp4"]')
+		.dragTo(page.locator('[data-variant="clip"]'), { targetPosition: { x: 5, y: 15 } });
+	await expect(page.locator("html")).toHaveAttribute("data-pending-import", "true");
+	await page.getByRole("button", { name: "Cancel", exact: true }).click();
+	await expect(page.getByText("Adding video…")).toHaveCount(0);
+	await expect(page.locator('[data-variant="clip"]')).toHaveCount(2);
+});

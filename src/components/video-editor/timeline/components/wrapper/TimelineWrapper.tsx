@@ -1,3 +1,4 @@
+import { TimelinePresentation } from "../../core/TimelinePresentation";
 import { KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import type {
 	DragEndEvent,
@@ -11,7 +12,7 @@ import type {
 import { TimelineContext } from "dnd-timeline";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { useCallback, useRef } from "react";
-import type { TimelineRegionSpan } from "../../core/timelineTypes";
+import type { ClipSequenceSpan, TimelineRegionSpan } from "../../core/timelineTypes";
 import { clampRange, resolveDragEnd, resolveResizeEnd } from "../../dnd/engine";
 
 interface TimelineWrapperProps {
@@ -23,7 +24,7 @@ interface TimelineWrapperProps {
 	minItemDurationMs: number;
 	minVisibleRangeMs: number;
 	gridSizeMs?: number;
-	onItemSpanChange: (id: string, span: Span, rowId?: string) => void;
+	onItemSpanChange: (id: string, span: ClipSequenceSpan, rowId?: string) => void;
 	resolveTargetRowId?: (id: string, proposedRowId: string) => string;
 	allRegionSpans?: TimelineRegionSpan[];
 	onLiveSpanPreviewChange?: (id: string, span: Span | null) => void;
@@ -276,7 +277,14 @@ export default function TimelineWrapper({
 			resizeHandleWidth={28}
 		>
 			<div className="relative h-full min-h-0">
-				{children}
+				<TimelinePresentation
+					regions={allRegionSpans}
+					totalMs={totalMs}
+					minItemDurationMs={minItemDurationMs}
+					hasOverlap={hasOverlap}
+				>
+					{children}
+				</TimelinePresentation>
 				{/* Floating tooltip shown during drag/resize */}
 				<div
 					ref={tooltipRef}

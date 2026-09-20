@@ -62,7 +62,7 @@ export function ClipFilmstrip({
 		<div
 			ref={ref}
 			data-testid="clip-filmstrip"
-			className="pointer-events-none absolute inset-0 flex overflow-hidden"
+			className="pointer-events-none absolute inset-0 flex overflow-hidden rounded-[inherit]"
 			aria-hidden="true"
 		>
 			{loading && <Skeleton className="h-full w-full rounded-none" />}

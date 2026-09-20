@@ -1,24 +1,34 @@
 import {
 	Gauge,
+	MagnifyingGlassPlus as ZoomIn,
 	ChatCircle as MessageSquare,
 	MusicNotes as Music,
 	Scissors,
 	SpeakerX,
-	MagnifyingGlassPlus as ZoomIn,
 } from "@phosphor-icons/react";
 import { ClipFilmstrip } from "./components/filmstrip/ClipFilmstrip";
-import type { Span } from "dnd-timeline";
-import { useItem } from "dnd-timeline";
-import { useMemo } from "react";
+import type { Span, GetSpanFromDragEvent, GetSpanFromResizeEvent } from "dnd-timeline";
+import { useItem, useTimelineContext } from "dnd-timeline";
+import { useCallback, useMemo, useRef } from "react";
+import { useDndMonitor } from "@dnd-kit/core";
+import { useTimelinePresentation } from "./core/TimelinePresentation";
+import { getRegionDisplaySpan, snapRegionSpan } from "./core/clipPresentation";
+import { resolveDragEnd, resolveResizeEnd } from "./dnd/engine";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { formatClipSpeedLabel } from "../clipSpeedChange";
+import { getTimeAtClipSeam, type ClipPresentation } from "./core/clipPresentation";
 import { formatPlayheadTime } from "./core/time";
 import AudioWaveform from "./components/waveform/AudioWaveform";
 import type { AudioPeaksData } from "./core/timelineTypes";
 import glassStyles from "./ItemGlass.module.css";
 
 interface ItemProps {
+	clipPresentation?: ClipPresentation[];
+	sharedLeftGrip?: boolean;
+	sharedRightGrip?: boolean;
+	displaySpan?: Span;
+	embedded?: boolean;
 	videoPath?: string | null;
 	sourceSpan?: Span;
 	id: string;
@@ -28,6 +38,7 @@ interface ItemProps {
 	children: React.ReactNode;
 	isSelected?: boolean;
 	onSelect?: () => void;
+	onDoubleClick?: () => void;
 	onSelectId?: (id: string) => void;
 	zoomDepth?: number;
 	zoomMode?: "auto" | "manual";
@@ -53,14 +64,20 @@ const ZOOM_LABELS: Record<number, string> = {
 };
 
 export default function Item({
+	clipPresentation: suppliedPresentation,
 	id,
+	sharedLeftGrip = false,
+	sharedRightGrip = false,
+	embedded = false,
 	videoPath,
 	sourceSpan,
 	span,
+	displaySpan: suppliedDisplaySpan,
 	rowId,
 	disabled = false,
 	isSelected = false,
 	onSelect,
+	onDoubleClick,
 	onSelectId,
 	zoomDepth = 1,
 	zoomMode = "auto",
@@ -75,13 +92,106 @@ export default function Item({
 	loadingLabel,
 	children,
 }: ItemProps) {
+	const timeline = useTimelineContext();
+	const presentation = useTimelinePresentation();
+	const clipPresentation =
+		variant === "clip" ? undefined : (suppliedPresentation ?? presentation.clips);
+	const displaySpan = clipPresentation?.length
+		? getRegionDisplaySpan(span, clipPresentation)
+		: (suppliedDisplaySpan ?? span);
+	const nodeRef = useRef<HTMLDivElement | null>(null);
+	const targets = useMemo(
+		() => [
+			...new Set(
+				presentation.regions
+					.filter((region) => region.id !== id)
+					.flatMap((region) => [region.start, region.end]),
+			),
+		],
+		[presentation.regions, id],
+	);
+	const snap = (next: Span, edge?: "start" | "end") =>
+		snapRegionSpan(next, targets, presentation.clips, timeline.pixelsToValue(1), edge);
+	const getMediaSpanFromDrag: GetSpanFromDragEvent = (event) => {
+		if (!("delta" in event)) return span;
+		const dragged = timeline.getSpanFromDragEvent(event);
+		if (!dragged) return null;
+		if (clipPresentation) {
+			const start = getTimeAtClipSeam(dragged.start, clipPresentation);
+			return snap({ start, end: start + span.end - span.start });
+		}
+		const visualOffset = displaySpan.start - span.start;
+		return { start: dragged.start - visualOffset, end: dragged.end - visualOffset };
+	};
+	const getMediaSpanFromResize: GetSpanFromResizeEvent = (event) => {
+		const delta = timeline.pixelsToValue(event.delta.x);
+		const edge = event.direction;
+		if (clipPresentation)
+			return snap(
+				{
+					...span,
+					[edge]: getTimeAtClipSeam(displaySpan[edge] + delta, clipPresentation),
+				},
+				edge,
+			);
+		const scale = (span.end - span.start) / (displaySpan.end - displaySpan.start);
+		return { ...span, [edge]: span[edge] + delta * scale };
+	};
+
+	const paintPreview = (preview: Span, deltaY = 0) => {
+		const node = nodeRef.current;
+		if (!node || !clipPresentation) return;
+		const display = getRegionDisplaySpan(preview, clipPresentation);
+		const side = timeline.direction === "rtl" ? "right" : "left";
+		node.style[side] = `${timeline.valueToPixels(display.start - timeline.range.start)}px`;
+		node.style.width = `${timeline.valueToPixels(display.end - display.start)}px`;
+		node.style.transform = deltaY ? `translateY(${deltaY}px)` : "none";
+	};
+	const { previewConfig } = presentation;
+	useDndMonitor({
+		onDragMove(event) {
+			if (event.active.id !== id || !clipPresentation) return;
+			const next = getMediaSpanFromDrag(event);
+			if (next) {
+				const resolved = resolveDragEnd(id, next, rowId, previewConfig);
+				paintPreview(resolved?.span ?? span, event.delta.y);
+			}
+		},
+		onDragEnd(event) {
+			if (event.active.id === id) paintPreview(span);
+		},
+		onDragCancel(event) {
+			if (event.active.id === id) paintPreview(span);
+		},
+	});
 	const { setNodeRef, attributes, listeners, itemStyle, itemContentStyle } = useItem({
 		id,
-		span,
+		span: displaySpan,
 		disabled: disabled || isLoading,
-		data: { rowId },
+		data: {
+			rowId,
+			span,
+			getSpanFromDragEvent: getMediaSpanFromDrag,
+			getSpanFromResizeEvent: getMediaSpanFromResize,
+		},
+		resizeHandleWidth: variant === "clip" ? 12 : undefined,
+		onResizeMove(event) {
+			if (!clipPresentation) return;
+			const next = getMediaSpanFromResize(event);
+			if (next) {
+				const resolved = resolveResizeEnd(id, next, previewConfig);
+				if (resolved) paintPreview(resolved);
+			}
+		},
 	});
 
+	const attachRef = useCallback(
+		(node: HTMLDivElement | null) => {
+			nodeRef.current = node;
+			setNodeRef(node);
+		},
+		[setNodeRef],
+	);
 	const timeLabel = useMemo(
 		() => `${formatPlayheadTime(span.start)} – ${formatPlayheadTime(span.end)}`,
 		[span.start, span.end],
@@ -90,7 +200,7 @@ export default function Item({
 	if (isLoading) {
 		return (
 			<div
-				ref={setNodeRef}
+				ref={attachRef}
 				style={{
 					...itemStyle,
 					height: "100%",
@@ -101,6 +211,8 @@ export default function Item({
 				{...attributes}
 				data-timeline-item="true"
 				data-variant={variant}
+				data-start-ms={span.start}
+				data-end-ms={span.end}
 				onMouseDownCapture={(event) => event.stopPropagation()}
 				onClickCapture={(event) => event.stopPropagation()}
 			>
@@ -146,29 +258,38 @@ export default function Item({
 		...itemStyle,
 		minWidth: MIN_ITEM_PX,
 		height: "100%",
-		overflow: "hidden",
+		overflow: isClip ? "visible" : "hidden",
+		pointerEvents: "auto" as const,
 	};
 
 	return (
 		<div
-			ref={setNodeRef}
+			ref={attachRef}
 			style={safeItemStyle}
 			{...listeners}
 			{...attributes}
 			data-timeline-item="true"
 			data-variant={variant}
+			data-start-ms={span.start}
+			data-end-ms={span.end}
 			aria-label={
 				isClip
 					? `Clip${clipSpeedLabel ? ` ${clipSpeedLabel}` : ""} · ${timeLabel}`
 					: undefined
 			}
 			onPointerDownCapture={handleSelect}
+			onDoubleClick={(event) => {
+				if (!onDoubleClick) return;
+				event.stopPropagation();
+				onDoubleClick();
+			}}
 			className="group h-full"
 		>
 			<div
 				className="h-full"
 				style={{
 					...itemContentStyle,
+					overflow: isClip ? "visible" : "hidden",
 					minWidth: MIN_ITEM_PX,
 					height: "100%",
 					display: "flex",
@@ -178,14 +299,16 @@ export default function Item({
 				<div
 					className={cn(
 						glassClass,
-						"timeline-block w-full overflow-hidden flex items-center justify-center gap-1.5 cursor-grab active:cursor-grabbing relative",
+						"timeline-block w-full flex items-center justify-center gap-1.5 relative",
 						isSelected && glassStyles.selected,
+						embedded && glassStyles.embeddedCaption,
+						isClip ? "overflow-visible" : "overflow-hidden",
 					)}
 					style={{
 						height: "85%",
-						minHeight: 22,
+						minHeight: embedded ? 18 : 22,
 						minWidth: MIN_ITEM_PX,
-						containerType: "inline-size",
+						containerType: "size",
 					}}
 					onClick={(event) => {
 						event.stopPropagation();
@@ -204,7 +327,11 @@ export default function Item({
 							glassStyles.left,
 							isClip && glassStyles.clipHandle,
 						)}
-						style={{ cursor: "col-resize", pointerEvents: "auto" }}
+						style={{
+							cursor: "col-resize",
+							pointerEvents: isClip ? "none" : "auto",
+							display: isClip && sharedLeftGrip ? "none" : undefined,
+						}}
 						title="Resize left"
 					/>
 					<div
@@ -213,7 +340,11 @@ export default function Item({
 							glassStyles.right,
 							isClip && glassStyles.clipHandle,
 						)}
-						style={{ cursor: "col-resize", pointerEvents: "auto" }}
+						style={{
+							cursor: "col-resize",
+							pointerEvents: isClip ? "none" : "auto",
+							display: isClip && sharedRightGrip ? "none" : undefined,
+						}}
 						title="Resize right"
 					/>
 					{showAudioWaveform && waveformPeaks && (
@@ -240,21 +371,27 @@ export default function Item({
 								"relative z-10 flex max-w-full items-center justify-center gap-1 px-1 text-[11px] font-medium text-black/70 dark:text-white/90 select-none overflow-hidden",
 								isClip &&
 									"rounded bg-black/65 px-2 py-1 text-white dark:text-white",
-								isZoom && "text-white dark:text-white",
+								(isZoom || embedded) && "text-white dark:text-white",
+								embedded && "w-full justify-start px-2",
 							)}
 						>
 							{isClip ? (
 								clipSpeedLabel
 							) : isZoom ? (
 								<>
-									<ZoomIn className="zoom-icon size-3 shrink-0" />
+									<ZoomIn
+										aria-hidden="true"
+										className="zoom-icon size-3 shrink-0"
+									/>
 									<span className="zoom-value whitespace-nowrap">
 										{ZOOM_LABELS[zoomDepth] || `${zoomDepth}×`}
-										<span className="zoom-mode ml-1 font-normal">
+										<span className="zoom-mode font-normal">
 											{zoomMode === "manual" ? "Manual" : "Auto"}
 										</span>
 									</span>
 								</>
+							) : embedded ? (
+								<span className="truncate">{children}</span>
 							) : (
 								<>
 									{isTrim ? (

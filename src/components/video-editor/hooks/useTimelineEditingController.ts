@@ -124,6 +124,7 @@ export function useTimelineEditingController(input: Input) {
 		handleSeek: playback.handleSeek,
 	});
 	const zoomCommands = useZoomRegionCommands({
+		setSelectedClipId: timeline.setSelectedClipId,
 		videoPath: input.videoPath,
 		setZoomRegions: timeline.setZoomRegions,
 		selectedZoomId: timeline.selectedZoomId,
@@ -140,6 +141,7 @@ export function useTimelineEditingController(input: Input) {
 		(id: string | null) => {
 			timeline.setSelectedAnnotationId(id);
 			if (id) {
+				timeline.setSelectedClipId(null);
 				timeline.setSelectedZoomId(null);
 				timeline.setSelectedAudioId(null);
 				timeline.setSelectedCaptionId(null);
@@ -147,6 +149,7 @@ export function useTimelineEditingController(input: Input) {
 		},
 		[
 			timeline.setSelectedAnnotationId,
+			timeline.setSelectedClipId,
 			timeline.setSelectedZoomId,
 			timeline.setSelectedAudioId,
 			timeline.setSelectedCaptionId,
@@ -172,6 +175,8 @@ export function useTimelineEditingController(input: Input) {
 			input.pendingFreshRecordingAutoSuggestTelemetryCountRef,
 	});
 	const clipCommands = useClipRegionCommands({
+		setAnnotationRegions: timeline.setAnnotationRegions,
+		setAudioRegions: timeline.setAudioRegions,
 		sourceDurationMs: input.duration * 1000,
 		clipRegions: timeline.clipRegions,
 		setClipRegions: timeline.setClipRegions,
@@ -188,6 +193,7 @@ export function useTimelineEditingController(input: Input) {
 		t: input.t,
 	});
 	const audioCommands = useAudioRegionCommands({
+		setSelectedClipId: timeline.setSelectedClipId,
 		setAudioRegions: timeline.setAudioRegions,
 		selectedAudioId: timeline.selectedAudioId,
 		setSelectedAudioId: timeline.setSelectedAudioId,
@@ -198,6 +204,7 @@ export function useTimelineEditingController(input: Input) {
 		nextAudioIdRef: input.nextAudioIdRef,
 	});
 	const annotationCommands = useAnnotationRegionCommands({
+		onSelectAnnotation: handleSelectAnnotation,
 		setAnnotationRegions: timeline.setAnnotationRegions,
 		selectedAnnotationId: timeline.selectedAnnotationId,
 		setSelectedAnnotationId: timeline.setSelectedAnnotationId,

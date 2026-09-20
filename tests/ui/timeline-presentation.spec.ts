@@ -62,7 +62,7 @@ test("filmstrips have persistent handles, conditional speed badges and centered 
 	await expect(zoom).toBeVisible();
 	const clipHeight = (await clip.locator(".timeline-block").boundingBox())!.height;
 	const zoomHeight = (await zoom.boundingBox())!.height;
-	expect(Math.abs(clipHeight - zoomHeight * 2)).toBeLessThan(1);
+	expect(Math.abs(clipHeight - zoomHeight)).toBeLessThan(1);
 	const colors = await zoom.evaluate((node) => {
 		const probe = document.createElement("span");
 		probe.style.background = "var(--accent)";

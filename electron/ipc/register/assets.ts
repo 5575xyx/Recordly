@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -27,11 +28,21 @@ export function registerAssetHandlers() {
 
 	ipcMain.handle("generate-wallpaper-thumbnail", async (_, filePath: string) => {
 		try {
-			const resolved = await resolveReadableLocalFilePath(filePath);
+			const bundled = filePath.startsWith("/wallpapers/");
+			const candidate = bundled
+				? path.join(
+						getAssetRootPath(),
+						"wallpapers",
+						path.basename(decodeURIComponent(filePath)),
+					)
+				: filePath;
+			const resolved = await resolveReadableLocalFilePath(candidate);
 
 			// Deterministic cache key from file path + mtime
 			const stat = await fs.stat(resolved);
-			const cacheKey = Buffer.from(`${resolved}:${stat.mtimeMs}`).toString("base64url");
+			const cacheKey = createHash("sha256")
+				.update(`${resolved}:${stat.mtimeMs}`)
+				.digest("hex");
 			const thumbPath = path.join(thumbCacheDir, `${cacheKey}.jpg`);
 
 			// Return cached thumbnail if it exists (no queue needed)

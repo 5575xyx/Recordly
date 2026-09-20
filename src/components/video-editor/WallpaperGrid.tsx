@@ -53,8 +53,10 @@ export function WallpaperGrid({
 								<WallpaperVideoPreview src={item.previewUrl} />
 							) : (
 								<img
-									src={item.previewUrl}
+									src={item.previewUrl || undefined}
 									alt=""
+									loading="lazy"
+									decoding="async"
 									draggable={false}
 									className="absolute inset-0 h-full w-full select-none object-cover"
 								/>

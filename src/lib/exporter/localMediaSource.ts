@@ -1,8 +1,8 @@
+import { getLocalMediaServerPath } from "../localMediaUrl";
 import { fromFileUrl, toFileUrl } from "@/components/video-editor/projectPersistence";
 
 const NOOP = () => undefined;
 const REMOTE_MEDIA_URL_PATTERN = /^(https?:|blob:|data:)/i;
-const LOOPBACK_MEDIA_HOSTS = new Set(["127.0.0.1", "localhost"]);
 const BUNDLED_ASSET_PATH_PREFIXES = ["/wallpapers/", "/app-icons/"];
 
 export function isAbsoluteLocalPath(resource: string) {
@@ -15,24 +15,6 @@ export function isAbsoluteLocalPath(resource: string) {
 
 function isBundledAssetPath(resource: string) {
 	return BUNDLED_ASSET_PATH_PREFIXES.some((prefix) => resource.startsWith(prefix));
-}
-
-function getLocalMediaServerPath(resource: string) {
-	if (!/^https?:\/\//i.test(resource)) {
-		return null;
-	}
-
-	try {
-		const url = new URL(resource);
-		if (!LOOPBACK_MEDIA_HOSTS.has(url.hostname) || url.pathname !== "/video") {
-			return null;
-		}
-
-		const mediaPath = url.searchParams.get("path");
-		return mediaPath && mediaPath.trim().length > 0 ? mediaPath : null;
-	} catch {
-		return null;
-	}
 }
 
 export function isLocalMediaServerUrl(resource: string) {
@@ -95,10 +77,6 @@ function inferMimeType(filePath: string) {
 export async function resolveMediaResourceUrl(resource: string): Promise<string> {
 	const localFilePath = getLocalFilePath(resource);
 	if (!localFilePath) {
-		return resource;
-	}
-
-	if (isLocalMediaServerUrl(resource)) {
 		return resource;
 	}
 

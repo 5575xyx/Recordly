@@ -4,14 +4,11 @@ interface SliderControlProps {
 	label: string;
 	ariaLabel?: string;
 	value: number;
-	defaultValue: number;
 	min: number;
 	max: number;
 	step: number;
 	onChange: (value: number) => void;
 	formatValue: (value: number) => string;
-	parseInput: (text: string) => number | null;
-	accentColor?: "purple" | "blue";
 }
 export const SliderControl = memo(function SliderControl({
 	label,

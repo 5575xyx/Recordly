@@ -1,5 +1,4 @@
 import { Card, Chip, ProgressBar } from "@heroui/react";
-import { Button } from "@/components/ui/button";
 import {
 	ArrowClockwiseIcon,
 	CheckCircleIcon,
@@ -7,10 +6,11 @@ import {
 	WarningCircleIcon,
 } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { useI18n } from "@/contexts/I18nContext";
 import styles from "./UpdateToastWindow.module.css";
 
-type UpdateToastPayload = {
+export type UpdateToastPayload = {
 	version: string;
 	detail: string;
 	phase: "available" | "downloading" | "ready" | "error";
@@ -90,11 +90,17 @@ function PhaseIcon({ payload }: { payload: UpdateToastPayload }) {
 	}
 }
 
-export function UpdateToastWindow() {
-	const [payload, setPayload] = useState<UpdateToastPayload | null>(null);
+export function UpdateToastWindow({
+	payload: suppliedPayload,
+}: {
+	payload?: UpdateToastPayload;
+} = {}) {
+	const [livePayload, setPayload] = useState<UpdateToastPayload | null>(null);
+	const payload = suppliedPayload ?? livePayload;
 	const { t } = useI18n();
 
 	useEffect(() => {
+		if (suppliedPayload) return;
 		let mounted = true;
 		const refresh = () => {
 			void window.electronAPI.getCurrentUpdateToastPayload().then((nextPayload) => {
@@ -111,7 +117,7 @@ export function UpdateToastWindow() {
 			clearInterval(pollTimer);
 			dispose();
 		};
-	}, []);
+	}, [suppliedPayload]);
 
 	if (!payload) {
 		return <div className={styles.window} />;

@@ -984,6 +984,14 @@ export function createEditorWindow(): BrowserWindow {
 		console.log("[editor-window] focus");
 	});
 
+	win.on("enter-full-screen", () => {
+		if (!win.isDestroyed()) win.webContents.send("window-fullscreen-changed", true);
+	});
+
+	win.on("leave-full-screen", () => {
+		if (!win.isDestroyed()) win.webContents.send("window-fullscreen-changed", false);
+	});
+
 	if (VITE_DEV_SERVER_URL) {
 		const query = new URLSearchParams(getEditorWindowQuery());
 		win.loadURL(`${VITE_DEV_SERVER_URL}?${query.toString()}`);

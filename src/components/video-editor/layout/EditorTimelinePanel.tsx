@@ -12,6 +12,7 @@ import type { useTimelineState } from "../state/useTimelineState";
 import TimelineEditor, { type TimelineEditorHandle } from "../timeline/TimelineEditor";
 
 type Props = {
+	panelRef?: RefObject<HTMLDivElement | null>;
 	timelineRef: RefObject<TimelineEditorHandle | null>;
 	timeline: ReturnType<typeof useTimelineState>;
 	projection: ReturnType<typeof useTimelineProjection>;
@@ -58,7 +59,10 @@ export function EditorTimelinePanel(props: Props) {
 
 	return (
 		<div
-			className="flex flex-shrink-0 flex-col bg-transparent px-4 pb-4 pt-2"
+			ref={props.panelRef}
+			tabIndex={-1}
+			data-timeline-panel
+			className="outline-none flex flex-shrink-0 flex-col bg-transparent px-4 pb-4 pt-2"
 			style={{ height: "22%", minHeight: 180, maxHeight: 280 }}
 		>
 			<TimelineEditor
@@ -84,6 +88,7 @@ export function EditorTimelinePanel(props: Props) {
 				trimRegions={timeline.trimRegions}
 				clipRegions={timeline.clipRegions}
 				onClipSplit={clipCommands.handleClipSplit}
+				onClipDelete={clipCommands.handleClipDelete}
 				onClipSpanChange={clipCommands.handleClipSpanChange}
 				selectedClipId={timeline.selectedClipId}
 				onSelectClip={clipCommands.handleSelectClip}
@@ -110,7 +115,11 @@ export function EditorTimelinePanel(props: Props) {
 							cue.sourceCueId === timeline.selectedCaptionId &&
 							currentTime * 1000 >= cue.startMs &&
 							currentTime * 1000 < cue.endMs,
-					)?.id ?? null
+					)?.id ??
+					projection.effectiveCaptionRegions.find(
+						(cue) => cue.sourceCueId === timeline.selectedCaptionId,
+					)?.id ??
+					null
 				}
 				onSelectCaption={(id) => {
 					const fragment = projection.effectiveCaptionRegions.find(

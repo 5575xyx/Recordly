@@ -1,6 +1,7 @@
 import { Popover as HeroPopover } from "@heroui/react";
 import { createContext, useContext, useState, type ComponentProps, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { useUNSAFE_PortalContext } from "react-aria";
 const ModalContext = createContext(true);
 const CloseContext = createContext<(() => void) | undefined>(undefined);
 export function Popover({
@@ -56,6 +57,7 @@ export function PopoverContent({
 	...props
 }: ContentProps) {
 	const modal = useContext(ModalContext);
+	const scopedPortalContainer = useUNSAFE_PortalContext().getContainer?.();
 	const close = useContext(CloseContext);
 	const placement = (align === "center" ? side : `${side} ${align}`) as ComponentProps<
 		typeof HeroPopover.Content
@@ -70,7 +72,9 @@ export function PopoverContent({
 			containerPadding={collisionPadding}
 			isNonModal={!modal}
 			UNSTABLE_portalContainer={
-				usePortal ? undefined : (document.getElementById("root") ?? undefined)
+				usePortal
+					? undefined
+					: (scopedPortalContainer ?? document.getElementById("root") ?? undefined)
 			}
 			className="max-w-[calc(100vw-24px)]"
 		>

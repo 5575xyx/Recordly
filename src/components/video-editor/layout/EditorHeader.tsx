@@ -1,6 +1,7 @@
 import { Input } from "@/components/ui/input";
 import {
 	FolderOpen,
+	FilmStrip,
 	ArrowClockwise as Redo2,
 	ArrowCounterClockwise as Undo2,
 } from "@phosphor-icons/react";
@@ -18,6 +19,8 @@ import { EditorExportMenu } from "./EditorExportMenu";
 import { EditorPresetMenu } from "./EditorPresetMenu";
 
 type Props = {
+	videosOpen?: boolean;
+	onToggleVideos?: () => void;
 	t: ReturnType<typeof useI18n>["t"];
 	headerLeftControlsPaddingClass: string;
 	project: ReturnType<typeof useProjectState>;
@@ -48,6 +51,10 @@ type Props = {
 	handleStartExportFromDropdown: () => void;
 	revealExportedFile: () => void;
 	exportMessage: string | null;
+	prepareExportForShare: () => Promise<string | undefined>;
+	onRequestShareSignIn: () => void;
+	shareRequestNonce: number;
+	authToken?: string;
 };
 
 export function EditorHeader(props: Props) {
@@ -100,6 +107,16 @@ export function EditorHeader(props: Props) {
 				className={`editor-header-start flex items-center justify-self-start gap-1 ${headerLeftControlsPaddingClass}`}
 				style={{ WebkitAppRegion: "no-drag" } as CSSProperties}
 			>
+				<Button
+					type="button"
+					variant="secondary"
+					className="[--button-bg:var(--surface)] [--button-fg:var(--foreground)] mr-2 inline-flex h-9 min-w-[104px] items-center justify-center gap-2 px-4.5"
+					aria-expanded={props.videosOpen}
+					onClick={props.onToggleVideos}
+				>
+					<FilmStrip className="h-4 w-4" />
+					<span className="text-sm font-semibold tracking-tight">Videos</span>
+				</Button>
 				<Button
 					ref={projectBrowserTriggerRef}
 					type="button"
@@ -219,6 +236,11 @@ export function EditorHeader(props: Props) {
 					handleStartExportFromDropdown={handleStartExportFromDropdown}
 					revealExportedFile={revealExportedFile}
 					exportMessage={exportMessage}
+					projectTitle={projectDisplayName}
+					prepareExportForShare={props.prepareExportForShare}
+					onRequestShareSignIn={props.onRequestShareSignIn}
+					shareRequestNonce={props.shareRequestNonce}
+					authToken={props.authToken}
 				/>
 			</div>
 		</header>

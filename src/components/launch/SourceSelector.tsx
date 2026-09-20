@@ -56,6 +56,7 @@ export const SourceSelectorContent = ({
 		const isSelected = selectedSource === source.name;
 		return (
 			<ToggleButton
+				variant="ghost"
 				isSelected={isSelected}
 				key={`${source.id}-${index}`}
 				className={cn(
@@ -157,7 +158,7 @@ export const SourceSelectorContent = ({
 
 /**
  * SourceSelector - A rich source selection component with thumbnails
- * Uses Radix UI Popover for positioning and accessibility
+ * Uses the shared HeroUI popover for positioning and accessibility
  */
 export const SourceSelector = React.memo(function SourceSelector({
 	screenSources: propsScreenSources,
@@ -293,7 +294,7 @@ export const SourceSelector = React.memo(function SourceSelector({
 		)
 	) : (
 		<Button
-			variant="outline"
+			variant="ghost"
 			size="lg"
 			onPointerEnter={prefetchSources}
 			onFocusCapture={prefetchSources}

@@ -18,6 +18,7 @@ import {
 } from "@phosphor-icons/react";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -70,7 +71,7 @@ type Props = {
 	setIsPreviewReady: Dispatch<SetStateAction<boolean>>;
 	setCurrentTime: Dispatch<SetStateAction<number>>;
 	setIsPlaying: Dispatch<SetStateAction<boolean>>;
-	setError: Dispatch<SetStateAction<string | null>>;
+	setError: (message: string | null) => void;
 };
 
 function formatTime(seconds: number) {
@@ -341,32 +342,45 @@ export function EditorPreviewPanel(props: Props) {
 					</div>
 				</div>
 
-				<div className="editor-playback-volume z-10 ml-auto flex items-center gap-2">
-					<div className="flex items-center gap-1.5">
-						<Button
-							variant="ghost"
-							type="button"
-							title={t("editor.playback.muteUnmute")}
-							onClick={() => setPreviewVolume(previewVolume <= 0.001 ? 1 : 0)}
+				<div className="editor-playback-volume z-10 ml-auto flex items-center">
+					<Popover>
+						<PopoverTrigger asChild>
+							<Button
+								variant="ghost"
+								size="icon"
+								aria-label={t("editor.playback.volume", "Preview volume")}
+								title={t("editor.playback.volume", "Preview volume")}
+							>
+								{previewVolume <= 0.001 ? (
+									<SpeakerX className="size-3.5" />
+								) : previewVolume < 0.5 ? (
+									<SpeakerLow className="size-3.5" />
+								) : (
+									<SpeakerHigh className="size-3.5" />
+								)}
+							</Button>
+						</PopoverTrigger>
+						<PopoverContent
+							side="top"
+							sideOffset={10}
+							aria-label="Preview volume"
+							className="flex w-14 flex-col items-center gap-3 p-3"
 						>
-							{previewVolume <= 0.001 ? (
-								<SpeakerX className="h-3.5 w-3.5" />
-							) : previewVolume < 0.5 ? (
-								<SpeakerLow className="h-3.5 w-3.5" />
-							) : (
-								<SpeakerHigh className="h-3.5 w-3.5" />
-							)}
-						</Button>
-						<Slider
-							aria-label={t("editor.playback.volume", "Preview volume")}
-							min={0}
-							max={1}
-							step={0.01}
-							value={[previewVolume]}
-							onValueChange={([value]) => setPreviewVolume(value)}
-							className="w-24"
-						/>
-					</div>
+							<span className="text-[10px] tabular-nums text-muted-foreground">
+								{Math.round(previewVolume * 100)}%
+							</span>
+							<Slider
+								aria-label={t("editor.playback.volume", "Preview volume")}
+								orientation="vertical"
+								min={0}
+								max={1}
+								step={0.01}
+								value={[previewVolume]}
+								onValueChange={([value]) => setPreviewVolume(value)}
+								className="h-28"
+							/>
+						</PopoverContent>
+					</Popover>
 				</div>
 			</div>
 		</div>

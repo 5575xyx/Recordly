@@ -54,6 +54,9 @@
 	width: 300px;
 	max-height: 400px;
 	overflow-y: auto;
+	overflow-x: hidden;
+	scrollbar-width: thin;
+	scrollbar-color: var(--launch-border-strong) transparent;
 	pointer-events: auto;
 }
 

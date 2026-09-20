@@ -1,5 +1,5 @@
 import { Card, Popover } from "@heroui/react";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { toFileUrl } from "./projectPersistence";
 
@@ -34,7 +34,6 @@ export default function ProjectBrowserDialog({
 	renderMode = "floating",
 }: ProjectBrowserDialogProps) {
 	const panelRef = useRef<HTMLDivElement>(null);
-	const visibleEntries = useMemo(() => entries.slice(0, 24), [entries]);
 	useEffect(() => {
 		if (!open) {
 			onPanelHeightChange?.(0);
@@ -55,7 +54,7 @@ export default function ProjectBrowserDialog({
 	const content = (
 		<Card
 			ref={panelRef}
-			className="w-[340px] max-w-[calc(100vw-24px)] rounded-none bg-transparent p-4 shadow-none"
+			className={`${renderMode === "inline" ? "w-full" : "w-[340px]"} min-w-0 max-w-[calc(100vw-24px)] rounded-none bg-transparent p-3 shadow-none`}
 		>
 			<Card.Header className="flex-row items-center justify-between gap-3">
 				<Card.Title>Projects</Card.Title>
@@ -65,10 +64,10 @@ export default function ProjectBrowserDialog({
 					</Button>
 				)}
 			</Card.Header>
-			<Card.Content className="max-h-80 overflow-auto min-w-0">
-				{visibleEntries.length ? (
+			<Card.Content className="custom-scrollbar max-h-80 overflow-y-auto overflow-x-hidden min-w-0">
+				{entries.length ? (
 					<div className="space-y-1">
-						{visibleEntries.map((entry) => (
+						{entries.map((entry) => (
 							<Button
 								key={entry.path}
 								variant="ghost"

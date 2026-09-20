@@ -22,7 +22,7 @@ async function clickOutside(page: Page) {
 	await page.mouse.click(1000, 300);
 }
 
-test("clip filmstrip decodes different source frames and zoom blocks stay compact", async ({
+test("clip filmstrip decodes different source frames and zoom blocks use the available height", async ({
 	page,
 }) => {
 	test.setTimeout(60000);
@@ -38,8 +38,8 @@ test("clip filmstrip decodes different source frames and zoom blocks stay compac
 	await page.getByRole("button", { name: "Add Zoom (Z)", exact: true }).click();
 	const zoom = page.locator('[data-timeline-item][data-variant="zoom"] .timeline-block');
 	await expect(zoom).toBeVisible();
-	expect((await zoom.boundingBox())!.height).toBeLessThanOrEqual(30);
-	await expect(page.locator(".timeline-axis")).toHaveCSS("border-bottom-width", "0px");
+	expect((await zoom.boundingBox())!.height).toBeGreaterThan(50);
+	await expect(page.locator(".timeline-axis")).toHaveCount(0);
 	await page.screenshot({
 		path: "test-results/editor-filmstrip-zoom.png",
 		animations: "disabled",

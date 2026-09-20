@@ -64,14 +64,12 @@ import {
 	ADVANCED_VERTICAL_PADDING_MAX,
 	DEFAULT_AUTO_CAPTION_SETTINGS,
 	DEFAULT_CROP_REGION,
-	DEFAULT_CURSOR_CLICK_BOUNCE,
 	DEFAULT_CURSOR_CLICK_BOUNCE_DURATION,
 	DEFAULT_CURSOR_CLICK_EFFECT,
 	DEFAULT_CURSOR_CLICK_EFFECT_COLOR,
 	DEFAULT_CURSOR_CLICK_EFFECT_DURATION_MS,
 	DEFAULT_CURSOR_CLICK_EFFECT_OPACITY,
 	DEFAULT_CURSOR_CLICK_EFFECT_SCALE,
-	DEFAULT_CURSOR_SIZE,
 	DEFAULT_CURSOR_STYLE,
 	DEFAULT_CURSOR_SWAY,
 	DEFAULT_PADDING,
@@ -1133,7 +1131,6 @@ export function SettingsPanel({
 	);
 	const removeBackgroundEnabled = aspectRatio === "native" && isZeroPadding(padding);
 
-	const [backgroundDirection, setBackgroundDirection] = useState(1);
 	const [backgroundTab, setBackgroundTab] = useState<BackgroundTab>(() =>
 		getBackgroundTabForWallpaper(selected),
 	);
@@ -1227,7 +1224,7 @@ export function SettingsPanel({
 					key: wallpaper ? `builtin/${wallpaper.id}` : previewPath,
 					label: wallpaper?.label ?? `Wallpaper ${index + 1}`,
 					value: wallpaper?.publicPath ?? previewPath,
-					previewUrl: previewPath,
+					previewUrl: wallpaperPreviewPaths.length ? previewPath : "",
 				};
 			});
 
@@ -1606,13 +1603,11 @@ export function SettingsPanel({
 				<SliderControl
 					label={tSettings("effects.backgroundBlur")}
 					value={backgroundBlur}
-					defaultValue={initialEditorPreferences.backgroundBlur}
 					min={0}
 					max={8}
 					step={0.25}
 					onChange={(v) => onBackgroundBlurChange?.(v)}
 					formatValue={(v) => `${v.toFixed(1)}px`}
-					parseInput={(text) => parseFloat(text.replace(/px$/, ""))}
 				/>
 			</section>
 
@@ -1622,10 +1617,6 @@ export function SettingsPanel({
 					value={backgroundTab}
 					onValueChange={(value) => {
 						if (value) {
-							const order = ["image", "video", "color", "gradient"];
-							setBackgroundDirection(
-								order.indexOf(value) > order.indexOf(backgroundTab) ? 1 : -1,
-							);
 							setBackgroundTab(value as typeof backgroundTab);
 						}
 					}}
@@ -1650,124 +1641,105 @@ export function SettingsPanel({
 					))}
 				</ChoiceGroup>
 
-				<div className="pt-4 overflow-hidden">
-					<AnimatePresence mode="wait" initial={false} custom={backgroundDirection}>
-						<motion.div
-							key={backgroundTab}
-							custom={backgroundDirection}
-							variants={{
-								enter: (direction: number) => ({
-									x: `${direction * 100}%`,
-									opacity: 0,
-								}),
-								center: { x: 0, opacity: 1 },
-								exit: (direction: number) => ({
-									x: `${direction * -100}%`,
-									opacity: 0,
-								}),
-							}}
-							initial="enter"
-							animate="center"
-							exit="exit"
-							transition={{ duration: 0.2, ease: "easeOut" }}
-						>
-							{backgroundTab === "image" || backgroundTab === "video" ? (
-								<>
-									<input
-										type="file"
-										ref={fileInputRef}
-										onChange={handleImageUpload}
-										accept=".jpg,.jpeg,image/jpeg"
-										className="hidden"
-									/>
-									<WallpaperGrid
-										addLabel={
-											backgroundTab === "image"
-												? tSettings(
-														"background.addWallpaper",
-														"Add wallpaper",
-													)
-												: tSettings(
-														"background.addVideoWallpaper",
-														"Add video wallpaper",
-													)
-										}
-										onAdd={
-											backgroundTab === "image"
-												? () => fileInputRef.current?.click()
-												: handleVideoUpload
-										}
-										onSelect={onWallpaperChange}
-										onRemove={handleRemoveCustomImage}
-										isSelected={getWallpaperTileState}
-										items={[
-											...customImages
-												.filter(
-													(url) =>
-														isVideoWallpaperSource(url) ===
-														(backgroundTab === "video"),
+				<input
+					type="file"
+					ref={fileInputRef}
+					onChange={handleImageUpload}
+					accept=".jpg,.jpeg,image/jpeg"
+					className="hidden"
+				/>
+				<div className="grid pt-4 overflow-hidden" data-testid="background-slider">
+					<div
+						key={backgroundTab}
+						data-background-panel={backgroundTab}
+						className="editor-section-enter min-w-0"
+					>
+						{backgroundTab === "image" || backgroundTab === "video" ? (
+							<>
+								<WallpaperGrid
+									addLabel={
+										backgroundTab === "image"
+											? tSettings("background.addWallpaper", "Add wallpaper")
+											: tSettings(
+													"background.addVideoWallpaper",
+													"Add video wallpaper",
 												)
-												.map((url, index) => ({
-													key: `custom-${index}`,
-													value: url,
-													previewUrl: url,
-													label: isVideoWallpaperSource(url)
-														? (url.split(/[\\/]/).pop() ??
-															"Custom video wallpaper")
-														: `${tSettings("background.customWallpaper", "Custom wallpaper")} ${index + 1}`,
-													removable: true,
-												})),
-											...(backgroundTab === "image"
-												? imageWallpaperTiles
-												: videoWallpaperTiles),
-										]}
+									}
+									onAdd={
+										backgroundTab === "image"
+											? () => fileInputRef.current?.click()
+											: handleVideoUpload
+									}
+									onSelect={onWallpaperChange}
+									onRemove={handleRemoveCustomImage}
+									isSelected={getWallpaperTileState}
+									items={[
+										...customImages
+											.filter(
+												(url) =>
+													isVideoWallpaperSource(url) ===
+													(backgroundTab === "video"),
+											)
+											.map((url, index) => ({
+												key: `custom-${index}`,
+												value: url,
+												previewUrl: url,
+												label: isVideoWallpaperSource(url)
+													? (url.split(/[\\/]/).pop() ??
+														"Custom video wallpaper")
+													: `${tSettings("background.customWallpaper", "Custom wallpaper")} ${index + 1}`,
+												removable: true,
+											})),
+										...(backgroundTab === "image"
+											? imageWallpaperTiles
+											: videoWallpaperTiles),
+									]}
+								/>
+							</>
+						) : backgroundTab === "color" ? (
+							<div className="mt-0 space-y-4">
+								<div className="flex flex-col gap-3">
+									<ColorPalette
+										color={selectedColor}
+										colors={visibleColorPalette}
+										onChange={({ hex }) => {
+											setSelectedColor(hex);
+											onWallpaperChange(hex);
+										}}
 									/>
-								</>
-							) : backgroundTab === "color" ? (
-								<div className="mt-0 space-y-4">
-									<div className="flex flex-col gap-3">
-										<ColorPalette
-											color={selectedColor}
-											colors={visibleColorPalette}
-											onChange={({ hex }) => {
-												setSelectedColor(hex);
-												onWallpaperChange(hex);
-											}}
-										/>
-										<ColorControl
-											label="Custom color"
-											value={selectedColor}
-											onChange={(color) => {
-												setSelectedColor(color);
-												onWallpaperChange(color);
-											}}
-										/>
-									</div>
+									<ColorControl
+										label="Custom color"
+										value={selectedColor}
+										onChange={(color) => {
+											setSelectedColor(color);
+											onWallpaperChange(color);
+										}}
+									/>
 								</div>
-							) : (
-								<div className="mt-0 grid grid-cols-5 gap-2">
-									{GRADIENTS.map((g, idx) => (
-										<Button
-											variant="ghost"
-											key={g}
-											className={wallpaperTileClass(gradient === g)}
-											aria-label={`Gradient ${idx + 1}`}
-											onClick={() => {
-												setGradient(g);
-												onWallpaperChange(g);
-											}}
-											role="button"
-										>
-											<div
-												className="absolute inset-[1px] overflow-hidden rounded-[8px]"
-												style={{ background: g }}
-											/>
-										</Button>
-									))}
-								</div>
-							)}
-						</motion.div>
-					</AnimatePresence>
+							</div>
+						) : (
+							<div className="mt-0 grid grid-cols-5 gap-2">
+								{GRADIENTS.map((g, idx) => (
+									<Button
+										variant="ghost"
+										key={g}
+										className={wallpaperTileClass(gradient === g)}
+										aria-label={`Gradient ${idx + 1}`}
+										onClick={() => {
+											setGradient(g);
+											onWallpaperChange(g);
+										}}
+										role="button"
+									>
+										<div
+											className="absolute inset-[1px] overflow-hidden rounded-[8px]"
+											style={{ background: g }}
+										/>
+									</Button>
+								))}
+							</div>
+						)}
+					</div>
 				</div>
 			</div>
 		</div>
@@ -1849,24 +1821,20 @@ export function SettingsPanel({
 				<SliderControl
 					label={tSettings("effects.shadow")}
 					value={shadowIntensity}
-					defaultValue={initialEditorPreferences.shadowIntensity}
 					min={0}
 					max={1}
 					step={0.01}
 					onChange={(v) => onShadowChange?.(v)}
 					formatValue={(v) => `${Math.round(v * 100)}%`}
-					parseInput={(text) => parseFloat(text.replace(/%$/, "")) / 100}
 				/>
 				<SliderControl
 					label={tSettings("effects.radius", "Radius")}
 					value={borderRadius}
-					defaultValue={initialEditorPreferences.borderRadius}
 					min={0}
 					max={50}
 					step={0.1}
 					onChange={(v) => onBorderRadiusChange?.(v)}
 					formatValue={(v) => `${v}%`}
-					parseInput={(text) => parseFloat(text.replace(/%$/, ""))}
 				/>
 				<div className="flex flex-col gap-3 pt-0.5">
 					{advanced && (
@@ -1884,59 +1852,49 @@ export function SettingsPanel({
 						<SliderControl
 							label={tSettings("effects.padding")}
 							value={padding.top}
-							defaultValue={DEFAULT_PADDING.top}
 							min={0}
 							max={100}
 							step={1}
 							onChange={(v) => handlePaddingSideChange("top", v)}
 							formatValue={(v) => `${v}%`}
-							parseInput={(text) => parseFloat(text.replace(/%$/, ""))}
 						/>
 					) : (
 						<div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
 							<SliderControl
 								label={tSettings("effects.paddingTop", "Top")}
 								value={padding.top}
-								defaultValue={DEFAULT_PADDING.top}
 								min={0}
 								max={ADVANCED_VERTICAL_PADDING_MAX}
 								step={1}
 								onChange={(v) => handlePaddingSideChange("top", v)}
 								formatValue={(v) => `${v}%`}
-								parseInput={(text) => parseFloat(text.replace(/%$/, ""))}
 							/>
 							<SliderControl
 								label={tSettings("effects.paddingBottom", "Bottom")}
 								value={padding.bottom}
-								defaultValue={DEFAULT_PADDING.bottom}
 								min={0}
 								max={ADVANCED_VERTICAL_PADDING_MAX}
 								step={1}
 								onChange={(v) => handlePaddingSideChange("bottom", v)}
 								formatValue={(v) => `${v}%`}
-								parseInput={(text) => parseFloat(text.replace(/%$/, ""))}
 							/>
 							<SliderControl
 								label={tSettings("effects.paddingLeft", "Left")}
 								value={padding.left}
-								defaultValue={DEFAULT_PADDING.left}
 								min={0}
 								max={100}
 								step={1}
 								onChange={(v) => handlePaddingSideChange("left", v)}
 								formatValue={(v) => `${v}%`}
-								parseInput={(text) => parseFloat(text.replace(/%$/, ""))}
 							/>
 							<SliderControl
 								label={tSettings("effects.paddingRight", "Right")}
 								value={padding.right}
-								defaultValue={DEFAULT_PADDING.right}
 								min={0}
 								max={100}
 								step={1}
 								onChange={(v) => handlePaddingSideChange("right", v)}
 								formatValue={(v) => `${v}%`}
-								parseInput={(text) => parseFloat(text.replace(/%$/, ""))}
 							/>
 						</div>
 					)}
@@ -1975,46 +1933,38 @@ export function SettingsPanel({
 				<SliderControl
 					label={tSettings("crop.top", "Top")}
 					value={cropTop}
-					defaultValue={0}
 					min={0}
 					max={50}
 					step={1}
 					onChange={(v) => setCropInset("top", v)}
 					formatValue={(v) => `${Math.round(v)}%`}
-					parseInput={(text) => parseFloat(text.replace(/%$/, ""))}
 				/>
 				<SliderControl
 					label={tSettings("crop.bottom", "Bottom")}
 					value={cropBottom}
-					defaultValue={0}
 					min={0}
 					max={50}
 					step={1}
 					onChange={(v) => setCropInset("bottom", v)}
 					formatValue={(v) => `${Math.round(v)}%`}
-					parseInput={(text) => parseFloat(text.replace(/%$/, ""))}
 				/>
 				<SliderControl
 					label={tSettings("crop.left", "Left")}
 					value={cropLeft}
-					defaultValue={0}
 					min={0}
 					max={50}
 					step={1}
 					onChange={(v) => setCropInset("left", v)}
 					formatValue={(v) => `${Math.round(v)}%`}
-					parseInput={(text) => parseFloat(text.replace(/%$/, ""))}
 				/>
 				<SliderControl
 					label={tSettings("crop.right", "Right")}
 					value={cropRight}
-					defaultValue={0}
 					min={0}
 					max={50}
 					step={1}
 					onChange={(v) => setCropInset("right", v)}
 					formatValue={(v) => `${Math.round(v)}%`}
-					parseInput={(text) => parseFloat(text.replace(/%$/, ""))}
 				/>
 			</div>
 		</section>
@@ -2202,13 +2152,11 @@ export function SettingsPanel({
 				<SliderControl
 					label={tSettings("captions.fontSize", "Font size")}
 					value={autoCaptionSettings.fontSize}
-					defaultValue={DEFAULT_AUTO_CAPTION_SETTINGS.fontSize}
 					min={16}
 					max={72}
 					step={1}
 					onChange={(value) => updateAutoCaptionSettings({ fontSize: value })}
 					formatValue={(value) => `${Math.round(value)}px`}
-					parseInput={(text) => parseFloat(text.replace(/px$/, ""))}
 				/>
 				<div className="flex items-center justify-between py-2">
 					<span className="text-sm font-medium text-foreground">
@@ -2225,7 +2173,6 @@ export function SettingsPanel({
 					<SliderControl
 						label={tSettings("captions.rowCount", "Rows")}
 						value={autoCaptionSettings.maxRows}
-						defaultValue={DEFAULT_AUTO_CAPTION_SETTINGS.maxRows}
 						min={1}
 						max={4}
 						step={1}
@@ -2233,40 +2180,34 @@ export function SettingsPanel({
 							updateAutoCaptionSettings({ maxRows: Math.round(value) })
 						}
 						formatValue={(value) => `${Math.round(value)}`}
-						parseInput={(text) => parseFloat(text)}
 					/>
 				)}
 				{advanced && (
 					<SliderControl
 						label={tSettings("captions.bottomOffset", "Bottom offset")}
 						value={autoCaptionSettings.bottomOffset}
-						defaultValue={DEFAULT_AUTO_CAPTION_SETTINGS.bottomOffset}
 						min={0}
 						max={30}
 						step={1}
 						onChange={(value) => updateAutoCaptionSettings({ bottomOffset: value })}
 						formatValue={(value) => `${Math.round(value)}%`}
-						parseInput={(text) => parseFloat(text.replace(/%$/, ""))}
 					/>
 				)}
 				{advanced && (
 					<SliderControl
 						label={tSettings("captions.maxWidth", "Max width")}
 						value={autoCaptionSettings.maxWidth}
-						defaultValue={DEFAULT_AUTO_CAPTION_SETTINGS.maxWidth}
 						min={40}
 						max={95}
 						step={1}
 						onChange={(value) => updateAutoCaptionSettings({ maxWidth: value })}
 						formatValue={(value) => `${Math.round(value)}%`}
-						parseInput={(text) => parseFloat(text.replace(/%$/, ""))}
 					/>
 				)}
 				{advanced && (
 					<SliderControl
 						label={tSettings("captions.boxRadius", "Box radius")}
 						value={autoCaptionSettings.boxRadius}
-						defaultValue={DEFAULT_AUTO_CAPTION_SETTINGS.boxRadius}
 						min={0}
 						max={40}
 						step={0.5}
@@ -2274,14 +2215,12 @@ export function SettingsPanel({
 						formatValue={(value) =>
 							`${Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1)}px`
 						}
-						parseInput={(text) => parseFloat(text.replace(/px$/, ""))}
 					/>
 				)}
 				{advanced && (
 					<SliderControl
 						label={tSettings("captions.backgroundOpacity", "Background opacity")}
 						value={autoCaptionSettings.backgroundOpacity}
-						defaultValue={DEFAULT_AUTO_CAPTION_SETTINGS.backgroundOpacity}
 						min={0}
 						max={1}
 						step={0.01}
@@ -2289,7 +2228,6 @@ export function SettingsPanel({
 							updateAutoCaptionSettings({ backgroundOpacity: value })
 						}
 						formatValue={(value) => `${Math.round(value * 100)}%`}
-						parseInput={(text) => parseFloat(text.replace(/%$/, "")) / 100}
 					/>
 				)}
 			</div>
@@ -2505,9 +2443,6 @@ export function SettingsPanel({
 									"Camera stiffness",
 								)}
 								value={cameraSpringStiffnessMultiplier}
-								defaultValue={
-									initialEditorPreferences.cameraSpringStiffnessMultiplier
-								}
 								min={0.25}
 								max={3}
 								step={0.01}
@@ -2515,7 +2450,6 @@ export function SettingsPanel({
 									onCameraSpringStiffnessMultiplierChange?.(value)
 								}
 								formatValue={(value) => `${value.toFixed(2)}×`}
-								parseInput={(text) => parseFloat(text.replace(/×$/, ""))}
 							/>
 							<SliderControl
 								label={tSettings(
@@ -2523,15 +2457,11 @@ export function SettingsPanel({
 									"Camera damping",
 								)}
 								value={cameraSpringDampingMultiplier}
-								defaultValue={
-									initialEditorPreferences.cameraSpringDampingMultiplier
-								}
 								min={0.25}
 								max={3}
 								step={0.01}
 								onChange={(value) => onCameraSpringDampingMultiplierChange?.(value)}
 								formatValue={(value) => `${value.toFixed(2)}×`}
-								parseInput={(text) => parseFloat(text.replace(/×$/, ""))}
 							/>
 							<SliderControl
 								label={tSettings(
@@ -2539,13 +2469,11 @@ export function SettingsPanel({
 									"Camera mass",
 								)}
 								value={cameraSpringMassMultiplier}
-								defaultValue={initialEditorPreferences.cameraSpringMassMultiplier}
 								min={0.25}
 								max={3}
 								step={0.01}
 								onChange={(value) => onCameraSpringMassMultiplierChange?.(value)}
 								formatValue={(value) => `${value.toFixed(2)}×`}
-								parseInput={(text) => parseFloat(text.replace(/×$/, ""))}
 							/>
 						</div>
 
@@ -2567,9 +2495,6 @@ export function SettingsPanel({
 									"Spring stiffness",
 								)}
 								value={cursorSpringStiffnessMultiplier}
-								defaultValue={
-									initialEditorPreferences.cursorSpringStiffnessMultiplier
-								}
 								min={0.25}
 								max={3}
 								step={0.01}
@@ -2577,7 +2502,6 @@ export function SettingsPanel({
 									onCursorSpringStiffnessMultiplierChange?.(value)
 								}
 								formatValue={(value) => `${value.toFixed(2)}×`}
-								parseInput={(text) => parseFloat(text.replace(/×$/, ""))}
 							/>
 							<SliderControl
 								label={tSettings(
@@ -2585,15 +2509,11 @@ export function SettingsPanel({
 									"Spring damping",
 								)}
 								value={cursorSpringDampingMultiplier}
-								defaultValue={
-									initialEditorPreferences.cursorSpringDampingMultiplier
-								}
 								min={0.25}
 								max={3}
 								step={0.01}
 								onChange={(value) => onCursorSpringDampingMultiplierChange?.(value)}
 								formatValue={(value) => `${value.toFixed(2)}×`}
-								parseInput={(text) => parseFloat(text.replace(/×$/, ""))}
 							/>
 							<SliderControl
 								label={tSettings(
@@ -2601,13 +2521,11 @@ export function SettingsPanel({
 									"Spring mass",
 								)}
 								value={cursorSpringMassMultiplier}
-								defaultValue={initialEditorPreferences.cursorSpringMassMultiplier}
 								min={0.25}
 								max={3}
 								step={0.01}
 								onChange={(value) => onCursorSpringMassMultiplierChange?.(value)}
 								formatValue={(value) => `${value.toFixed(2)}×`}
-								parseInput={(text) => parseFloat(text.replace(/×$/, ""))}
 							/>
 						</div>
 					</section>
@@ -2671,50 +2589,41 @@ export function SettingsPanel({
 						</ChoiceGroup>
 					</>
 				)}
-				<div className="flex items-center justify-between gap-3">
-					<SectionLabel>{tSettings("zoom.globalSettings", "Animation")}</SectionLabel>
-					<Button
-						variant="ghost"
-						size="sm"
-						className="text-xs text-muted"
-						type="button"
-						onClick={resetZoomSection}
-					>
-						{t("common.actions.reset", "Reset")}
-					</Button>
-				</div>
 				{advanced && (
-					<div className="flex items-center justify-between py-2">
-						<span className="text-xs text-muted-foreground">
-							{tSettings("effects.classicZoom", "Classic Animation")}
-						</span>
-						<Switch
-							aria-label={tSettings("effects.classicZoom", "Classic Animation")}
-							checked={zoomClassicMode}
-							onCheckedChange={(v) => onZoomClassicModeChange?.(v)}
-						/>
-					</div>
-				)}
-				{!zoomClassicMode && (
-					<div className="text-xs text-muted-foreground">
-						{tSettings(
-							"effects.motionPresetsZoomHint",
-							"Zoom motion presets are available in Settings.",
+					<>
+						<div className="flex items-center justify-between gap-3">
+							<SectionLabel>
+								{tSettings("zoom.globalSettings", "Animation")}
+							</SectionLabel>
+							<Button
+								variant="ghost"
+								size="sm"
+								className="text-xs text-muted"
+								type="button"
+								onClick={resetZoomSection}
+							>
+								{t("common.actions.reset", "Reset")}
+							</Button>
+						</div>
+						<div className="flex items-center justify-between py-2">
+							<span className="text-xs text-muted-foreground">
+								{tSettings("effects.classicZoom", "Classic Animation")}
+							</span>
+							<Switch
+								aria-label={tSettings("effects.classicZoom", "Classic Animation")}
+								checked={zoomClassicMode}
+								onCheckedChange={(v) => onZoomClassicModeChange?.(v)}
+							/>
+						</div>
+						{!zoomClassicMode && (
+							<div className="text-xs text-muted-foreground">
+								{tSettings(
+									"effects.motionPresetsZoomHint",
+									"Zoom motion presets are available in Settings.",
+								)}
+							</div>
 						)}
-					</div>
-				)}
-				{selectedZoomId && (
-					<Button
-						onClick={() => {
-							if (selectedZoomId && onZoomDelete) onZoomDelete(selectedZoomId);
-						}}
-						variant="destructive-soft"
-						size="sm"
-						className="mt-1 h-9 w-full gap-2 text-xs"
-					>
-						<Trash2 className="h-3 w-3" />
-						{tSettings("zoom.deleteZoom")}
-					</Button>
+					</>
 				)}
 			</section>
 		);
@@ -2739,13 +2648,11 @@ export function SettingsPanel({
 				<SliderControl
 					label={tSettings("audio.volume", "Volume")}
 					value={selectedAudioVolume ?? 1}
-					defaultValue={1}
 					min={0}
 					max={1}
 					step={0.01}
 					onChange={(v) => onAudioVolumeChange?.(v)}
 					formatValue={(v) => `${Math.round(v * 100)}%`}
-					parseInput={(text) => parseFloat(text.replace(/%$/, "")) / 100}
 				/>
 				<div className="flex items-center justify-between py-2">
 					<span className="text-xs text-muted-foreground">
@@ -2762,20 +2669,17 @@ export function SettingsPanel({
 
 		const clipSectionContent = (
 			<section className="flex flex-col gap-3">
-				<SectionLabel>{tSettings("clip.title", "Clip")}</SectionLabel>
 				<SliderControl
 					label={tSettings("speed.label", "Speed")}
 					value={Math.min(
 						clipSpeedRange.max,
 						Math.max(clipSpeedRange.min, selectedClipSpeed ?? 1),
 					)}
-					defaultValue={1}
 					min={clipSpeedRange.min}
 					max={clipSpeedRange.max}
 					step={0.25}
 					onChange={(value) => onClipSpeedChange?.(value)}
 					formatValue={(value) => `${value}×`}
-					parseInput={(text) => Number.parseFloat(text)}
 				/>
 				{selectedClipSpeed != null &&
 					(selectedClipSpeed < clipSpeedRange.min ||
@@ -2808,7 +2712,6 @@ export function SettingsPanel({
 
 		const captionSectionContent = (
 			<section className="flex flex-col gap-4">
-				<SectionLabel>{tSettings("sections.caption", "Caption")}</SectionLabel>
 				{selectedCaptionId !== null ? (
 					<CaptionListPanel
 						cues={autoCaptions}
@@ -2930,13 +2833,11 @@ export function SettingsPanel({
 							<SliderControl
 								label={tSettings("effects.cursorSize")}
 								value={cursorSize}
-								defaultValue={DEFAULT_CURSOR_SIZE}
 								min={0.5}
 								max={10}
 								step={0.05}
 								onChange={(v) => onCursorSizeChange?.(v)}
 								formatValue={(v) => `${v.toFixed(2)}×`}
-								parseInput={(text) => parseFloat(text.replace(/×$/, ""))}
 							/>
 							<CursorClickEffectCards
 								title={tSettings(
@@ -2980,13 +2881,11 @@ export function SettingsPanel({
 											"Effect Size",
 										)}
 										value={cursorClickEffectScale}
-										defaultValue={DEFAULT_CURSOR_CLICK_EFFECT_SCALE}
 										min={0.5}
 										max={2}
 										step={0.05}
 										onChange={(v) => onCursorClickEffectScaleChange?.(v)}
 										formatValue={(v) => `${v.toFixed(2)}×`}
-										parseInput={(text) => parseFloat(text.replace(/×$/, ""))}
 									/>
 									<SliderControl
 										label={tSettings(
@@ -2994,15 +2893,11 @@ export function SettingsPanel({
 											"Effect Opacity",
 										)}
 										value={cursorClickEffectOpacity}
-										defaultValue={DEFAULT_CURSOR_CLICK_EFFECT_OPACITY}
 										min={0}
 										max={1}
 										step={0.01}
 										onChange={(v) => onCursorClickEffectOpacityChange?.(v)}
 										formatValue={(v) => `${Math.round(v * 100)}%`}
-										parseInput={(text) =>
-											parseFloat(text.replace(/%$/, "")) / 100
-										}
 									/>
 									<SliderControl
 										label={tSettings(
@@ -3010,28 +2905,22 @@ export function SettingsPanel({
 											"Effect Duration",
 										)}
 										value={cursorClickEffectDurationMs}
-										defaultValue={DEFAULT_CURSOR_CLICK_EFFECT_DURATION_MS}
 										min={120}
 										max={1200}
 										step={10}
 										onChange={(v) => onCursorClickEffectDurationMsChange?.(v)}
 										formatValue={(v) => `${Math.round(v)} ms`}
-										parseInput={(text) =>
-											parseFloat(text.replace(/ms$/i, "").trim())
-										}
 									/>
 								</div>
 							) : null}
 							<SliderControl
 								label={tSettings("effects.cursorClickBounce")}
 								value={cursorClickBounce}
-								defaultValue={DEFAULT_CURSOR_CLICK_BOUNCE}
 								min={0}
 								max={5}
 								step={0.05}
 								onChange={(v) => onCursorClickBounceChange?.(v)}
 								formatValue={(v) => `${v.toFixed(2)}×`}
-								parseInput={(text) => parseFloat(text.replace(/×$/, ""))}
 							/>
 							{advanced && (
 								<SliderControl
@@ -3040,22 +2929,17 @@ export function SettingsPanel({
 										"Bounce Speed",
 									)}
 									value={cursorClickBounceDuration}
-									defaultValue={DEFAULT_CURSOR_CLICK_BOUNCE_DURATION}
 									min={60}
 									max={500}
 									step={5}
 									onChange={(v) => onCursorClickBounceDurationChange?.(v)}
 									formatValue={(v) => `${Math.round(v)} ms`}
-									parseInput={(text) =>
-										parseFloat(text.replace(/ms$/i, "").trim())
-									}
 								/>
 							)}
 							{advanced && (
 								<SliderControl
 									label={tSettings("effects.cursorSway")}
 									value={toCursorSwaySliderValue(cursorSway)}
-									defaultValue={toCursorSwaySliderValue(DEFAULT_CURSOR_SWAY)}
 									min={0}
 									max={toCursorSwaySliderValue(2)}
 									step={toCursorSwaySliderValue(0.05)}
@@ -3065,11 +2949,6 @@ export function SettingsPanel({
 									formatValue={(v) =>
 										v <= 0 ? tSettings("effects.off") : `${v.toFixed(2)}×`
 									}
-									parseInput={(text) => {
-										const normalized = text.trim().toLowerCase();
-										if (normalized === "off") return 0;
-										return parseFloat(text.replace(/×$/, ""));
-									}}
 								/>
 							)}
 							{advanced && showDevMotionControls ? (
@@ -3147,25 +3026,21 @@ export function SettingsPanel({
 							<SliderControl
 								label={tSettings("effects.webcamWidth", "Webcam Width")}
 								value={webcamWidth}
-								defaultValue={DEFAULT_WEBCAM_SIZE}
 								min={10}
 								max={100}
 								step={1}
 								onChange={(v) => updateWebcam({ width: v, size: v })}
 								formatValue={(v) => `${Math.round(v)}%`}
-								parseInput={(text) => parseFloat(text.replace(/%$/, ""))}
 							/>
 							{advanced && (
 								<SliderControl
 									label={tSettings("effects.webcamHeight", "Webcam Height")}
 									value={webcamHeight}
-									defaultValue={DEFAULT_WEBCAM_SIZE}
 									min={10}
 									max={100}
 									step={1}
 									onChange={(v) => updateWebcam({ height: v })}
 									formatValue={(v) => `${Math.round(v)}%`}
-									parseInput={(text) => parseFloat(text.replace(/%$/, ""))}
 								/>
 							)}
 							{advanced && (
@@ -3264,7 +3139,6 @@ export function SettingsPanel({
 									<SliderControl
 										label={tSettings("effects.webcamHorizontal", "Horizontal")}
 										value={webcamPositionX * 100}
-										defaultValue={DEFAULT_WEBCAM_POSITION_X * 100}
 										min={0}
 										max={100}
 										step={1}
@@ -3275,12 +3149,10 @@ export function SettingsPanel({
 											})
 										}
 										formatValue={(v) => `${Math.round(v)}%`}
-										parseInput={(text) => parseFloat(text.replace(/%$/, ""))}
 									/>
 									<SliderControl
 										label={tSettings("effects.webcamVertical", "Vertical")}
 										value={webcamPositionY * 100}
-										defaultValue={DEFAULT_WEBCAM_POSITION_Y * 100}
 										min={0}
 										max={100}
 										step={1}
@@ -3291,7 +3163,6 @@ export function SettingsPanel({
 											})
 										}
 										formatValue={(v) => `${Math.round(v)}%`}
-										parseInput={(text) => parseFloat(text.replace(/%$/, ""))}
 									/>
 								</>
 							) : null}
@@ -3299,37 +3170,31 @@ export function SettingsPanel({
 								<SliderControl
 									label={tSettings("effects.webcamMargin", "Margin")}
 									value={webcam?.margin ?? DEFAULT_WEBCAM_MARGIN}
-									defaultValue={DEFAULT_WEBCAM_MARGIN}
 									min={0}
 									max={96}
 									step={1}
 									onChange={(v) => updateWebcam({ margin: v })}
 									formatValue={(v) => `${Math.round(v)}px`}
-									parseInput={(text) => parseFloat(text.replace(/px$/, ""))}
 								/>
 							)}
 							<SliderControl
 								label={tSettings("effects.webcamRoundness")}
 								value={webcam?.roundness ?? DEFAULT_WEBCAM_ROUNDNESS}
-								defaultValue={DEFAULT_WEBCAM_ROUNDNESS}
 								min={0}
 								max={100}
 								step={1}
 								onChange={(v) => updateWebcam({ roundness: v })}
 								formatValue={(v) => `${Math.round(v)}%`}
-								parseInput={(text) => parseFloat(text.replace(/%$/, ""))}
 							/>
 							{advanced && (
 								<SliderControl
 									label={tSettings("effects.webcamShadow")}
 									value={webcam?.shadow ?? DEFAULT_WEBCAM_SHADOW}
-									defaultValue={DEFAULT_WEBCAM_SHADOW}
 									min={0}
 									max={1}
 									step={0.01}
 									onChange={(v) => updateWebcam({ shadow: v })}
 									formatValue={(v) => `${Math.round(v * 100)}%`}
-									parseInput={(text) => parseFloat(text.replace(/%$/, "")) / 100}
 								/>
 							)}
 							<div className="py-2">

@@ -787,6 +787,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	clearCurrentVideoPath: () => {
 		return ipcRenderer.invoke("clear-current-video-path");
 	},
+	getRecordingThumbnail: (filePath: string) => ipcRenderer.invoke("get-recording-thumbnail", filePath),
+	listRecordings: () => ipcRenderer.invoke("list-recordings"),
+	setRecordingsRemoved: (paths: string[], removed: boolean) =>
+		ipcRenderer.invoke("set-recordings-removed", paths, removed),
+	importRecording: (currentPath: string, recordingPath: string, webcam?: import("../src/types/recordingLibrary").RecordingWebcamSource) =>
+		ipcRenderer.invoke("import-recording", currentPath, recordingPath, webcam),
 	deleteRecordingFile: (filePath: string) => {
 		return ipcRenderer.invoke("delete-recording-file", filePath);
 	},
@@ -952,11 +958,49 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	getPlatform: () => {
 		return ipcRenderer.invoke("get-platform");
 	},
+	isWindowFullscreen: () => {
+		return ipcRenderer.invoke("get-window-fullscreen");
+	},
+	onWindowFullscreenChanged: (callback: (isFullscreen: boolean) => void) => {
+		const listener = (_event: Electron.IpcRendererEvent, isFullscreen: boolean) =>
+			callback(isFullscreen);
+		ipcRenderer.on("window-fullscreen-changed", listener);
+		return () => ipcRenderer.removeListener("window-fullscreen-changed", listener);
+	},
 	getLinuxWindowSystem: () => {
 		return ipcRenderer.invoke("get-linux-window-system");
 	},
+	getPendingAuthCallbackUrl: () => ipcRenderer.invoke("auth:get-pending-callback"),
+	onAuthCallbackUrl: (callback: (url: string) => void) => {
+		const listener = (_event: Electron.IpcRendererEvent, url: string) => callback(url);
+		ipcRenderer.on("auth:callback", listener);
+		return () => ipcRenderer.removeListener("auth:callback", listener);
+	},
 	revealInFolder: (filePath: string) => {
 		return ipcRenderer.invoke("reveal-in-folder", filePath);
+	},
+	cloudShareUpload: (input: {
+		filePath: string;
+		endpoint: string;
+		token?: string;
+		title?: string;
+		notes?: string;
+		uploadId?: string;
+	}) => ipcRenderer.invoke("cloud-share-upload", input),
+	cloudShareCancel: (uploadId: string) => ipcRenderer.invoke("cloud-share-cancel", uploadId),
+	onCloudShareProgress: (
+		callback: (progress: {
+			uploadId: string;
+			uploadedBytes: number;
+			totalBytes: number;
+		}) => void,
+	) => {
+		const listener = (
+			_event: Electron.IpcRendererEvent,
+			progress: { uploadId: string; uploadedBytes: number; totalBytes: number },
+		) => callback(progress);
+		ipcRenderer.on("cloud-share-progress", listener);
+		return () => ipcRenderer.removeListener("cloud-share-progress", listener);
 	},
 	openRecordingsFolder: () => {
 		return ipcRenderer.invoke("open-recordings-folder");

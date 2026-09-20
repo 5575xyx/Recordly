@@ -1,3 +1,6 @@
+import { getRecordingThumbnail } from "../recording/thumbnail";
+import { listRecordings, setRecordingsRemoved } from "../recording/library";
+import { importRecording } from "../recording/importRecording";
 import { randomUUID } from "node:crypto";
 import { constants as fsConstants } from "node:fs";
 import fs from "node:fs/promises";
@@ -211,6 +214,32 @@ async function ensureNamedProjectSaveDoesNotOverwriteDifferentProject(
 }
 
 export function registerProjectHandlers() {
+	ipcMain.handle("get-recording-thumbnail", async (_, file: string) => {
+		try { return { success: true, value: await getRecordingThumbnail(file) }; }
+		catch (error) { return { success: false, error: String(error) }; }
+	});
+	ipcMain.handle("list-recordings", async () => {
+		try {
+			return { success: true, value: await listRecordings() };
+		} catch (error) {
+			return { success: false, error: String(error) };
+		}
+	});
+	ipcMain.handle("set-recordings-removed", async (_, paths: string[], removed: boolean) => {
+		try {
+			await setRecordingsRemoved(paths, removed);
+			return { success: true, value: null };
+		} catch (error) {
+			return { success: false, error: String(error) };
+		}
+	});
+	ipcMain.handle("import-recording", async (_, currentPath: string, recordingPath: string, webcam?: import("../../../src/types/recordingLibrary").RecordingWebcamSource) => {
+		try {
+			return { success: true, value: await importRecording(currentPath, recordingPath, webcam) };
+		} catch (error) {
+			return { success: false, error: String(error) };
+		}
+	});
 	ipcMain.handle("reveal-in-folder", async (_, filePath: string) => {
 		try {
 			// shell.showItemInFolder doesn't return a value, it throws on error

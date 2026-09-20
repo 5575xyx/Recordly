@@ -752,6 +752,25 @@ interface Window {
 		}>;
 		getCurrentVideoPath: () => Promise<{ success: boolean; path?: string }>;
 		clearCurrentVideoPath: () => Promise<{ success: boolean }>;
+		getRecordingThumbnail: (filePath: string) => Promise<import("../src/types/recordingLibrary").LibraryResult<string>>;
+		listRecordings: () => Promise<
+			import("../src/types/recordingLibrary").LibraryResult<
+				import("../src/types/recordingLibrary").RecordingLibraryEntry[]
+			>
+		>;
+		setRecordingsRemoved: (
+			paths: string[],
+			removed: boolean,
+		) => Promise<import("../src/types/recordingLibrary").LibraryResult<null>>;
+		importRecording: (
+			currentPath: string,
+			recordingPath: string,
+			webcam?: import("../src/types/recordingLibrary").RecordingWebcamSource,
+		) => Promise<
+			import("../src/types/recordingLibrary").LibraryResult<
+				import("../src/types/recordingLibrary").RecordingImportResult
+			>
+		>;
 		deleteRecordingFile: (filePath: string) => Promise<{ success: boolean; error?: string }>;
 		getLocalMediaUrl: (
 			filePath: string,
@@ -869,10 +888,36 @@ interface Window {
 			callback: (chrome: { trafficLightsVisible: boolean }) => void,
 		) => () => void;
 		getPlatform: () => Promise<string>;
+		isWindowFullscreen: () => Promise<boolean>;
+		onWindowFullscreenChanged: (callback: (isFullscreen: boolean) => void) => () => void;
 		getLinuxWindowSystem: () => Promise<"wayland" | "x11" | null>;
+		getPendingAuthCallbackUrl: () => Promise<string | null>;
+		onAuthCallbackUrl: (callback: (url: string) => void) => () => void;
 		revealInFolder: (
 			filePath: string,
 		) => Promise<{ success: boolean; error?: string; message?: string }>;
+		cloudShareUpload: (input: {
+			filePath: string;
+			endpoint: string;
+			token?: string;
+			title?: string;
+			notes?: string;
+			uploadId?: string;
+		}) => Promise<{
+			success: boolean;
+			uploadId?: string;
+			shareUrl?: string;
+			canceled?: boolean;
+			error?: string;
+		}>;
+		cloudShareCancel: (uploadId: string) => Promise<{ success: boolean }>;
+		onCloudShareProgress: (
+			callback: (progress: {
+				uploadId: string;
+				uploadedBytes: number;
+				totalBytes: number;
+			}) => void,
+		) => () => void;
 		openRecordingsFolder: () => Promise<{ success: boolean; error?: string; message?: string }>;
 		getRecordingsDirectory: () => Promise<{
 			success: boolean;

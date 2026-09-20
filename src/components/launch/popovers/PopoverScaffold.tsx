@@ -62,6 +62,7 @@ export function MicDeviceRow({
 
 	return (
 		<ToggleButton
+			variant="ghost"
 			isSelected={selected}
 			className="w-full justify-start gap-3"
 			onClick={onSelect}

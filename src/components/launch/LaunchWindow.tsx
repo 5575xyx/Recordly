@@ -231,7 +231,7 @@ function LaunchWindowContent() {
 						onOpen={beginInteractiveHudAction}
 						trigger={
 							<Button
-								variant="outline"
+								variant="ghost"
 								size="lg"
 								className={` ${styles.electronNoDrag} group gap-2 px-3 min-w-0 max-w-[180px] shrink-0  ${openId === "sources" ? "border-[var(--launch-border-strong)] bg-[var(--launch-hover)]" : ""} `}
 								title={selectedSource}

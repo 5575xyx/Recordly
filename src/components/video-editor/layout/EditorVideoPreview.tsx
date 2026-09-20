@@ -36,7 +36,7 @@ type Props = {
 	setIsPreviewReady: Dispatch<SetStateAction<boolean>>;
 	setCurrentTime: Dispatch<SetStateAction<number>>;
 	setIsPlaying: Dispatch<SetStateAction<boolean>>;
-	setError: Dispatch<SetStateAction<string | null>>;
+	setError: (message: string | null) => void;
 	handlers: Handlers;
 };
 

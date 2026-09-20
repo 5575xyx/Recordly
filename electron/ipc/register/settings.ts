@@ -43,6 +43,7 @@ function getBrowserMicrophoneProfileFromEnv() {
 }
 
 export function registerSettingsHandlers() {
+	ipcMain.handle("get-window-fullscreen", (event) => BrowserWindow.fromWebContents(event.sender)?.isFullScreen() ?? false);
 	ipcMain.handle("app:getVersion", () => {
 		return app.getVersion();
 	});

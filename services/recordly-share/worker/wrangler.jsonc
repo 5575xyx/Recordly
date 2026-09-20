@@ -4,10 +4,8 @@
   // database and R2 bucket in the DEPLOYER's account. The worker creates its own
   // schema at runtime, so no migrations need to run.
   //
-  // wrangler picks JSON config over wrangler.toml, so a bare `wrangler deploy`
-  // here uses THIS file. The maintainer's own worker (with real resource IDs)
-  // lives in wrangler.toml — always deploy it with `npm run deploy`
-  // (== `wrangler deploy --config wrangler.toml`), never a bare `wrangler deploy`.
+  // npm run deploy uses this wrangler.jsonc configuration.
+  // Supply a separate explicit --config path for any deployment-specific configuration.
   //
   "name": "recordly-share",
   "main": "src/index.js",

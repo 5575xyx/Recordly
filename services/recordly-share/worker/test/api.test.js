@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { env, SELF } from 'cloudflare:test';
-import { sha256Hex } from '../src/index.js';
+import worker, { sha256Hex } from '../src/index.js';
 
 const AUTH = { Authorization: 'Bearer test-secret' };
 const BASE = 'https://share.test';
@@ -447,4 +447,60 @@ describe('error middleware', () => {
     expect(res.headers.get('Content-Type')).toContain('application/json');
     expect((await res.json()).error).toBe('Internal error');
   });
+});
+
+
+describe('review security fixes', () => {
+  it('allows only the configured Supabase owner and performs one auth lookup', async () => {
+    const config = { ...env, ALLOW_API_SECRET_UPLOADS: 'false', SUPABASE_URL: 'https://auth.example.test', SUPABASE_PUBLISHABLE_KEY: 'public-test', OWNER_USER_ID: 'owner' };
+    const request = () => new Request(`${BASE}/api/health`, { headers: { Authorization: 'Bearer user-token' } });
+    const lookup = vi.spyOn(globalThis, 'fetch');
+    try {
+      lookup.mockResolvedValue(new Response(JSON.stringify({ id: 'other-user' })));
+      expect((await worker.fetch(request(), config, {})).status).toBe(401);
+      lookup.mockClear().mockResolvedValue(new Response(JSON.stringify({ id: 'owner' })));
+      expect((await worker.fetch(request(), config, {})).status).toBe(200);
+      expect(lookup).toHaveBeenCalledTimes(1);
+      lookup.mockClear();
+      expect((await worker.fetch(request(), { ...config, OWNER_USER_ID: '' }, {})).status).toBe(401);
+      expect(lookup).not.toHaveBeenCalled();
+    } finally { lookup.mockRestore(); }
+  });
+
+  it('never publicly caches protected video or transcripts', async () => {
+    const password = 'cache-test';
+    const { shareCode } = await createShare({ password_hash: await sha256Hex(password) });
+    await completeUpload(shareCode);
+    const unlocked = await SELF.fetch(`${BASE}/s/${shareCode}/verify-password`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) });
+    const Cookie = unlocked.headers.get('Set-Cookie').split(';')[0];
+    for (const [url, extra] of [[`/v/${shareCode}`, {}], [`/v/${shareCode}`, { Range: 'bytes=0-3' }], [`/vtt/${shareCode}`, {}]]) {
+      const response = await SELF.fetch(`${BASE}${url}`, { headers: { Cookie, ...extra } });
+      expect([200, 206]).toContain(response.status);
+      expect(response.headers.get('Cache-Control')).toBe('private, no-store');
+      await response.arrayBuffer();
+    }
+  });
+
+  it('coerces untrusted dimensions at upload and when rendering older rows', async () => {
+    const payload = '\"><script>alert(1)</script>';
+    const { shareCode } = await createShare({ width: payload, height: payload, duration: 'invalid', fileSize: -1 });
+    const row = await env.DB.prepare('SELECT width, height, duration, file_size FROM videos WHERE share_code = ?').bind(shareCode).first();
+    expect(row).toMatchObject({ width: 0, height: 0, duration: 0, file_size: 0 });
+    await completeUpload(shareCode);
+    await env.DB.prepare('UPDATE videos SET width = ?, height = ? WHERE share_code = ?').bind(payload, payload, shareCode).run();
+    const response = await SELF.fetch(`${BASE}/s/${shareCode}`, { headers: { 'User-Agent': 'Twitterbot/1.0' } });
+    expect(await response.text()).not.toContain('<script>alert(1)</script>');
+  });
+});
+
+
+it('normalizes invalid comment pagination and clamps zero limits', async () => {
+  const { shareCode } = await createShare();
+  await completeUpload(shareCode);
+  for (const query of ['page=invalid&limit=invalid', 'page=-5&limit=0', 'page=1&limit=-1']) {
+    const response = await SELF.fetch(`${BASE}/s/${shareCode}/comments?${query}`);
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.comments).toEqual([]);
+  }
 });

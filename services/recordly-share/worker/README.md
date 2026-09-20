@@ -12,7 +12,7 @@ npm --prefix web run build
 npm run dev
 ```
 
-Set `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in `.dev.vars` to the same public project configuration used by the desktop app. Recordly sends the signed-in user's access token when it publishes to:
+Set `OWNER_USER_ID` to the deployment owner’s Supabase user ID. Only that user may administer this single-owner library. Set `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in `.dev.vars` to the same public project configuration used by the desktop app. Recordly sends the signed-in user's access token when it publishes to:
 
 - Endpoint: `http://localhost:8787/api/upload`
 
@@ -31,7 +31,7 @@ npx wrangler secret put SUPABASE_PUBLISHABLE_KEY
 npm run deploy
 ```
 
-Set `SUPABASE_URL` as a Worker variable. The ID-less configuration provisions `recordly-share-db` and `recordly-videos` for a new deployment. Add the `videos.recordly.dev` custom domain; production Recordly builds accept only that publishing origin.
+Set `SUPABASE_URL` as a Worker variable. The ID-less configuration provisions `recordly-share-db` and `recordly-videos` for a new deployment. Desktop builds currently upload only to localhost; production service integration is deferred.
 
 ## Attribution
 

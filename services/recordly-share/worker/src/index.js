@@ -375,7 +375,7 @@ async function isAuthorized(request, env) {
     env.API_SECRET &&
     timingSafeEqual(token, env.API_SECRET)
   ) return true;
-  if (!env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY) return false;
+  if (!env.SUPABASE_URL || !env.SUPABASE_PUBLISHABLE_KEY || !env.OWNER_USER_ID) return false;
   try {
     const authBase = new URL(env.SUPABASE_URL);
     const isLocal = authBase.hostname === 'localhost' || authBase.hostname === '127.0.0.1';
@@ -387,7 +387,9 @@ async function isAuthorized(request, env) {
         apikey: env.SUPABASE_PUBLISHABLE_KEY,
       },
     });
-    return response.ok;
+    if (!response.ok) return false;
+    const user = await response.json();
+    return typeof user.id === 'string' && timingSafeEqual(user.id, env.OWNER_USER_ID);
   } catch {
     return false;
   }
@@ -448,7 +450,10 @@ async function expectedSessionToken(env) {
 }
 
 async function isDashboardAuthed(request, env) {
-  if (await isAuthorized(request, env)) return true;
+  return (await isAuthorized(request, env)) || dashboardCookieAuthed(request, env);
+}
+
+async function dashboardCookieAuthed(request, env) {
   const cookies = parseCookies(request.headers.get('Cookie') || '');
   const sessionToken = cookies['voom_session'];
   if (!sessionToken) return false;
@@ -611,8 +616,7 @@ async function handleRequest(request, env) {
         });
       }
 
-      const cookieOk = await isDashboardAuthed(request, env);
-      if (!(await isAuthorized(request, env)) && !cookieOk) {
+      if (!(await isAuthorized(request, env)) && !(await dashboardCookieAuthed(request, env))) {
         return errorResponse('Unauthorized', 401);
       }
 
@@ -807,6 +811,11 @@ async function handleRequest(request, env) {
 
 // --- API Handlers ---
 
+function finiteNonnegative(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? number : 0;
+}
+
 async function handleUpload(request, env) {
   const body = await request.json();
   const { title, duration, width, height, hasWebcam, fileSize, password_hash, cta_url, cta_text } = body;
@@ -836,7 +845,7 @@ async function handleUpload(request, env) {
     `INSERT INTO videos (share_code, title, duration, width, height, has_webcam, file_size, expires_at, password_hash, password_salt, cta_url, cta_text)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
-    .bind(shareCode, title, duration || 0, width || 0, height || 0, hasWebcam ? 1 : 0, fileSize || 0, expiresAt, storedHash, salt, cta_url || null, cta_text || null)
+    .bind(shareCode, title, finiteNonnegative(duration), finiteNonnegative(width), finiteNonnegative(height), hasWebcam ? 1 : 0, finiteNonnegative(fileSize), expiresAt, storedHash, salt, cta_url || null, cta_text || null)
     .run();
 
   const baseUrl = new URL(request.url).origin;
@@ -1086,7 +1095,7 @@ async function handleVideoStream(request, env, shareCode) {
           'Content-Range': `bytes ${start}-${actualEnd}/${totalSize}`,
           'Content-Length': String(actualEnd - start + 1),
           'Accept-Ranges': 'bytes',
-          'Cache-Control': 'public, max-age=3600',
+          'Cache-Control': video.password_hash ? 'private, no-store' : 'public, max-age=3600',
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Expose-Headers': 'Content-Range, Content-Length, Accept-Ranges',
         },
@@ -1103,7 +1112,7 @@ async function handleVideoStream(request, env, shareCode) {
       'Content-Type': 'video/mp4',
       'Content-Length': String(object.size),
       'Accept-Ranges': 'bytes',
-      'Cache-Control': 'public, max-age=3600',
+      'Cache-Control': video.password_hash ? 'private, no-store' : 'public, max-age=3600',
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Expose-Headers': 'Content-Range, Content-Length, Accept-Ranges',
     },
@@ -1140,7 +1149,7 @@ async function handleVTT(request, env, shareCode) {
   return new Response(vtt, {
     headers: {
       'Content-Type': 'text/vtt; charset=utf-8',
-      'Cache-Control': 'public, max-age=3600',
+      'Cache-Control': video.password_hash ? 'private, no-store' : 'public, max-age=3600',
       'Access-Control-Allow-Origin': '*',
     },
   });
@@ -1249,8 +1258,8 @@ async function handleOGPage(request, env, shareCode) {
 <meta property="og:video" content="${baseUrl}/embed/${shareCode}">
 <meta property="og:video:secure_url" content="${baseUrl}/embed/${shareCode}">
 <meta property="og:video:type" content="text/html">
-<meta property="og:video:width" content="${video.width}">
-<meta property="og:video:height" content="${video.height}">
+<meta property="og:video:width" content="${finiteNonnegative(video.width)}">
+<meta property="og:video:height" content="${finiteNonnegative(video.height)}">
 <meta property="og:image" content="${baseUrl}/og/${shareCode}">
 <meta property="og:image:secure_url" content="${baseUrl}/og/${shareCode}">
 <meta property="og:image:width" content="1200">
@@ -1262,8 +1271,8 @@ async function handleOGPage(request, env, shareCode) {
 <meta name="twitter:description" content="${desc}">
 <meta name="twitter:image" content="${baseUrl}/og/${shareCode}">
 <meta name="twitter:player" content="${baseUrl}/embed/${shareCode}">
-<meta name="twitter:player:width" content="${video.width}">
-<meta name="twitter:player:height" content="${video.height}">
+<meta name="twitter:player:width" content="${finiteNonnegative(video.width)}">
+<meta name="twitter:player:height" content="${finiteNonnegative(video.height)}">
 </head>
 <body>
 <p>${escapeHTML(video.title)}</p>
@@ -1459,8 +1468,10 @@ async function handleGetComments(request, env, shareCode) {
   if (!authed) return errorResponse('Password required', 401);
 
   const url = new URL(request.url);
-  const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10));
-  const limit = Math.min(parseInt(url.searchParams.get('limit') || '50', 10), 100);
+  const requestedPage = parseInt(url.searchParams.get('page') || '1', 10);
+  const requestedLimit = parseInt(url.searchParams.get('limit') || '50', 10);
+  const page = Number.isSafeInteger(requestedPage) ? Math.max(1, Math.min(requestedPage, Math.floor(Number.MAX_SAFE_INTEGER / 100))) : 1;
+  const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(requestedLimit, 100)) : 50;
   const offset = (page - 1) * limit;
 
   const total = await env.DB.prepare(
@@ -1545,7 +1556,7 @@ async function handleOGImage(env, shareCode) {
   const date = formatDate(video.created_at);
   const rawTitle = locked ? 'Protected video' : video.title;
   const title = rawTitle.length > 60 ? rawTitle.substring(0, 57) + '...' : rawTitle;
-  const res = !locked && video.width > 0 ? `${video.width}\u00d7${video.height}` : '';
+  const res = !locked && video.width > 0 ? `${finiteNonnegative(video.width)}\u00d7${finiteNonnegative(video.height)}` : '';
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
   <rect width="1200" height="630" fill="#000"/>

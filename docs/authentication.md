@@ -49,4 +49,4 @@ Restart `npm run dev` after creating `.env.local`. Open an editor and verify:
 3. Google opens the system browser and returns to Recordly.
 4. Clicking **Create link** while signed out opens this modal; after successful authentication it continues to the share dialog.
 
-Add the same `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` values to the share Worker's secrets or variables. The Worker validates the user's access token with Supabase before accepting an upload. `API_SECRET` is server-side only and remains available for library administration and explicitly enabled local integration tests; it is never entered into or exposed by the desktop app.
+Add the same `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` values to the share Worker's secrets or variables. Set `OWNER_USER_ID` to the owner’s Supabase user ID. The Worker validates the access token with Supabase and requires that owner identity before accepting API requests. `API_SECRET` is server-side only and remains available for library administration and explicitly enabled local integration tests; it is never entered into or exposed by the desktop app.

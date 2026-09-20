@@ -8,7 +8,7 @@ The desktop app defaults to the local development endpoint:
 http://localhost:8787/api/upload
 ```
 
-The endpoint is intentionally not user-configurable. Development builds use the local service above; production builds use `https://videos.recordly.dev/api/upload`. Publishing requires the user's Recordly access token. No share API secret is exposed in the app.
+The endpoint is intentionally not user-configurable. All builds currently use the local service above. Production service integration is planned but is not selected by any build. Publishing requires the user's Recordly access token. No share API secret is exposed in the app.
 
 ## Publishing protocol
 
@@ -26,3 +26,5 @@ Anyone with a valid link can watch a public recording and leave timestamped feed
 ## Third-party licensing
 
 The hosting service is based on MIT-licensed open-source software. Required attribution and the complete license text are preserved in [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) and [the vendored license](../services/recordly-share/LICENSE).
+
+The self-hosted worker is a single-owner library. Set `OWNER_USER_ID` to the owner’s Supabase user ID. Other accounts in the same Supabase project cannot administer the library. Missing owner configuration disables Supabase bearer access.

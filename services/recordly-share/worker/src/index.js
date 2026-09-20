@@ -916,7 +916,7 @@ async function handleMultipartAbort(request, env, shareCode, uploadId) {
   try {
     const multipartUpload = env.VIDEOS_BUCKET.resumeMultipartUpload(key, uploadId);
     await multipartUpload.abort();
-  } catch (e) {
+  } catch (_e) {
     // Ignore errors — upload may already be completed or expired
   }
   return jsonResponse({ ok: true });
@@ -1068,7 +1068,7 @@ async function handleVideoStream(request, env, shareCode) {
 
       try {
         object = await env.VIDEOS_BUCKET.get(key, { range: r2Range });
-      } catch (e) {
+      } catch (_e) {
         // R2 throws on an unsatisfiable range (e.g. offset past end of object).
         return new Response('Range not satisfiable', { status: 416 });
       }

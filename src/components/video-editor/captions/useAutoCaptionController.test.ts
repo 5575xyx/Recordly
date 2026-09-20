@@ -4,8 +4,11 @@ const state = vi.hoisted(() => ({ refs: [] as { current: unknown }[], index: 0 }
 vi.mock("react", () => ({
 	useCallback: (callback: unknown) => callback,
 	useEffect: () => {},
-	useRef: (current: unknown) =>
-		state.refs[state.index++] ?? (state.refs[state.index - 1] = { current }),
+	useRef: (current: unknown) => {
+		const index = state.index++;
+		state.refs[index] ??= { current };
+		return state.refs[index];
+	},
 }));
 vi.mock("@/components/ui/toast", () => ({
 	toast: { error: vi.fn(), info: vi.fn(), success: vi.fn() },

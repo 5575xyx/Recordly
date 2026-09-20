@@ -7,7 +7,7 @@ export function mergeCaptionSources(
 	system: CaptionCuePayload[],
 ): CaptionCuePayload[] {
 	// Sound-event labels are not competing microphone speech.
-	const micSpeech = microphone.filter((cue) => !/^(?:\s*[\[(][^\])]+[\])]\s*)+$/.test(cue.text));
+	const micSpeech = microphone.filter((cue) => !/^(?:\s*[[(][^\])]+[\])]\s*)+$/.test(cue.text));
 	const overlapsMic = (startMs: number, endMs: number) =>
 		micSpeech.some((cue) => startMs < cue.endMs && endMs > cue.startMs);
 	const systemCues: CaptionCuePayload[] = [];

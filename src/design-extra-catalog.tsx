@@ -188,7 +188,7 @@ function ExportState({ mode }: { mode: string }) {
 		<EditorExportMenu
 			projectTitle="Demo recording"
 			prepareExportForShare={async () => undefined}
-			onRequestShareSignIn={() => {}}
+			onRequestShareSignIn={() => undefined}
 			shareRequestNonce={0}
 			t={t}
 			exportSettings={exportSettings}

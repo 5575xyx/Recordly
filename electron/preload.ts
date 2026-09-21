@@ -789,8 +789,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	},
 	getRecordingThumbnail: (filePath: string) =>
 		ipcRenderer.invoke("get-recording-thumbnail", filePath),
-	finishRecordingImport: (keepPath: string) =>
-		ipcRenderer.invoke("finish-recording-import", keepPath),
+	finishRecordingImport: (keepPath: string, commit?: boolean) =>
+		ipcRenderer.invoke("finish-recording-import", keepPath, commit),
 	cancelRecordingImport: () => ipcRenderer.invoke("cancel-recording-import"),
 	listRecordings: () => ipcRenderer.invoke("list-recordings"),
 	setRecordingsRemoved: (paths: string[], removed: boolean) =>

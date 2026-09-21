@@ -229,18 +229,19 @@ export function registerProjectHandlers() {
 			},
 		);
 	};
-	ipcMain.handle("finish-recording-import", async (event, keepPath: string) => {
+	ipcMain.handle("finish-recording-import", async (event, keepPath: string, commit = false) => {
 		if (imports.has(event.sender.id))
 			return { success: false, error: "Import is still running" };
 		const outputs = pendingImports.get(event.sender.id);
-		// Transfer the final source before async cleanup can race renderer teardown.
-		outputs?.delete(keepPath);
+		// Commit only after the renderer confirms that its project is still active.
+		if (commit) outputs?.delete(keepPath);
 		try {
 			for (const output of outputs ?? []) {
+				if (output === keepPath) continue;
 				await discardRecordingImport(output);
 				outputs?.delete(output);
 			}
-			pendingImports.delete(event.sender.id);
+			if (!outputs?.size) pendingImports.delete(event.sender.id);
 			return { success: true };
 		} catch (error) {
 			return { success: false, error: String(error) };

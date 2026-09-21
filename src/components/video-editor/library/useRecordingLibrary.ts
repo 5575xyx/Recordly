@@ -184,12 +184,16 @@ export function useRecordingLibrary(
 			const { project, timeline, ui, appearance } = current.current;
 			if (project.videoSourcePath !== source)
 				throw new Error("The project changed while importing. Add the recordings again.");
-			// Commit ownership before exposing the source to project saves or renderer teardown.
-			const committed = await window.electronAPI.finishRecordingImport(media.path);
-			if (!committed.success)
-				throw new Error(committed.error || "Could not finalize imported media");
+			// Prepare cleanup while retaining rollback ownership until the project check passes.
+			const prepared = await window.electronAPI.finishRecordingImport(media.path);
+			if (!prepared.success)
+				throw new Error(prepared.error || "Could not finalize imported media");
 			if (current.current.project.videoSourcePath !== source)
 				throw new Error("The project changed while importing. Add the recordings again.");
+			// Send acceptance before synchronous project state updates; no await can switch projects here.
+			void window.electronAPI
+				.finishRecordingImport(media.path, true)
+				.catch((error) => console.warn("Could not accept imported media", error));
 			ui.clipInitializedRef.current = true;
 			ui.autoFullTrackClipIdRef.current = null;
 			ui.autoFullTrackClipEndMsRef.current = null;
@@ -223,7 +227,10 @@ export function useRecordingLibrary(
 			if (!cancelled.current) toast.error(`Could not add video: ${String(error)}`);
 		} finally {
 			try {
-				const cleanup = await window.electronAPI.finishRecordingImport(retainedSource!);
+				const cleanup = await window.electronAPI.finishRecordingImport(
+					retainedSource!,
+					true,
+				);
 				if (!cleanup.success)
 					console.warn("Could not clean up temporary imports", cleanup.error);
 			} catch (error) {

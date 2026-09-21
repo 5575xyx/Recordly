@@ -755,7 +755,10 @@ interface Window {
 		getRecordingThumbnail: (
 			filePath: string,
 		) => Promise<import("../src/types/recordingLibrary").LibraryResult<string>>;
-		finishRecordingImport: (keepPath: string) => Promise<{ success: boolean; error?: string }>;
+		finishRecordingImport: (
+			keepPath: string,
+			commit?: boolean,
+		) => Promise<{ success: boolean; error?: string }>;
 		cancelRecordingImport: () => Promise<{ success: boolean }>;
 		listRecordings: () => Promise<
 			import("../src/types/recordingLibrary").LibraryResult<

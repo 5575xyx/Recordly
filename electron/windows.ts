@@ -446,6 +446,14 @@ ipcMain.handle("set-hud-overlay-capture-protection", (_event, enabled: boolean) 
 	};
 });
 
+const editorWindows = new Set<BrowserWindow>();
+function notifyEditorMode() {
+	if (hudOverlayWindow && !hudOverlayWindow.webContents.isDestroyed()) {
+		hudOverlayWindow.webContents.send("editor-mode-changed", editorWindows.size > 0);
+	}
+}
+ipcMain.handle("get-editor-mode", () => editorWindows.size > 0);
+
 export function createHudOverlayWindow(): BrowserWindow {
 	const perfStart = Date.now();
 	loadHudOverlayCaptureProtectionSetting();
@@ -936,6 +944,13 @@ export function createEditorWindow(): BrowserWindow {
 			webSecurity: false,
 			backgroundThrottling: false,
 		},
+	});
+
+	editorWindows.add(win);
+	notifyEditorMode();
+	win.once("closed", () => {
+		editorWindows.delete(win);
+		notifyEditorMode();
 	});
 
 	const publishWindowChrome = () => {

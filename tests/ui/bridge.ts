@@ -80,6 +80,8 @@ export async function installDesktopBridge(page: Page, videoFixture = "preview.m
 				hudOverlayRendererReady: success,
 				hudOverlaySetIgnoreMouse: success,
 				hudOverlaySetWebcamPreviewVisible: success,
+				getEditorMode: async () => false,
+				onEditorModeChanged: subscribe,
 				getActiveCountdown: async () => ({ success: true, seconds: 3 }),
 				onCountdownTick: subscribe,
 				cancelCountdown: async () => {

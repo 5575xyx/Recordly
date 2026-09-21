@@ -187,7 +187,7 @@ export default function SharePage() {
   const [unlocking, setUnlocking] = useState(false);
   const [error, setError] = useState('');
 
-  async function load() {
+  const load = useCallback(async () => {
     setView('loading');
     try {
       const code = location.pathname.split('/').filter(Boolean).pop() || '';
@@ -207,10 +207,10 @@ export default function SharePage() {
     } catch {
       setView('error');
     }
-  }
+  }, []);
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
 
   async function unlock() {
     if (unlocking) return;

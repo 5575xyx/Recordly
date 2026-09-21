@@ -5,7 +5,7 @@ import {
   LockKeyIcon,
   TrashIcon,
 } from '@phosphor-icons/react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   fetchVideos,
   renewVideo,
@@ -43,7 +43,7 @@ export default function LibraryPage() {
   const [error, setError] = useState('');
   const [pending, setPending] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -53,10 +53,10 @@ export default function LibraryPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
   async function renew(code: string) {
     setPending(code);
     try {

@@ -90,7 +90,7 @@ export default function ShareFeedback({
     return () => {
       cancelled = true;
     };
-  }, [data.shareCode]);
+  }, [data.shareCode, setComments]);
 
   async function loadMore() {
     setMoreLoading(true);

@@ -25,7 +25,7 @@ import {
   RewindIcon,
   ChatCircleIcon,
 } from '@phosphor-icons/react';
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import type { Comment, Reaction, ShareData } from '../scripts/api';
 import { formatTimestamp } from '../scripts/api';
 import { clusterTimeline, type TimelineItem } from '../scripts/shareModel';
@@ -70,7 +70,7 @@ export default function SharePlayer({
   const cta =
     data.video.cta_url && /^https?:\/\//i.test(data.video.cta_url) ? data.video.cta_url : null;
 
-  async function togglePlay() {
+  const togglePlay = useCallback(async () => {
     const video = videoRef.current;
     if (!video) return;
     if (!video.paused) video.pause();
@@ -80,8 +80,8 @@ export default function SharePlayer({
       } catch {
         toast.danger('Playback could not start. Try again.');
       }
-  }
-  function toggleMute() {
+  }, [videoRef]);
+  const toggleMute = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
     if (video.muted || video.volume === 0) {
@@ -91,15 +91,15 @@ export default function SharePlayer({
       savedVolume.current = video.volume;
       video.muted = true;
     }
-  }
-  async function fullscreen() {
+  }, [videoRef]);
+  const fullscreen = useCallback(async () => {
     try {
       if (document.fullscreenElement) await document.exitFullscreen();
       else await shell.current?.requestFullscreen();
     } catch {
       toast.danger('Fullscreen is unavailable in this browser.');
     }
-  }
+  }, []);
   async function pictureInPicture() {
     try {
       if (document.pictureInPictureElement) await document.exitPictureInPicture();
@@ -159,7 +159,7 @@ export default function SharePlayer({
     }
     document.addEventListener('keydown', keyboard);
     return () => document.removeEventListener('keydown', keyboard);
-  }, [seek]);
+  }, [seek, videoRef, togglePlay, toggleMute, fullscreen]);
 
   return (
     <Card ref={shell} className="video-shell">

@@ -1,5 +1,9 @@
 reviews:
   profile: assertive
+  # Standalone design previews; keep runtime code and tests in review.
+  path_filters:
+    - "!design-*.html"
+    - "!src/design-*.tsx"
   auto_review:
     enabled: true
     base_branches:

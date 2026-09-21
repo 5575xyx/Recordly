@@ -442,6 +442,7 @@ function dashboardPassword(env) {
 
 async function expectedSessionToken(env) {
   const password = dashboardPassword(env);
+  if (!password) throw new Error('Dashboard sign-in is not configured');
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     'raw', encoder.encode(password), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
@@ -455,6 +456,7 @@ async function isDashboardAuthed(request, env) {
 }
 
 async function dashboardCookieAuthed(request, env) {
+  if (!dashboardPassword(env)) return false;
   const cookies = parseCookies(request.headers.get('Cookie') || '');
   const sessionToken = cookies['voom_session'];
   if (!sessionToken) return false;
@@ -1087,7 +1089,7 @@ async function handleVideoStream(request, env, shareCode) {
 
       const totalSize = object.size; // R2Object.size is the full stored object size
       const start = suffix ? Math.max(0, totalSize - r2Range.suffix) : r2Range.offset;
-      const actualEnd = !suffix && r2Range.length !== undefined ? start + r2Range.length - 1 : totalSize - 1;
+      const actualEnd = !suffix && r2Range.length !== undefined ? Math.min(totalSize - 1, start + r2Range.length - 1) : totalSize - 1;
 
       return new Response(object.body, {
         status: 206,

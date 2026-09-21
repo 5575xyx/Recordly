@@ -140,7 +140,9 @@ async function uploadMultipart(options: {
 						callback(null, chunk);
 					},
 				});
-				const body = createReadStream(options.filePath, { start, end }).pipe(progress);
+				const source = createReadStream(options.filePath, { start, end });
+				const body = source.pipe(progress);
+				source.on("error", (error) => body.destroy(error));
 				try {
 					const partResponse = await fetch(
 						new URL(
@@ -197,6 +199,7 @@ async function uploadMultipart(options: {
 					}
 				} finally {
 					body.destroy();
+					source.destroy();
 				}
 
 				options.onProgress(confirmedBytes);
@@ -358,7 +361,9 @@ export function registerCloudShareHandlers() {
 							callback(null, chunk);
 						},
 					});
-					const body = createReadStream(resolvedPath).pipe(progress);
+					const source = createReadStream(resolvedPath);
+					const body = source.pipe(progress);
+					source.on("error", (error) => body.destroy(error));
 					const uploadHeaders: Record<string, string> = {
 						"content-type": contentType,
 						"content-length": String(stat.size),
@@ -383,6 +388,7 @@ export function registerCloudShareHandlers() {
 						}
 					} finally {
 						body.destroy();
+						source.destroy();
 					}
 				}
 

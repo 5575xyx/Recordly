@@ -1,4 +1,4 @@
--- Require an authenticated Recordly viewer account before posting comments.
+-- Optional viewer accounts; posting comments does not require an account.
 
 CREATE TABLE IF NOT EXISTS comment_users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

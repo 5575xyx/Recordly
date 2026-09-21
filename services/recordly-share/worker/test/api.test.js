@@ -544,3 +544,21 @@ it('rejects creating protected shares without a signing secret', async () => {
     await response.arrayBuffer();
   } finally { lookup.mockRestore(); }
 });
+
+it('rejects dashboard cookies without configured secrets instead of crashing', async () => {
+  const config = { ...env, API_SECRET: undefined, DASHBOARD_PASSWORD: undefined };
+  const response = await worker.fetch(new Request(`${BASE}/api/videos`, {
+    headers: { Cookie: 'voom_session=untrusted' },
+  }), config, {});
+  expect(response.status).toBe(401);
+  await response.arrayBuffer();
+});
+it('clamps a bounded video range to the actual object size', async () => {
+  const { shareCode } = await createShare();
+  await completeUpload(shareCode);
+  const response = await SELF.fetch(`${BASE}/v/${shareCode}`, { headers: { Range: 'bytes=6-200' } });
+  expect(response.status).toBe(206);
+  expect(response.headers.get('Content-Range')).toBe('bytes 6-7/8');
+  expect(response.headers.get('Content-Length')).toBe('2');
+  expect(Array.from(new Uint8Array(await response.arrayBuffer()))).toEqual([6, 7]);
+});

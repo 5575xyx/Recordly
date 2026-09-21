@@ -17,7 +17,7 @@ import {
   LinkSimpleIcon,
   PaperPlaneTiltIcon,
 } from '@phosphor-icons/react';
-import { useEffect, useState, type RefObject } from 'react';
+import { useEffect, useState, type Dispatch, type SetStateAction, type RefObject } from 'react';
 import {
   fetchComments,
   formatDate,
@@ -35,7 +35,7 @@ interface Props {
   time: number;
   duration: number;
   comments: Comment[];
-  setComments: (comments: Comment[]) => void;
+  setComments: Dispatch<SetStateAction<Comment[]>>;
   seek: (time: number) => void;
   composerRef: RefObject<HTMLTextAreaElement | null>;
   selectedTab: string;
@@ -96,7 +96,7 @@ export default function ShareFeedback({
     setMoreLoading(true);
     try {
       const result = await fetchComments(data.shareCode, page + 1);
-      setComments([...comments, ...result.comments].sort((a, b) => a.timestamp - b.timestamp));
+      setComments((current) => [...new Map([...current, ...result.comments].map((comment) => [comment.id, comment])).values()].sort((a, b) => a.timestamp - b.timestamp || a.id - b.id));
       setTotal(result.total);
       setPage(page + 1);
     } catch {
@@ -112,12 +112,12 @@ export default function ShareFeedback({
     setPosting(true);
     setError('');
     try {
-      const ok = await postComment(data.shareCode, timestamp, name.trim(), text.trim());
-      if (!ok) throw new Error('Could not post your comment. Please try again.');
-      setComments(
+      const id = await postComment(data.shareCode, timestamp, name.trim(), text.trim());
+      setComments((current) =>
         [
-          ...comments,
+          ...current,
           {
+            id,
             timestamp,
             author_name: name.trim(),
             text: text.trim(),
@@ -190,7 +190,7 @@ export default function ShareFeedback({
                 <article
                   className="comment-item"
                   data-active={i === activeIndex}
-                  key={`${comment.created_at}-${i}`}
+                  key={comment.id}
                 >
                   <div className="comment-heading">
                     <Avatar size="sm">

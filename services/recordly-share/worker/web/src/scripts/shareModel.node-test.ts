@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { clusterComments, clusterReactions, clusterTimeline, timestampParts } from './shareModel.ts';
 
 const comment = (timestamp: number) => ({
+  id: timestamp,
   timestamp,
   author_name: 'Viewer',
   text: 'Feedback',

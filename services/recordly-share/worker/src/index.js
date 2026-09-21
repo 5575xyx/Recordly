@@ -426,6 +426,7 @@ async function generateAuthToken(shareCode, expiresAt, apiSecret) {
 
 async function verifyPasswordAuth(request, env, shareCode, video) {
   if (!video.password_hash) return true;
+  if (!env.API_SECRET) return false;
   const cookies = parseCookies(request.headers.get('Cookie') || '');
   const authToken = cookies[`voom_auth_${shareCode}`];
   if (!authToken) return false;
@@ -820,6 +821,7 @@ async function handleUpload(request, env) {
   const { title, duration, width, height, hasWebcam, fileSize, password_hash, cta_url, cta_text } = body;
 
   if (!title) return errorResponse('title is required');
+  if (password_hash && !env.API_SECRET) return errorResponse('Password protection is not configured', 503);
 
   // CTA links render as <a href> on the share page — only allow web URLs so a
   // stored javascript:/data: URL can never reach that sink.
@@ -1315,6 +1317,7 @@ async function handleVerifyPassword(request, env, shareCode) {
   ).bind(shareCode).first();
 
   if (!video || !video.password_hash) return errorResponse('Not found', 404);
+  if (!env.API_SECRET) return errorResponse('Password protection is not configured', 503);
 
   // Brute-force protection: 10 attempts per IP per video per 5 minutes.
   const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
@@ -1448,11 +1451,11 @@ async function handleComment(request, env, shareCode) {
   ).bind(video.id, clientIP).first();
   if (recent && recent.cnt >= 5) return errorResponse('Rate limit exceeded', 429);
 
-  await env.DB.prepare(
+  const inserted = await env.DB.prepare(
     'INSERT INTO comments (video_id, timestamp, author_name, text, client_ip) VALUES (?, ?, ?, ?, ?)'
   ).bind(video.id, timestamp, authorName.trim(), text.trim().substring(0, 2000), clientIP).run();
 
-  return jsonResponse({ ok: true });
+  return jsonResponse({ ok: true, id: inserted.meta.last_row_id });
 }
 
 async function handleGetComments(request, env, shareCode) {
@@ -1478,7 +1481,7 @@ async function handleGetComments(request, env, shareCode) {
   ).bind(video.id).first();
 
   const comments = await env.DB.prepare(
-    'SELECT timestamp, author_name, text, created_at FROM comments WHERE video_id = ? ORDER BY timestamp ASC LIMIT ? OFFSET ?'
+    'SELECT id, timestamp, author_name, text, created_at FROM comments WHERE video_id = ? ORDER BY timestamp ASC, id ASC LIMIT ? OFFSET ?'
   ).bind(video.id, limit, offset).all();
 
   return jsonResponse({

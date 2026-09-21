@@ -505,3 +505,42 @@ it('normalizes invalid comment pagination and clamps zero limits', async () => {
     expect(body.comments).toEqual([]);
   }
 });
+
+it('fails password verification gracefully when its signing secret is absent', async () => {
+  const { shareCode } = await createShare({ password_hash: await sha256Hex('secret') });
+  await completeUpload(shareCode);
+  const response = await worker.fetch(new Request(`${BASE}/s/${shareCode}/verify-password`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: 'secret' }),
+  }), { ...env, API_SECRET: '' }, {});
+  expect(response.status).toBe(503);
+  expect(await response.json()).toMatchObject({ error: 'Password protection is not configured' });
+});
+
+it('returns stable comment IDs and orders equal timestamps by ID', async () => {
+  const { shareCode } = await createShare();
+  await completeUpload(shareCode);
+  const ids = [];
+  for (const text of ['first', 'second']) {
+    const response = await SELF.fetch(`${BASE}/s/${shareCode}/comment`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ timestamp: 1, author_name: 'Viewer', text }),
+    });
+    expect(response.status).toBe(200);
+    ids.push((await response.json()).id);
+  }
+  const response = await SELF.fetch(`${BASE}/s/${shareCode}/comments`);
+  expect((await response.json()).comments.map((comment) => comment.id)).toEqual(ids);
+  expect(ids[1]).toBeGreaterThan(ids[0]);
+});
+
+it('rejects creating protected shares without a signing secret', async () => {
+  const lookup = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ id: 'owner' })));
+  try {
+    const response = await worker.fetch(new Request(`${BASE}/api/upload`, {
+      method: 'POST', headers: { Authorization: 'Bearer owner-token', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Protected', password_hash: 'hash' }),
+    }), { ...env, API_SECRET: '', ALLOW_API_SECRET_UPLOADS: 'false', SUPABASE_URL: 'https://auth.example.test', SUPABASE_PUBLISHABLE_KEY: 'key', OWNER_USER_ID: 'owner' }, {});
+    expect(response.status).toBe(503);
+    await response.arrayBuffer();
+  } finally { lookup.mockRestore(); }
+});

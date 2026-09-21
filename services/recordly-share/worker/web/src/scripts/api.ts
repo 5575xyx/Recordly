@@ -42,6 +42,7 @@ export interface Expired {
 }
 
 export interface Comment {
+  id: number;
   timestamp: number;
   author_name: string;
   text: string;
@@ -121,14 +122,15 @@ export async function postComment(
   timestamp: number,
   authorName: string,
   text: string
-): Promise<boolean> {
+): Promise<number> {
   const res = await fetch(`/s/${shareCode}/comment`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
     body: JSON.stringify({ timestamp, author_name: authorName, text }),
   });
-  return res.ok;
+  if (!res.ok) throw new Error('Could not post comment');
+  return (await res.json()).id;
 }
 
 export async function fetchCommentUser(): Promise<CommentUser | null> {

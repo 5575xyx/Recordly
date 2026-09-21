@@ -1,7 +1,0 @@
-<!doctype html><html><head><meta charset="UTF-8"><title>Recordly app component catalog</title><style>html,body,#root{min-width:1440px!important;width:1440px!important;min-height:1000px!important}html,body{height:auto!important;overflow:auto!important}</style></head><body><div id="root"></div><script type="module">
-import {installDesktopBridge} from '/tests/ui/bridge.ts';
-await installDesktopBridge({addInitScript:async(fn,arg)=>fn(arg)},'filmstrip.mp4');
-// Source device rows render against fixtures without opening physical microphones/cameras.
-if (navigator.mediaDevices) Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {configurable:true,value:async()=>{throw new DOMException('Design fixture: live device access disabled','NotAllowedError')}});
-await import('/src/design-app-catalog.tsx');
-</script><script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script></body></html>

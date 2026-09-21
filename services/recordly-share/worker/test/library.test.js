@@ -153,3 +153,13 @@ describe('GET /library (dashboard gate)', () => {
     expect([200, 304]).toContain(res.status);
   });
 });
+
+it('rejects expired and tampered dashboard sessions', async () => {
+  const expired = await expectedSessionToken(env, Math.floor(Date.now() / 1000) - 1);
+  const valid = await expectedSessionToken(env);
+  const tampered = `${Number(valid.split('.')[0]) + 604800}.${valid.split('.')[1]}`;
+  for (const token of [expired, tampered, valid.split('.')[1]]) {
+    const res = await SELF.fetch(`${BASE}/api/videos`, { headers: { Cookie: `voom_session=${token}` } });
+    expect(res.status).toBe(401);
+  }
+});

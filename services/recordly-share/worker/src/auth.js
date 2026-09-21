@@ -1,7 +1,7 @@
 // Adapted from Voom (MIT), Copyright (c) 2026 Aritro Paul.
 // See ../../LICENSE and ../../../../THIRD_PARTY_NOTICES.md for attribution.
 
-import { generateSalt, sha256Hex, timingSafeEqual } from './crypto.js';
+import { generateSalt, sha256Hex, timingSafeEqual, hashRecordingPassword } from './crypto.js';
 import { errorResponse, jsonResponse, parseCookies } from './http.js';
 
 export async function isAuthorized(request, env) {
@@ -61,15 +61,15 @@ export function dashboardPassword(env) {
   return env.DASHBOARD_PASSWORD || env.API_SECRET;
 }
 
-export async function expectedSessionToken(env) {
+export async function expectedSessionToken(env, expiresAt = Math.floor(Date.now() / 1000) + 604800) {
   const password = dashboardPassword(env);
   if (!password) throw new Error('Dashboard sign-in is not configured');
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     'raw', encoder.encode(password), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
   );
-  const sig = await crypto.subtle.sign('HMAC', key, encoder.encode('voom-dashboard-v1'));
-  return Array.from(new Uint8Array(sig), b => b.toString(16).padStart(2, '0')).join('');
+  const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(`voom-dashboard-v2:${expiresAt}`));
+  return `${expiresAt}.` + Array.from(new Uint8Array(sig), b => b.toString(16).padStart(2, '0')).join('');
 }
 
 export async function isDashboardAuthed(request, env) {
@@ -80,8 +80,10 @@ export async function dashboardCookieAuthed(request, env) {
   if (!dashboardPassword(env)) return false;
   const cookies = parseCookies(request.headers.get('Cookie') || '');
   const sessionToken = cookies['voom_session'];
-  if (!sessionToken) return false;
-  return timingSafeEqual(sessionToken, await expectedSessionToken(env));
+  if (!sessionToken || !/^\d+\.[0-9a-f]{64}$/.test(sessionToken)) return false;
+  const expiresAt = Number(sessionToken.split('.')[0]);
+  if (!Number.isSafeInteger(expiresAt) || expiresAt <= Math.floor(Date.now() / 1000)) return false;
+  return timingSafeEqual(sessionToken, await expectedSessionToken(env, expiresAt));
 }
 
 // best-effort, per-isolate login rate limiter (real protection is the password's entropy)
@@ -123,21 +125,17 @@ export async function handleVerifyPassword(request, env, shareCode) {
   const body = await request.json();
   const password = body.password || '';
 
-  // The browser sends the raw password (HTTPS); the app stored it as a salted
-  // hash of SHA256(password). Legacy rows (pre-salt) hold bare SHA256(password).
   const clientHash = await sha256Hex(password);
-  let matches;
-  if (video.password_salt) {
-    matches = timingSafeEqual(await sha256Hex(video.password_salt + clientHash), video.password_hash);
-  } else {
-    matches = timingSafeEqual(clientHash, video.password_hash);
-    // Lazy upgrade: re-store the legacy unsalted hash as salted on success.
-    if (matches) {
-      const salt = generateSalt();
-      const upgraded = await sha256Hex(salt + clientHash);
-      await env.DB.prepare('UPDATE videos SET password_hash = ?, password_salt = ? WHERE id = ?')
-        .bind(upgraded, salt, video.id).run();
-    }
+  const slowHash = video.password_hash.startsWith('pbkdf2-sha256:210000:');
+  const actual = slowHash
+    ? await hashRecordingPassword(clientHash, video.password_salt)
+    : video.password_salt ? await sha256Hex(video.password_salt + clientHash) : clientHash;
+  const matches = timingSafeEqual(actual, video.password_hash);
+  if (matches && !slowHash) {
+    const salt = generateSalt();
+    const upgraded = await hashRecordingPassword(clientHash, salt);
+    await env.DB.prepare('UPDATE videos SET password_hash = ?, password_salt = ? WHERE id = ?')
+      .bind(upgraded, salt, video.id).run();
   }
 
   if (!matches) {

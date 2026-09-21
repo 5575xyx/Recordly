@@ -9,8 +9,8 @@ import {
   formatVTTTime,
 } from '../src/index.js';
 
-const SHARE_CODE_CHARS = 'abcdefghjkmnpqrstuvwxyz23456789';
-const SHARE_CODE_LENGTH = 10;
+const SHARE_CODE_CHARS = '0123456789abcdef';
+const SHARE_CODE_LENGTH = 64;
 
 describe('generateShareCode', () => {
   it('produces codes of the documented length and charset', () => {
@@ -22,8 +22,8 @@ describe('generateShareCode', () => {
     }
   });
 
-  it('excludes ambiguous characters (i, l, o, 0, 1)', () => {
-    for (const ch of 'ilo01') expect(SHARE_CODE_CHARS).not.toContain(ch);
+  it('generates distinct random codes', () => {
+    expect(new Set(Array.from({ length: 100 }, generateShareCode)).size).toBe(100);
   });
 });
 

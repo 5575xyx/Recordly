@@ -69,7 +69,7 @@ async function createCommentSession(request, env, user) {
 
 export async function handleCommentRegister(request, env) {
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-  if (!checkLoginRateLimit(`comment:${ip}`)) return errorResponse('Too many attempts', 429);
+  if (!checkLoginRateLimit(`register:${ip}`)) return errorResponse('Too many attempts', 429);
   const body = await request.json();
   const email = String(body.email || '').trim().toLowerCase();
   const displayName = String(body.displayName || '').trim();
@@ -89,7 +89,6 @@ export async function handleCommentRegister(request, env) {
     const result = await env.DB.prepare(
       'INSERT INTO comment_users (email, display_name, password_hash, password_salt) VALUES (?, ?, ?, ?)'
     ).bind(email, displayName, passwordHash, salt).run();
-    clearLoginRateLimit(`comment:${ip}`);
     return createCommentSession(request, env, { id: result.meta.last_row_id, email, display_name: displayName });
   } catch (error) {
     if (/unique|constraint/i.test(error.message || '')) {

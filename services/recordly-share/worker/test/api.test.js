@@ -134,7 +134,7 @@ describe('upload validation', () => {
 
   it('accepts https CTA URLs and returns a well-formed share code', async () => {
     const data = await createShare({ cta_url: 'https://example.com', cta_text: 'Visit' });
-    expect(data.shareCode).toMatch(/^[a-z0-9]{10}$/);
+    expect(data.shareCode).toMatch(/^[0-9a-f]{64}$/);
     expect(data.shareURL).toContain(`/s/${data.shareCode}`);
   });
 
@@ -338,7 +338,7 @@ describe('password protection', () => {
     const row = await env.DB.prepare('SELECT password_hash, password_salt FROM videos WHERE share_code = ?')
       .bind(shareCode).first();
     expect(row.password_salt).toMatch(/^[0-9a-f]{32}$/);
-    expect(row.password_hash).not.toBe(clientHash);
+    expect(row.password_hash).toMatch(/^pbkdf2-sha256:210000:[0-9a-f]{64}$/);
   });
 
   it('lazily upgrades legacy unsalted rows on successful verify', async () => {
@@ -357,7 +357,7 @@ describe('password protection', () => {
     const row = await env.DB.prepare('SELECT password_hash, password_salt FROM videos WHERE share_code = ?')
       .bind(shareCode).first();
     expect(row.password_salt).toMatch(/^[0-9a-f]{32}$/);
-    expect(row.password_hash).not.toBe(clientHash); // re-stored salted
+    expect(row.password_hash).toMatch(/^pbkdf2-sha256:210000:[0-9a-f]{64}$/); // re-stored salted
   });
 
   it('rate-limits brute-force attempts (429 after 10 failures)', async () => {
@@ -561,4 +561,43 @@ it('clamps a bounded video range to the actual object size', async () => {
   expect(response.headers.get('Content-Range')).toBe('bytes 6-7/8');
   expect(response.headers.get('Content-Length')).toBe('2');
   expect(Array.from(new Uint8Array(await response.arrayBuffer()))).toEqual([6, 7]);
+});
+
+it('counts successful registrations without allowing login to reset their quota', async () => {
+  const headers = { 'Content-Type': 'application/json', 'CF-Connecting-IP': '192.0.2.201' };
+  for (let i = 0; i < 10; i++) {
+    const response = await SELF.fetch(`${BASE}/auth/register`, {
+      method: 'POST', headers,
+      body: JSON.stringify({ email: `quota-${i}@example.com`, displayName: 'Quota Test', password: 'test-password' }),
+    });
+    expect(response.status).toBe(200);
+  }
+  const login = await SELF.fetch(`${BASE}/auth/login`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ email: 'quota-0@example.com', password: 'test-password' }),
+  });
+  expect(login.status).toBe(200);
+  const blocked = await SELF.fetch(`${BASE}/auth/register`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ email: 'quota-extra@example.com', displayName: 'Quota Test', password: 'test-password' }),
+  });
+  expect(blocked.status).toBe(429);
+});
+
+it('upgrades salted legacy recording passwords only after correct verification', async () => {
+  const password = 'legacy-recording-password';
+  const { shareCode } = await createShare();
+  await completeUpload(shareCode);
+  const salt = 'legacy-salt';
+  const hash = await sha256Hex(salt + await sha256Hex(password));
+  await env.DB.prepare('UPDATE videos SET password_hash = ?, password_salt = ? WHERE share_code = ?').bind(hash, salt, shareCode).run();
+  const verify = (value) => SELF.fetch(`${BASE}/s/${shareCode}/verify-password`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: value }),
+  });
+  expect((await verify('wrong')).status).toBe(403);
+  expect((await env.DB.prepare('SELECT password_hash FROM videos WHERE share_code = ?').bind(shareCode).first()).password_hash).toBe(hash);
+  expect((await verify(password)).status).toBe(200);
+  const row = await env.DB.prepare('SELECT password_hash FROM videos WHERE share_code = ?').bind(shareCode).first();
+  expect(row.password_hash).toMatch(/^pbkdf2-sha256:210000:[0-9a-f]{64}$/);
+  expect((await verify(password)).status).toBe(200);
 });

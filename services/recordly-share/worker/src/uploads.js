@@ -3,16 +3,12 @@
 
 import { errorResponse, jsonResponse } from './http.js';
 import { EXPIRY_DAYS, finiteNonnegative } from './video.js';
-import { generateSalt, sha256Hex } from './crypto.js';
-
-const SHARE_CODE_CHARS = 'abcdefghjkmnpqrstuvwxyz23456789';
-
-const SHARE_CODE_LENGTH = 10;
+import { generateSalt, hashRecordingPassword } from './crypto.js';
 
 export function generateShareCode() {
-  const bytes = new Uint8Array(SHARE_CODE_LENGTH);
+  const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
-  return Array.from(bytes, b => SHARE_CODE_CHARS[b % SHARE_CODE_CHARS.length]).join('');
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
 }
 
 export async function handleUpload(request, env) {
@@ -31,14 +27,12 @@ export async function handleUpload(request, env) {
   const shareCode = generateShareCode();
   const expiresAt = new Date(Date.now() + EXPIRY_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
-  // Store password hashes salted: hash = SHA256(salt + clientHash). The client
-  // sends SHA256(password) so the raw password never leaves the user's machine;
-  // salting server-side makes a leaked D1 dump useless against rainbow tables.
+  // Versioned slow hash of the client digest, with a unique per-record salt.
   let storedHash = null;
   let salt = null;
   if (password_hash) {
     salt = generateSalt();
-    storedHash = await sha256Hex(salt + password_hash);
+    storedHash = await hashRecordingPassword(password_hash, salt);
   }
 
   await env.DB.prepare(

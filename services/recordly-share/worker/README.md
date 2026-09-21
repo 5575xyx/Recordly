@@ -36,3 +36,17 @@ Set `SUPABASE_URL` as a Worker variable. The ID-less configuration provisions `r
 ## Attribution
 
 This service is adapted from an MIT-licensed open-source project. The required original copyright and permission notice is preserved in [`../LICENSE`](../LICENSE) and Recordly's root `THIRD_PARTY_NOTICES.md`. Product-facing pages use Recordly branding; legal attribution must remain with distributed copies.
+
+## Worker source layout
+
+`src/index.js` contains the fetch/scheduled entry points and error boundaries. `router.js` dispatches requests and applies route access checks. The implementation lives in focused modules:
+
+- `schema.js`: database bootstrap and migrations.
+- `auth.js` and `accounts.js`: owner/dashboard access, video passwords, and optional viewer accounts.
+- `uploads.js`: upload creation, multipart transfers, and metadata.
+- `media.js`: streaming, captions, share data, and social previews.
+- `feedback.js`: comments and reactions.
+- `library.js`: listing, renewal, deletion, view counts, and expiry cleanup.
+- `crypto.js`, `http.js`, and `video.js`: shared cryptographic, response, and video metadata helpers.
+
+Run `npm test` here to exercise these modules through the Worker endpoints and database migrations.

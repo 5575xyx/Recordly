@@ -326,6 +326,7 @@ export function registerCloudShareHandlers() {
 				}
 				const contentType = contentTypeFor(resolvedPath);
 				const sendProgress = (uploadedBytes: number) => {
+					if (event.sender.isDestroyed()) return;
 					event.sender.send("cloud-share-progress", {
 						uploadId,
 						uploadedBytes,

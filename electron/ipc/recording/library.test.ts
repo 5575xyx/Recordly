@@ -46,8 +46,8 @@ vi.mock("../ffmpeg/binary", async () => {
 		getFfprobeBinaryPath: () => require("ffprobe-static").path,
 	};
 });
-import { listRecordings, setRecordingsRemoved } from "./library";
-import { importRecording } from "./importRecording";
+import { listRecordings, setRecordingsRemoved, clearRecordingTrashUndo } from "./library";
+import { importRecording, discardRecordingImport } from "./importRecording";
 import { getRecordingThumbnail } from "./thumbnail";
 import { getCompanionAudioFallbackInfo } from "./diagnostics";
 const require = createRequire(import.meta.url);
@@ -58,6 +58,7 @@ beforeEach(async () => {
 	state.approved.clear();
 });
 afterEach(async () => {
+	await clearRecordingTrashUndo();
 	await fs.rm(state.root, { recursive: true, force: true });
 });
 
@@ -79,7 +80,9 @@ it("lists recordings, moves recordings and their companions to Trash with revers
 	expect(await listRecordings()).toEqual([]);
 	await expect(fs.access(first)).rejects.toThrow();
 	await expect(fs.access(path.join(state.root, "recording-new.mic.wav"))).rejects.toThrow();
-	expect(await fs.readdir(path.join(state.root, ".test-trash"))).toHaveLength(1);
+	expect(
+		(await fs.readdir(state.root)).filter((name) => name.startsWith(".recordly-trash-")),
+	).toHaveLength(1);
 	await setRecordingsRemoved([first, second], false);
 	expect(await listRecordings()).toHaveLength(2);
 	expect(await fs.readFile(first, "utf8")).toBe("fixture");
@@ -238,6 +241,16 @@ it("imports different-sized recordings with playable video, separate audio, stab
 		{ startMs: 1200, endMs: 2000 },
 		{ startMs: 2200, endMs: 3000 },
 	]);
+	await discardRecordingImport(result.path);
+	await expect(fs.access(result.path)).rejects.toThrow();
+	await expect(fs.access(result.path.replace(/\.mp4$/, ".mic.wav"))).rejects.toThrow();
+	await expect(fs.access(result.path.replace(/\.mp4$/, "-webcam.mp4"))).rejects.toThrow();
+	await expect(
+		fs.access(result.path.replace(/\.mp4$/, ".recordly-session.json")),
+	).rejects.toThrow();
+	await expect(fs.access(`${result.path}.webcam-ranges.json`)).rejects.toThrow();
+	await expect(fs.access(`${result.path}.cursor.json`)).rejects.toThrow();
+	await expect(fs.access(second.path)).resolves.toBeUndefined();
 	expect(await fs.readFile(base)).toEqual(original);
 	expect((await listRecordings()).map((entry) => entry.path).sort()).toEqual(
 		[base, added].sort(),
@@ -247,12 +260,14 @@ it("imports different-sized recordings with playable video, separate audio, stab
 	);
 }, 60000);
 
-it("restores every original when the OS refuses to trash the bundle", async () => {
+it("retains staged originals for undo when the OS refuses Trash", async () => {
 	const { shell } = await import("electron");
 	const file = path.join(state.root, "recording-failure.mp4");
 	await fs.writeFile(file, "original");
+	await setRecordingsRemoved([file], true);
 	vi.mocked(shell.trashItem).mockRejectedValueOnce(new Error("Trash unavailable"));
-	await expect(setRecordingsRemoved([file], true)).rejects.toThrow("Trash unavailable");
+	await expect(clearRecordingTrashUndo()).rejects.toThrow("Trash unavailable");
+	await setRecordingsRemoved([file], false);
 	expect(await fs.readFile(file, "utf8")).toBe("original");
 });
 

@@ -1,6 +1,6 @@
 import { getRecordingThumbnail } from "../recording/thumbnail";
 import { listRecordings, setRecordingsRemoved } from "../recording/library";
-import { importRecording } from "../recording/importRecording";
+import { importRecording, discardRecordingImport } from "../recording/importRecording";
 import { randomUUID } from "node:crypto";
 import { constants as fsConstants } from "node:fs";
 import fs from "node:fs/promises";
@@ -215,6 +215,22 @@ async function ensureNamedProjectSaveDoesNotOverwriteDifferentProject(
 
 export function registerProjectHandlers() {
 	const imports = new Map<number, AbortController>();
+	const pendingImports = new Map<number, Set<string>>();
+	ipcMain.handle("finish-recording-import", async (event, keepPath: string) => {
+		if (imports.has(event.sender.id))
+			return { success: false, error: "Import is still running" };
+		const outputs = pendingImports.get(event.sender.id);
+		try {
+			for (const output of outputs ?? []) {
+				if (output !== keepPath) await discardRecordingImport(output);
+				outputs?.delete(output);
+			}
+			pendingImports.delete(event.sender.id);
+			return { success: true };
+		} catch (error) {
+			return { success: false, error: String(error) };
+		}
+	});
 	ipcMain.handle("cancel-recording-import", (event) => {
 		imports.get(event.sender.id)?.abort();
 		return { success: true };
@@ -255,15 +271,16 @@ export function registerProjectHandlers() {
 			const controller = new AbortController();
 			imports.set(owner, controller);
 			try {
-				return {
-					success: true,
-					value: await importRecording(
-						currentPath,
-						recordingPath,
-						webcam,
-						controller.signal,
-					),
-				};
+				const value = await importRecording(
+					currentPath,
+					recordingPath,
+					webcam,
+					controller.signal,
+				);
+				const outputs = pendingImports.get(owner) ?? new Set<string>();
+				outputs.add(value.path);
+				pendingImports.set(owner, outputs);
+				return { success: true, value };
 			} catch (error) {
 				return { success: false, error: String(error) };
 			} finally {

@@ -62,7 +62,7 @@ export function useRecordingLibrary(
 		try {
 			const result = await window.electronAPI.setRecordingsRemoved(paths, true);
 			if (!result.success) throw new Error(result.error);
-			setRemoved((previous) => [...previous, paths]);
+			setRemoved([paths]);
 			setEntries((previous) => previous.filter((entry) => !paths.includes(entry.path)));
 			setSelected(new Set());
 		} catch (error) {
@@ -103,6 +103,7 @@ export function useRecordingLibrary(
 	};
 	const addToTimeline = async (paths: string | string[], index?: number) => {
 		const source = current.current.project.videoSourcePath;
+		let retainedSource = source;
 		if (lock.current || !source) return;
 		lock.current = true;
 		cancelled.current = false;
@@ -203,6 +204,7 @@ export function useRecordingLibrary(
 					enabled: true,
 				}));
 			project.setVideoSourcePath(media.path);
+			retainedSource = media.path;
 			project.setVideoPath(media.url);
 			ui.setIsPreviewReady(false);
 			ui.setPreviewVersion((version) => version + 1);
@@ -214,6 +216,13 @@ export function useRecordingLibrary(
 		} catch (error) {
 			if (!cancelled.current) toast.error(`Could not add video: ${String(error)}`);
 		} finally {
+			try {
+				const cleanup = await window.electronAPI.finishRecordingImport(retainedSource!);
+				if (!cleanup.success)
+					console.warn("Could not clean up temporary imports", cleanup.error);
+			} catch (error) {
+				console.warn("Could not clean up temporary imports", error);
+			}
 			lock.current = false;
 			setImporting(false);
 			setCancelling(false);

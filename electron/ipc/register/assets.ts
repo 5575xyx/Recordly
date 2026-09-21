@@ -29,13 +29,20 @@ export function registerAssetHandlers() {
 	ipcMain.handle("generate-wallpaper-thumbnail", async (_, filePath: string) => {
 		try {
 			const bundled = filePath.startsWith("/wallpapers/");
+			const wallpaperRoot = path.resolve(getAssetRootPath(), "wallpapers");
 			const candidate = bundled
-				? path.join(
-						getAssetRootPath(),
-						"wallpapers",
-						path.basename(decodeURIComponent(filePath)),
+				? path.resolve(
+						wallpaperRoot,
+						decodeURIComponent(filePath.slice("/wallpapers/".length)),
 					)
 				: filePath;
+			if (
+				bundled &&
+				(path.relative(wallpaperRoot, candidate).startsWith("..") ||
+					path.isAbsolute(path.relative(wallpaperRoot, candidate)))
+			) {
+				throw new Error("Wallpaper path is outside the bundled wallpapers");
+			}
 			const resolved = await resolveReadableLocalFilePath(candidate);
 
 			// Deterministic cache key from file path + mtime

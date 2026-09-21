@@ -21,7 +21,9 @@ export const recordlyAuth = recordlyAuthConfigured
 
 function requireAuth() {
 	if (!recordlyAuth) {
-		throw new Error("Recordly Auth is not configured. Add the Supabase URL and publishable key.");
+		throw new Error(
+			"Recordly Auth is not configured. Add the Supabase URL and publishable key.",
+		);
 	}
 	return recordlyAuth;
 }
@@ -68,8 +70,11 @@ export async function signInWithSaml(email: string): Promise<void> {
 	await openAuthUrl(data.url);
 }
 
-export async function completeAuthCallback(url: string): Promise<void> {
-	const code = new URL(url).searchParams.get("code");
+async function exchangeAuthCallback(url: string): Promise<void> {
+	const params = new URL(url).searchParams;
+	const providerError = params.get("error_description") || params.get("error");
+	if (providerError) throw new Error(providerError);
+	const code = params.get("code");
 	if (!code) throw new Error("The sign-in callback did not include an authorization code.");
 	const client = requireAuth();
 	const { error } = await client.auth.exchangeCodeForSession(code);
@@ -80,4 +85,12 @@ export async function signOutRecordly(): Promise<void> {
 	const client = requireAuth();
 	const { error } = await client.auth.signOut();
 	if (error) throw error;
+}
+
+let lastCallback: { url: string; completion: Promise<void> } | undefined;
+export function completeAuthCallback(url: string): Promise<void> {
+	if (lastCallback?.url === url) return lastCallback.completion;
+	const completion = exchangeAuthCallback(url);
+	lastCallback = { url, completion };
+	return completion;
 }

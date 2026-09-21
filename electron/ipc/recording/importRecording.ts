@@ -130,13 +130,7 @@ export async function importRecording(
 	const work = await fs.mkdtemp(path.join(root, "import-"));
 	const output = path.join(root, `${id}.mp4`);
 	const stem = output.slice(0, -4);
-	const outputs = [
-		...sequenceWebcamOutputs(output),
-		output,
-		`${stem}.system.wav`,
-		`${stem}.mic.wav`,
-		`${output}.cursor.json`,
-	];
+	const outputs = recordingImportOutputs(output);
 	try {
 		const normalizedBase = path.join(work, "base.mkv");
 		const normalizedNew = path.join(work, "new.mkv");
@@ -252,4 +246,18 @@ export async function importRecording(
 	} finally {
 		await fs.rm(work, { recursive: true, force: true });
 	}
+}
+
+function recordingImportOutputs(output: string) {
+	const stem = output.slice(0, -4);
+	return [
+		...sequenceWebcamOutputs(output),
+		output,
+		`${stem}.system.wav`,
+		`${stem}.mic.wav`,
+		`${output}.cursor.json`,
+	];
+}
+export async function discardRecordingImport(output: string) {
+	await Promise.all(recordingImportOutputs(output).map((file) => fs.rm(file, { force: true })));
 }

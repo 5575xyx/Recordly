@@ -1,39 +1,55 @@
 import fs from "node:fs/promises";
-import { constants } from "node:fs";
 import path from "node:path";
-import { app, shell } from "electron";
+import { shell } from "electron";
 import { buildMediaUrl, getMediaServerBaseUrl } from "../../mediaServer";
 import { rememberApprovedLocalReadPath } from "../project/manager";
 import { getRecordingsDir } from "../utils";
 import type { RecordingLibraryEntry } from "../../../src/types/recordingLibrary";
 
 let mutation = Promise.resolve();
-const undoBatches = new Map<string, { backup: string; files: string[] }>();
+const undoBatches = new Map<string, { bundle: string; files: string[] }>();
 const isRecording = (name: string) =>
 	/\.(mp4|mov|webm|mkv|m4v)$/i.test(name) && !/[.-]webcam[.-]/i.test(name);
 const batchKey = (paths: string[]) => JSON.stringify([...new Set(paths)].sort());
 
-export async function listRecordings(): Promise<RecordingLibraryEntry[]> {
-	const root = await fs.realpath(await getRecordingsDir());
-	const server = getMediaServerBaseUrl();
-	if (!server) throw new Error("Media server is not ready. Try again.");
-	const entries = await fs.readdir(root, { withFileTypes: true });
-	const result: RecordingLibraryEntry[] = [];
-	for (const entry of entries) {
-		if (!entry.isFile() || !isRecording(entry.name)) continue;
-		const filePath = path.join(root, entry.name);
-		const stat = await fs.stat(filePath);
-		if (!stat.size) continue;
-		await rememberApprovedLocalReadPath(filePath);
-		result.push({
-			path: filePath,
-			name: entry.name,
-			bytes: stat.size,
-			createdAt: stat.mtimeMs,
-			url: buildMediaUrl(server, filePath),
-		});
-	}
-	return result.sort((a, b) => b.createdAt - a.createdAt);
+export function listRecordings(): Promise<RecordingLibraryEntry[]> {
+	const task = mutation.then(async () => {
+		const root = await fs.realpath(await getRecordingsDir());
+		const server = getMediaServerBaseUrl();
+		if (!server) throw new Error("Media server is not ready. Try again.");
+		const entries = await fs.readdir(root, { withFileTypes: true });
+		for (const entry of entries) {
+			const staged = path.join(root, entry.name);
+			if (
+				entry.isDirectory() &&
+				/^\.recordly-trash-[A-Za-z0-9]{6}$/.test(entry.name) &&
+				![...undoBatches.values()].some((batch) => batch.bundle === staged)
+			) {
+				await shell.trashItem(staged);
+			}
+		}
+		const result: RecordingLibraryEntry[] = [];
+		for (const entry of entries) {
+			if (!entry.isFile() || !isRecording(entry.name)) continue;
+			const filePath = path.join(root, entry.name);
+			const stat = await fs.stat(filePath);
+			if (!stat.size) continue;
+			await rememberApprovedLocalReadPath(filePath);
+			result.push({
+				path: filePath,
+				name: entry.name,
+				bytes: stat.size,
+				createdAt: stat.mtimeMs,
+				url: buildMediaUrl(server, filePath),
+			});
+		}
+		return result.sort((a, b) => b.createdAt - a.createdAt);
+	});
+	mutation = task.then(
+		() => undefined,
+		() => undefined,
+	);
+	return task;
 }
 
 // Only capture sidecars belonging to this exact recording, never adjacent recordings or projects.
@@ -52,7 +68,7 @@ function belongsToRecording(name: string, video: string) {
 	);
 }
 
-/** Move the recording bundle into the system Trash. Session backups allow cross-platform Undo. */
+/** Stage a bundle by rename for Undo; the next removal or app exit sends it to Trash. */
 export function setRecordingsRemoved(paths: string[], removed: boolean): Promise<void> {
 	const task = mutation.then(async () => {
 		if (
@@ -93,19 +109,15 @@ export function setRecordingsRemoved(paths: string[], removed: boolean): Promise
 			const restored: string[] = [];
 			try {
 				for (const file of batch.files) {
-					await fs.copyFile(
-						path.join(batch.backup, path.basename(file)),
-						file,
-						constants.COPYFILE_EXCL,
-					);
+					await fs.link(path.join(batch.bundle, path.basename(file)), file);
 					restored.push(file);
 				}
 			} catch (error) {
-				await Promise.all(restored.map((file) => fs.rm(file, { force: true })));
+				await Promise.all(restored.map((file) => fs.unlink(file)));
 				throw error;
 			}
 			undoBatches.delete(key);
-			await fs.rm(batch.backup, { recursive: true, force: true });
+			await fs.rm(batch.bundle, { recursive: true, force: true });
 			return;
 		}
 		const available = await fs.readdir(root, { withFileTypes: true });
@@ -120,42 +132,33 @@ export function setRecordingsRemoved(paths: string[], removed: boolean): Promise
 					selected.some((file) => belongsToRecording(entry.name, path.basename(file))),
 			)
 			.map((entry) => path.join(root, entry.name));
-		const backup = await fs.mkdtemp(path.join(app.getPath("temp"), "recordly-trash-undo-"));
-		const bundle = await fs.mkdtemp(path.join(root, "Recordly videos "));
+		await finishPendingTrash();
+		const bundle = await fs.mkdtemp(path.join(root, ".recordly-trash-"));
 		const moved: string[] = [];
 		try {
-			for (const file of files)
-				await fs.copyFile(
-					file,
-					path.join(backup, path.basename(file)),
-					constants.COPYFILE_FICLONE,
-				);
 			for (const file of files) {
 				await fs.rename(file, path.join(bundle, path.basename(file)));
 				moved.push(file);
 			}
-			await shell.trashItem(bundle);
-			undoBatches.set(key, { backup, files });
+			undoBatches.set(key, { bundle, files });
 		} catch (error) {
 			for (const file of moved) await fs.rename(path.join(bundle, path.basename(file)), file);
-			await fs.rm(backup, { recursive: true, force: true });
+			await fs.rmdir(bundle);
 			throw error;
-		} finally {
-			await fs.rmdir(bundle).catch((error) => {
-				if (error.code !== "ENOENT") throw error;
-			});
 		}
 	});
 	mutation = task.catch(() => undefined);
 	return task;
 }
 
-export async function clearRecordingTrashUndo() {
-	await mutation;
-	await Promise.all(
-		[...undoBatches.values()].map(({ backup }) =>
-			fs.rm(backup, { recursive: true, force: true }),
-		),
-	);
-	undoBatches.clear();
+async function finishPendingTrash() {
+	for (const [key, batch] of undoBatches) {
+		await shell.trashItem(batch.bundle);
+		undoBatches.delete(key);
+	}
+}
+export function clearRecordingTrashUndo() {
+	const task = mutation.then(finishPendingTrash);
+	mutation = task.catch(() => undefined);
+	return task;
 }

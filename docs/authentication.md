@@ -1,6 +1,6 @@
 # Recordly authentication setup
 
-Recordly uses Supabase Auth for one shared session across email/password and Google. The desktop application uses PKCE and returns from the system browser through a loopback callback in development and `recordly://auth/callback` in production. X and SAML are intentionally hidden until those providers are configured.
+Recordly uses Supabase Auth for one shared session across email/password and Google. The desktop application uses PKCE and returns from the system browser through a loopback callback in development and `recordly://auth/callback` in production. X is shown in the sign-in dialog and requires its provider to be enabled in Supabase. SAML is intentionally hidden until configured.
 
 ## 1. Create the project
 
@@ -18,7 +18,7 @@ Email/password works once email authentication is enabled and a user has been cr
 3. Enable Google under **Supabase → Authentication → Sign In / Providers** and paste the Google client ID and secret.
 4. Keep the requested scopes to `openid`, email, and profile unless Recordly genuinely needs more.
 
-## 3. X (currently hidden)
+## 3. X
 
 1. Create an OAuth 2.0 app in the X Developer Dashboard and enable requesting the user's email.
 2. Set its callback URL to `https://YOUR_PROJECT_REF.supabase.co/auth/v1/callback`.

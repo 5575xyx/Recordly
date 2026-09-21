@@ -1,5 +1,5 @@
 import type { User } from "@supabase/supabase-js";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
 	completeAuthCallback,
 	recordlyAuth,
@@ -11,6 +11,7 @@ export function useRecordlyAuth() {
 	const [accessToken, setAccessToken] = useState<string>();
 	const [loading, setLoading] = useState(recordlyAuthConfigured);
 	const [callbackError, setCallbackError] = useState<string>();
+	const callbackUrl = useRef<string | undefined>(undefined);
 
 	useEffect(() => {
 		if (!recordlyAuth) {
@@ -42,11 +43,16 @@ export function useRecordlyAuth() {
 		});
 
 		const handleCallback = async (url: string) => {
+			if (!mounted || callbackUrl.current === url) return;
+			callbackUrl.current = url;
 			try {
 				setCallbackError(undefined);
 				await completeAuthCallback(url);
 			} catch (error) {
-				setCallbackError(error instanceof Error ? error.message : String(error));
+				if (mounted)
+					setCallbackError(error instanceof Error ? error.message : String(error));
+			} finally {
+				await window.electronAPI.ackAuthCallbackUrl(url).catch(() => undefined);
 			}
 		};
 		const unsubscribe = window.electronAPI.onAuthCallbackUrl((url) => void handleCallback(url));

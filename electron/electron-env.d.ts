@@ -752,7 +752,10 @@ interface Window {
 		}>;
 		getCurrentVideoPath: () => Promise<{ success: boolean; path?: string }>;
 		clearCurrentVideoPath: () => Promise<{ success: boolean }>;
-		getRecordingThumbnail: (filePath: string) => Promise<import("../src/types/recordingLibrary").LibraryResult<string>>;
+		getRecordingThumbnail: (
+			filePath: string,
+		) => Promise<import("../src/types/recordingLibrary").LibraryResult<string>>;
+		finishRecordingImport: (keepPath: string) => Promise<{ success: boolean; error?: string }>;
 		cancelRecordingImport: () => Promise<{ success: boolean }>;
 		listRecordings: () => Promise<
 			import("../src/types/recordingLibrary").LibraryResult<
@@ -892,6 +895,7 @@ interface Window {
 		isWindowFullscreen: () => Promise<boolean>;
 		onWindowFullscreenChanged: (callback: (isFullscreen: boolean) => void) => () => void;
 		getLinuxWindowSystem: () => Promise<"wayland" | "x11" | null>;
+		ackAuthCallbackUrl: (url: string) => Promise<void>;
 		getPendingAuthCallbackUrl: () => Promise<string | null>;
 		onAuthCallbackUrl: (callback: (url: string) => void) => () => void;
 		revealInFolder: (

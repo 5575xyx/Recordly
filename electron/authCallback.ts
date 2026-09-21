@@ -111,10 +111,9 @@ export function createAuthCallbackController({ isDev, focusApp }: AuthCallbackOp
 		dispatch(url);
 	});
 
-	ipcMain.handle("auth:get-pending-callback", () => {
-		const callback = pendingUrl;
-		pendingUrl = null;
-		return callback;
+	ipcMain.handle("auth:get-pending-callback", () => pendingUrl);
+	ipcMain.handle("auth:ack-callback", (_, url: string) => {
+		if (pendingUrl === url) pendingUrl = null;
 	});
 
 	return { close, dispatch, find, protocol, startDevServer };

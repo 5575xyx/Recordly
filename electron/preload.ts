@@ -787,13 +787,19 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	clearCurrentVideoPath: () => {
 		return ipcRenderer.invoke("clear-current-video-path");
 	},
-	getRecordingThumbnail: (filePath: string) => ipcRenderer.invoke("get-recording-thumbnail", filePath),
+	getRecordingThumbnail: (filePath: string) =>
+		ipcRenderer.invoke("get-recording-thumbnail", filePath),
+	finishRecordingImport: (keepPath: string) =>
+		ipcRenderer.invoke("finish-recording-import", keepPath),
 	cancelRecordingImport: () => ipcRenderer.invoke("cancel-recording-import"),
 	listRecordings: () => ipcRenderer.invoke("list-recordings"),
 	setRecordingsRemoved: (paths: string[], removed: boolean) =>
 		ipcRenderer.invoke("set-recordings-removed", paths, removed),
-	importRecording: (currentPath: string, recordingPath: string, webcam?: import("../src/types/recordingLibrary").RecordingWebcamSource) =>
-		ipcRenderer.invoke("import-recording", currentPath, recordingPath, webcam),
+	importRecording: (
+		currentPath: string,
+		recordingPath: string,
+		webcam?: import("../src/types/recordingLibrary").RecordingWebcamSource,
+	) => ipcRenderer.invoke("import-recording", currentPath, recordingPath, webcam),
 	deleteRecordingFile: (filePath: string) => {
 		return ipcRenderer.invoke("delete-recording-file", filePath);
 	},
@@ -971,6 +977,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	getLinuxWindowSystem: () => {
 		return ipcRenderer.invoke("get-linux-window-system");
 	},
+	ackAuthCallbackUrl: (url: string) => ipcRenderer.invoke("auth:ack-callback", url),
 	getPendingAuthCallbackUrl: () => ipcRenderer.invoke("auth:get-pending-callback"),
 	onAuthCallbackUrl: (callback: (url: string) => void) => {
 		const listener = (_event: Electron.IpcRendererEvent, url: string) => callback(url);

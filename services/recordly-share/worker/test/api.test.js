@@ -467,13 +467,14 @@ describe('review security fixes', () => {
     } finally { lookup.mockRestore(); }
   });
 
-  it('never publicly caches protected video or transcripts', async () => {
+  it('never caches protected video, transcripts, or thumbnails', async () => {
     const password = 'cache-test';
     const { shareCode } = await createShare({ password_hash: await sha256Hex(password) });
     await completeUpload(shareCode);
+    await env.VIDEOS_BUCKET.put(`thumbnails/${shareCode}.jpg`, new Uint8Array([0xff, 0xd8, 0xff, 0xd9]));
     const unlocked = await SELF.fetch(`${BASE}/s/${shareCode}/verify-password`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) });
     const Cookie = unlocked.headers.get('Set-Cookie').split(';')[0];
-    for (const [url, extra] of [[`/v/${shareCode}`, {}], [`/v/${shareCode}`, { Range: 'bytes=0-3' }], [`/vtt/${shareCode}`, {}]]) {
+    for (const [url, extra] of [[`/v/${shareCode}`, {}], [`/v/${shareCode}`, { Range: 'bytes=0-3' }], [`/vtt/${shareCode}`, {}], [`/thumb/${shareCode}`, {}]]) {
       const response = await SELF.fetch(`${BASE}${url}`, { headers: { Cookie, ...extra } });
       expect([200, 206]).toContain(response.status);
       expect(response.headers.get('Cache-Control')).toBe('private, no-store');

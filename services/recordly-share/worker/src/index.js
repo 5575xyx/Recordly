@@ -783,9 +783,8 @@ async function handleRequest(request, env) {
       const thumb = await env.VIDEOS_BUCKET.get(`thumbnails/${thumbMatch[1]}.jpg`);
       if (thumb) {
         return new Response(thumb.body, {
-          // private: the unlock cookie gates access — a shared cache must not
-          // serve a protected poster to other clients.
-          headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': video.password_hash ? 'private, max-age=3600' : 'public, max-age=86400' },
+          // Recheck the unlock cookie on every protected poster request.
+          headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': video.password_hash ? 'private, no-store' : 'public, max-age=86400' },
         });
       }
       return new Response('Not found', { status: 404 });

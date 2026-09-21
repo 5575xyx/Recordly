@@ -184,6 +184,12 @@ export function useRecordingLibrary(
 			const { project, timeline, ui, appearance } = current.current;
 			if (project.videoSourcePath !== source)
 				throw new Error("The project changed while importing. Add the recordings again.");
+			// Commit ownership before exposing the source to project saves or renderer teardown.
+			const committed = await window.electronAPI.finishRecordingImport(media.path);
+			if (!committed.success)
+				throw new Error(committed.error || "Could not finalize imported media");
+			if (current.current.project.videoSourcePath !== source)
+				throw new Error("The project changed while importing. Add the recordings again.");
 			ui.clipInitializedRef.current = true;
 			ui.autoFullTrackClipIdRef.current = null;
 			ui.autoFullTrackClipEndMsRef.current = null;

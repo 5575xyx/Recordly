@@ -53,6 +53,16 @@ describe("resolveMediaElementSource", () => {
 		expect(result.src).toBe("http://127.0.0.1:4321/video?path=%2Ftmp%2Fexample%20clip.mp4");
 	});
 
+	it.each([
+		"failure",
+		"exception",
+	])("keeps the existing media URL after refresh %s", async (mode) => {
+		if (mode === "failure") getLocalMediaUrl.mockResolvedValueOnce({ success: false, url: "" });
+		else getLocalMediaUrl.mockRejectedValueOnce(new Error("Server unavailable"));
+		const resource = "http://127.0.0.1:43123/video?path=%2Ftmp%2Fexample.mp4";
+		expect((await resolveMediaElementSource(resource)).src).toBe(resource);
+	});
+
 	it("leaves remote URLs untouched", async () => {
 		const result = await resolveMediaElementSource("https://example.com/video.mp4");
 

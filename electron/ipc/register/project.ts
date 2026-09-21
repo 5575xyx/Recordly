@@ -216,13 +216,28 @@ async function ensureNamedProjectSaveDoesNotOverwriteDifferentProject(
 export function registerProjectHandlers() {
 	const imports = new Map<number, AbortController>();
 	const pendingImports = new Map<number, Set<string>>();
+	const watchedImportSenders = new WeakSet<Electron.WebContents>();
+	const abandonImports = (owner: number) => {
+		imports.get(owner)?.abort();
+		const outputs = pendingImports.get(owner);
+		pendingImports.delete(owner);
+		void Promise.allSettled([...(outputs ?? [])].map(discardRecordingImport)).then(
+			(results) => {
+				for (const result of results)
+					if (result.status === "rejected")
+						console.warn("Could not discard abandoned import", result.reason);
+			},
+		);
+	};
 	ipcMain.handle("finish-recording-import", async (event, keepPath: string) => {
 		if (imports.has(event.sender.id))
 			return { success: false, error: "Import is still running" };
 		const outputs = pendingImports.get(event.sender.id);
+		// Transfer the final source before async cleanup can race renderer teardown.
+		outputs?.delete(keepPath);
 		try {
 			for (const output of outputs ?? []) {
-				if (output !== keepPath) await discardRecordingImport(output);
+				await discardRecordingImport(output);
 				outputs?.delete(output);
 			}
 			pendingImports.delete(event.sender.id);
@@ -266,6 +281,14 @@ export function registerProjectHandlers() {
 			webcam?: import("../../../src/types/recordingLibrary").RecordingWebcamSource,
 		) => {
 			const owner = event.sender.id;
+			if (!watchedImportSenders.has(event.sender)) {
+				watchedImportSenders.add(event.sender);
+				event.sender.once("destroyed", () => abandonImports(owner));
+				event.sender.on("render-process-gone", () => abandonImports(owner));
+				event.sender.on("did-start-navigation", (_event, _url, isInPlace, isMainFrame) => {
+					if (isMainFrame && !isInPlace) abandonImports(owner);
+				});
+			}
 			if (imports.has(owner))
 				return { success: false, error: "An import is already running" };
 			const controller = new AbortController();
@@ -277,6 +300,10 @@ export function registerProjectHandlers() {
 					webcam,
 					controller.signal,
 				);
+				if (controller.signal.aborted || event.sender.isDestroyed()) {
+					await discardRecordingImport(value.path);
+					throw new Error("Import cancelled because its editor closed or reloaded");
+				}
 				const outputs = pendingImports.get(owner) ?? new Set<string>();
 				outputs.add(value.path);
 				pendingImports.set(owner, outputs);

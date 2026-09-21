@@ -87,11 +87,13 @@ export async function resolveMediaResourceUrl(resource: string): Promise<string>
 				return result.url;
 			}
 		} catch {
-			// Fall through to a file URL when the local media server is unavailable.
+			// Preserve an existing media URL if refreshing the server URL fails.
 		}
 	}
 
-	return /^file:\/\//i.test(resource) ? resource : toFileUrl(localFilePath);
+	return /^file:\/\//i.test(resource) || isLocalMediaServerUrl(resource)
+		? resource
+		: toFileUrl(localFilePath);
 }
 
 async function createReadableMediaResourceFile(resource: string): Promise<File> {

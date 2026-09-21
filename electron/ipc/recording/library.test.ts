@@ -312,3 +312,18 @@ it("cancels an active import and removes partial outputs without changing origin
 	expect(await fs.readFile(base)).toEqual(original);
 	expect(await fs.readFile(added)).toEqual(original);
 });
+
+it("restores on volumes without hard links and preserves conflicts", async () => {
+	const file = path.join(state.root, "recording-exfat.mp4");
+	await fs.writeFile(file, "recording");
+	await setRecordingsRemoved([file], true);
+	const link = vi
+		.spyOn(fs, "link")
+		.mockRejectedValue(Object.assign(new Error("unsupported"), { code: "ENOTSUP" }));
+	try {
+		await setRecordingsRemoved([file], false);
+		expect(await fs.readFile(file, "utf8")).toBe("recording");
+	} finally {
+		link.mockRestore();
+	}
+});

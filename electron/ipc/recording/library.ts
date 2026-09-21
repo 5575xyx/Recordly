@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import { constants } from "node:fs";
 import path from "node:path";
 import { shell } from "electron";
 import { buildMediaUrl, getMediaServerBaseUrl } from "../../mediaServer";
@@ -109,7 +110,18 @@ export function setRecordingsRemoved(paths: string[], removed: boolean): Promise
 			const restored: string[] = [];
 			try {
 				for (const file of batch.files) {
-					await fs.link(path.join(batch.bundle, path.basename(file)), file);
+					const staged = path.join(batch.bundle, path.basename(file));
+					try {
+						await fs.link(staged, file);
+					} catch (error) {
+						if (
+							!["EPERM", "ENOTSUP", "EOPNOTSUPP", "EXDEV"].includes(
+								(error as NodeJS.ErrnoException).code ?? "",
+							)
+						)
+							throw error;
+						await fs.copyFile(staged, file, constants.COPYFILE_EXCL);
+					}
 					restored.push(file);
 				}
 			} catch (error) {

@@ -1,3 +1,4 @@
+import { useI18n } from "@/contexts/I18nContext";
 import { GoogleLogo, SignOut, XLogo } from "@phosphor-icons/react";
 import type { User } from "@supabase/supabase-js";
 import { type FormEvent, useEffect, useState } from "react";
@@ -32,16 +33,20 @@ type Props = {
 	onAuthenticated: () => void;
 };
 
-function friendlyAuthError(error: unknown, action: string): string {
+function friendlyAuthError(
+	error: unknown,
+	action: string,
+	t: ReturnType<typeof useI18n>["t"],
+): string {
 	const message = error instanceof Error ? error.message : String(error);
 	if (/unsupported provider|provider is not enabled/i.test(message)) {
 		if (action === "google") {
-			return "Google sign-in isn't enabled yet. Use email for now, or ask your Recordly administrator to connect Google.";
+			return t("editor.cloud.googleUnavailable");
 		}
 		if (action === "x") {
-			return "X sign-in isn't enabled yet. Use email for now, or ask your Recordly administrator to connect X.";
+			return t("editor.cloud.xUnavailable");
 		}
-		return "This sign-in method isn't enabled for Recordly yet. Use email for now.";
+		return t("editor.cloud.providerUnavailable");
 	}
 	return message;
 }
@@ -55,16 +60,19 @@ export function RecordlySignInDialog({
 	callbackError,
 	onAuthenticated,
 }: Props) {
+	const { t } = useI18n();
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [busy, setBusy] = useState<string>();
 	const [message, setMessage] = useState<string>();
+	const [resetSent, setResetSent] = useState(false);
 
 	useEffect(() => {
 		if (!open) {
 			setPassword("");
 			setBusy(undefined);
 			setMessage(undefined);
+			setResetSent(false);
 		}
 	}, [open]);
 
@@ -75,10 +83,11 @@ export function RecordlySignInDialog({
 	const run = async (label: string, action: () => Promise<unknown>) => {
 		setBusy(label);
 		setMessage(undefined);
+		setResetSent(false);
 		try {
 			await action();
 		} catch (error) {
-			setMessage(friendlyAuthError(error, label));
+			setMessage(friendlyAuthError(error, label, t));
 		} finally {
 			setBusy(undefined);
 		}
@@ -95,12 +104,13 @@ export function RecordlySignInDialog({
 
 	const forgotPassword = () => {
 		if (!email.trim()) {
-			setMessage("Enter your email address first.");
+			setMessage(t("editor.cloud.enterEmail"));
 			return;
 		}
 		void run("reset", async () => {
 			await sendPasswordReset(email.trim());
-			setMessage("Password reset email sent.");
+			setMessage(t("editor.cloud.resetSent"));
+			setResetSent(true);
 		});
 	};
 
@@ -110,17 +120,19 @@ export function RecordlySignInDialog({
 			<Modal.Backdrop>
 				<Modal.Container size="sm" placement="center">
 					<Modal.Dialog>
-						<Modal.CloseTrigger aria-label="Close" />
+						<Modal.CloseTrigger aria-label={t("common.actions.close")} />
 						<Modal.Header>
 							<Modal.Heading>
-								{user ? "Your Recordly account" : "Sign into Recordly"}
+								{user
+									? t("editor.cloud.accountHeading")
+									: t("editor.cloud.signInHeading")}
 							</Modal.Heading>
 							<Description>
 								{user
 									? user.email
 									: reason === "share"
-										? "Sign in to publish this video and manage its shared link."
-										: "Access your recordings and shared links."}
+										? t("editor.cloud.signInShareDescription")
+										: t("editor.cloud.signInDescription")}
 							</Description>
 						</Modal.Header>
 						<Modal.Body className="flex flex-col gap-4">
@@ -132,7 +144,9 @@ export function RecordlySignInDialog({
 									onPress={() => void run("signout", signOutRecordly)}
 								>
 									<SignOut className="size-4" />
-									{busy === "signout" ? "Signing out…" : "Sign out"}
+									{busy === "signout"
+										? t("editor.cloud.signingOut")
+										: t("editor.cloud.signOut")}
 								</Button>
 							) : (
 								<>
@@ -161,7 +175,9 @@ export function RecordlySignInDialog({
 									</div>
 									<div className="my-1 flex items-center gap-3">
 										<Separator className="flex-1" />
-										<span className="text-xs text-muted">or</span>
+										<span className="text-xs text-muted">
+											{t("editor.cloud.or")}
+										</span>
 										<Separator className="flex-1" />
 									</div>
 									<Form className="flex flex-col gap-4" onSubmit={submitEmail}>
@@ -173,7 +189,7 @@ export function RecordlySignInDialog({
 											isRequired
 											isDisabled={Boolean(busy)}
 										>
-											<Label>Email</Label>
+											<Label>{t("editor.cloud.email")}</Label>
 											<Input
 												placeholder="you@example.com"
 												autoComplete="email"
@@ -188,7 +204,7 @@ export function RecordlySignInDialog({
 											isRequired
 											isDisabled={Boolean(busy)}
 										>
-											<Label>Password</Label>
+											<Label>{t("editor.cloud.password")}</Label>
 											<Input autoComplete="current-password" />
 											<FieldError />
 										</TextField>
@@ -199,26 +215,22 @@ export function RecordlySignInDialog({
 											isDisabled={disabled}
 											onPress={forgotPassword}
 										>
-											Forgot password?
+											{t("editor.cloud.forgotPassword")}
 										</Button>
 										<Button
 											type="submit"
 											className="w-full"
 											isDisabled={disabled}
 										>
-											{busy === "email" ? "Signing in…" : "Sign in"}
+											{busy === "email"
+												? t("editor.cloud.signingIn")
+												: t("editor.cloud.signIn")}
 										</Button>
 									</Form>
 								</>
 							)}
 							{message || callbackError ? (
-								<Alert
-									status={
-										message === "Password reset email sent."
-											? "success"
-											: "danger"
-									}
-								>
+								<Alert status={resetSent && !callbackError ? "success" : "danger"}>
 									<Alert.Indicator />
 									<Alert.Content>
 										<Alert.Description>
@@ -231,8 +243,7 @@ export function RecordlySignInDialog({
 						{!configured && !user && (
 							<Modal.Footer>
 								<Description role="status" className="min-w-0 flex-1">
-									Cloud sign-in isn’t available in this build yet. You can still
-									save videos to your computer.
+									{t("editor.cloud.unavailable")}
 								</Description>
 							</Modal.Footer>
 						)}

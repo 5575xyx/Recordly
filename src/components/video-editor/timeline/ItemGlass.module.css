@@ -343,12 +343,7 @@
 /* Caption previews share the filmstrip, with enough contrast over any footage. */
 .glassCaption.embeddedCaption,
 :global(:root:not(.dark)) .glassCaption.embeddedCaption {
-	background: rgba(0, 0, 0, 0.72);
-	border-color: rgba(255, 255, 255, 0.25);
 	border-radius: 4px;
-}
-.glassCaption.embeddedCaption.selected {
-	box-shadow: inset 0 0 0 1px var(--accent);
 }
 
 /* Caption selection uses the same primary blue as the editor controls. */
@@ -360,7 +355,7 @@
 	box-shadow: inset 0 0 0 1.5px var(--accent);
 }
 
-/* Compact caption lane above the filmstrip. */
+/* Compact caption lane inside the filmstrip. */
 .glassCaption,
 .glassCaption.embeddedCaption,
 :global(:root:not(.dark)) .glassCaption,

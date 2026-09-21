@@ -1,3 +1,4 @@
+import { useI18n } from "@/contexts/I18nContext";
 import { Check, CloudArrowUp, Copy, ShareNetwork } from "@phosphor-icons/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "@/components/ui/toast";
@@ -35,6 +36,7 @@ export function CloudShareButton({
 	hideTrigger = false,
 	authToken,
 }: Props) {
+	const { t } = useI18n();
 	const [internalOpen, setInternalOpen] = useState(false);
 	const open = controlledOpen ?? internalOpen;
 	const setOpen = useCallback(
@@ -96,7 +98,7 @@ export function CloudShareButton({
 		setError(undefined);
 		setShareUrl(undefined);
 		try {
-			if (!authToken) throw new Error("Sign in to Recordly before creating a shared link.");
+			if (!authToken) throw new Error(t("editor.cloud.signInRequired"));
 			let resolvedFilePath = filePath ?? preparedFileRef.current;
 			if (!resolvedFilePath) {
 				resolvedFilePath = await prepareFile?.();
@@ -105,8 +107,7 @@ export function CloudShareButton({
 						void window.electronAPI.discardExportedTemp(resolvedFilePath);
 					return;
 				}
-				if (!resolvedFilePath)
-					throw new Error("Could not prepare the current edit for sharing.");
+				if (!resolvedFilePath) throw new Error(t("editor.cloud.prepareFailed"));
 				preparedFileRef.current = resolvedFilePath;
 			}
 			const nextUploadId = crypto.randomUUID();
@@ -121,12 +122,12 @@ export function CloudShareButton({
 				uploadId: nextUploadId,
 			});
 			if (!result.success || !result.shareUrl) {
-				if (!result.canceled) setError(result.error || "Cloud upload failed.");
+				if (!result.canceled) setError(result.error || t("editor.cloud.uploadFailed"));
 				return;
 			}
 			setProgress(100);
 			setShareUrl(result.shareUrl);
-			toast.success("Share link created");
+			toast.success(t("editor.cloud.linkCreated"));
 		} catch (cause) {
 			setError(cause instanceof Error ? cause.message : String(cause));
 		} finally {
@@ -134,7 +135,7 @@ export function CloudShareButton({
 			setPhase("idle");
 			setUploadId(undefined);
 		}
-	}, [authToken, filePath, notes, prepareFile, projectTitle]);
+	}, [authToken, filePath, notes, prepareFile, projectTitle, t]);
 
 	const handleCancel = useCallback(async () => {
 		cancelRequestedRef.current = true;
@@ -144,10 +145,15 @@ export function CloudShareButton({
 
 	const copyShareUrl = useCallback(async () => {
 		if (!shareUrl) return;
-		await navigator.clipboard.writeText(shareUrl);
-		setCopied(true);
-		toast.success("Link copied");
-	}, [shareUrl]);
+		try {
+			await navigator.clipboard.writeText(shareUrl);
+			setCopied(true);
+			toast.success(t("editor.cloud.linkCopied"));
+		} catch {
+			setCopied(false);
+			toast.error(t("editor.cloud.copyFailed"));
+		}
+	}, [shareUrl, t]);
 
 	return (
 		<>
@@ -158,27 +164,26 @@ export function CloudShareButton({
 					onClick={() => setOpen(true)}
 					disabled={!filePath && !prepareFile}
 					className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg border-foreground/10 bg-foreground/5 px-3 text-foreground hover:bg-foreground/10 disabled:opacity-40"
-					title="Create a shareable link"
+					title={t("editor.cloud.createLinkTitle")}
 				>
 					<ShareNetwork className="h-4 w-4" />
-					<span className="text-sm font-semibold tracking-tight">Create link</span>
+					<span className="text-sm font-semibold tracking-tight">
+						{t("editor.cloud.createLink")}
+					</span>
 				</Button>
 			)}
 			<Dialog open={open} onOpenChange={handleOpenChange}>
 				<DialogContent className="max-w-md border-foreground/10 bg-editor-dialog text-foreground">
 					<DialogHeader>
-						<DialogTitle>Share to the cloud</DialogTitle>
-						<DialogDescription>
-							Publish the current edit to a Recordly viewing and feedback page. No
-							download is required. Shared videos are prepared at up to 1080p.
-						</DialogDescription>
+						<DialogTitle>{t("editor.cloud.heading")}</DialogTitle>
+						<DialogDescription>{t("editor.cloud.description")}</DialogDescription>
 					</DialogHeader>
 
 					{shareUrl ? (
 						<div className="space-y-4">
 							<div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm text-emerald-400">
 								<Check className="h-5 w-5 shrink-0" />
-								Your video is ready to share.
+								{t("editor.cloud.ready")}
 							</div>
 							<div className="flex gap-2">
 								<Input value={shareUrl} readOnly className="min-w-0" />
@@ -188,7 +193,7 @@ export function CloudShareButton({
 									) : (
 										<Copy className="h-4 w-4" />
 									)}
-									{copied ? "Copied" : "Copy"}
+									{copied ? t("editor.cloud.copied") : t("editor.cloud.copy")}
 								</Button>
 							</div>
 							<Button
@@ -197,16 +202,16 @@ export function CloudShareButton({
 								onClick={() => void window.electronAPI.openExternalUrl(shareUrl)}
 								className="w-full"
 							>
-								Open share page
+								{t("editor.cloud.openPage")}
 							</Button>
 						</div>
 					) : (
 						<div className="space-y-4">
 							<div className="space-y-2">
-								<Label htmlFor="cloud-share-notes">Notes</Label>
+								<Label htmlFor="cloud-share-notes">{t("editor.cloud.notes")}</Label>
 								<textarea
 									id="cloud-share-notes"
-									placeholder="Add context, instructions, or a short summary for viewers…"
+									placeholder={t("editor.cloud.notesPlaceholder")}
 									value={notes}
 									onChange={(event) =>
 										setNotes(event.target.value.slice(0, 2000))
@@ -228,8 +233,8 @@ export function CloudShareButton({
 									</div>
 									<p className="text-xs text-muted-foreground">
 										{phase === "preparing"
-											? "Preparing the current edit…"
-											: `Uploading… ${progress}%`}
+											? t("editor.cloud.preparing")
+											: t("editor.cloud.uploading", undefined, { progress })}
 									</p>
 								</div>
 							) : null}
@@ -241,12 +246,12 @@ export function CloudShareButton({
 										variant="outline"
 										onClick={() => void handleCancel()}
 									>
-										Cancel
+										{t("common.actions.cancel")}
 									</Button>
 								) : (
 									<Button type="button" onClick={() => void handleUpload()}>
 										<CloudArrowUp className="h-4 w-4" />
-										Publish and create link
+										{t("editor.cloud.publish")}
 									</Button>
 								)}
 							</div>

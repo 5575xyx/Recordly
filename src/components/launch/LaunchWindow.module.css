@@ -196,6 +196,6 @@
 }
 
 .micSelect option {
-	background-color: #1a1a22;
+	background-color: var(--surface);
 	color: var(--foreground);
 }

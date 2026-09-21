@@ -301,7 +301,7 @@ export function EditorExportMenu(props: Props) {
 									onClick={handleExportDropdownClose}
 									className="h-8 flex-1 text-xs"
 								>
-									Done
+									{t("editor.cloud.done")}
 								</Button>
 							</div>
 						</Card>
@@ -350,7 +350,7 @@ export function EditorExportMenu(props: Props) {
 									}}
 								>
 									<CloudArrowUp className="size-4" />
-									Create share link
+									{t("editor.cloud.createShareLink")}
 								</Button>
 							</div>
 						</>

@@ -377,9 +377,9 @@ export function EditorShell(props: Props) {
 					aria-live="polite"
 				>
 					<div className="rounded-xl border border-separator bg-background p-6 text-center">
-						<p className="font-medium">Adding video…</p>
+						<p className="font-medium">{t("editor.cloud.addingVideo")}</p>
 						<p className="mt-2 text-sm text-muted-foreground">
-							Preparing footage and audio for your timeline.
+							{t("editor.cloud.preparingFootage")}
 						</p>
 						<Button
 							className="mt-4"

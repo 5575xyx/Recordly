@@ -6,7 +6,15 @@ import {
 	Gear,
 	FrameCorners,
 } from "@phosphor-icons/react";
-import { ToggleButtonGroup, ToggleButton, Tooltip, Card, Switch, Label } from "@heroui/react";
+import {
+	ToggleButtonGroup,
+	ToggleButton,
+	Button,
+	Tooltip,
+	Card,
+	Switch,
+	Label,
+} from "@heroui/react";
 import type { ComponentProps, ReactNode } from "react";
 import { useMemo, useState } from "react";
 import type { useI18n } from "@/contexts/I18nContext";
@@ -93,7 +101,7 @@ export function EditorSidebar({
 					))}
 				</ToggleButtonGroup>
 				<Tooltip>
-					<ToggleButton
+					<Button
 						variant="ghost"
 						isIconOnly
 						className="mt-auto"
@@ -101,7 +109,7 @@ export function EditorSidebar({
 						onPress={onAccountClick}
 					>
 						<UserCircle className="size-5" />
-					</ToggleButton>
+					</Button>
 					<Tooltip.Content placement="right">Account</Tooltip.Content>
 				</Tooltip>
 			</nav>

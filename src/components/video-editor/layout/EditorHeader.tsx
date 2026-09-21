@@ -115,7 +115,9 @@ export function EditorHeader(props: Props) {
 					onClick={props.onToggleVideos}
 				>
 					<FilmStrip className="h-4 w-4" />
-					<span className="text-sm font-semibold tracking-tight">Videos</span>
+					<span className="text-sm font-semibold tracking-tight">
+						{t("editor.library.videos", "Videos")}
+					</span>
 				</Button>
 				<Button
 					ref={projectBrowserTriggerRef}

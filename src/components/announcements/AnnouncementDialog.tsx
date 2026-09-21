@@ -275,7 +275,11 @@ export function AnnouncementDialog({ audience }: { audience: AnnouncementAudienc
 									type="button"
 									variant="ghost"
 									size="icon"
-									className={usesCoverMedia ? "" : undefined}
+									className={
+										usesCoverMedia
+											? "text-white hover:text-white hover:bg-white/15"
+											: undefined
+									}
 									onClick={() =>
 										setCurrentIndex(
 											(index) =>
@@ -297,7 +301,8 @@ export function AnnouncementDialog({ audience }: { audience: AnnouncementAudienc
 										<Button
 											type="button"
 											key={announcement.id}
-											className={`h-1.5  ${
+											variant="ghost"
+											className={`h-1.5 min-w-0 p-0 rounded-full ${
 												index === currentIndex
 													? `w-6 ${usesCoverMedia ? "bg-white" : "bg-primary"}`
 													: `w-1.5 ${usesCoverMedia ? "bg-white/40" : "bg-foreground/25"}`
@@ -313,7 +318,11 @@ export function AnnouncementDialog({ audience }: { audience: AnnouncementAudienc
 									type="button"
 									variant="ghost"
 									size="icon"
-									className={usesCoverMedia ? "" : undefined}
+									className={
+										usesCoverMedia
+											? "text-white hover:text-white hover:bg-white/15"
+											: undefined
+									}
 									onClick={() =>
 										setCurrentIndex(
 											(index) => (index + 1) % announcements.length,
@@ -332,7 +341,11 @@ export function AnnouncementDialog({ audience }: { audience: AnnouncementAudienc
 							<Button
 								type="button"
 								variant="ghost"
-								className={usesCoverMedia ? "" : undefined}
+								className={
+									usesCoverMedia
+										? "text-white hover:text-white hover:bg-white/15"
+										: undefined
+								}
 								onClick={dismissCurrent}
 							>
 								{t("announcements.dismiss", "Dismiss")}

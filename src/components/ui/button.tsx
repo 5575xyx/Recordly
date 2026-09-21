@@ -62,6 +62,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 				"[&_svg]:size-5": iconSize === "lg",
 				"[&_svg]:size-6": iconSize === "xl",
 			},
+			variant === "link" && "h-auto p-0 underline underline-offset-4",
 			className,
 		),
 	};

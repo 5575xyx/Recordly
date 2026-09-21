@@ -111,8 +111,8 @@ function TimelineSample({
 			videoPath={media}
 			videoSourcePath={media}
 			disableSuggestedZooms
-			clipRegions={clips}
-			zoomRegions={zooms}
+			clipRegions={selection === "empty" ? [] : clips}
+			zoomRegions={selection === "empty" ? [] : zooms}
 			onZoomAdded={noop}
 			onZoomSpanChange={noop}
 			onZoomDelete={noop}
@@ -123,40 +123,62 @@ function TimelineSample({
 			onClipDelete={noop}
 			selectedClipId={selection === "clip" ? "clip-a" : null}
 			onSelectClip={noop}
-			annotationRegions={[
-				annotation,
-				{
-					...annotation,
-					id: "annotation-b",
-					startMs: 3500,
-					endMs: 5100,
-					content: "A second callout",
-					trackIndex: 1,
-				},
-			]}
+			annotationRegions={
+				selection === "empty"
+					? []
+					: [
+							annotation,
+							{
+								...annotation,
+								id: "annotation-b",
+								startMs: 3500,
+								endMs: 5100,
+								content: "A second callout",
+								trackIndex: 1,
+							},
+						]
+			}
 			onAnnotationAdded={noop}
 			onAnnotationSpanChange={noop}
 			onAnnotationDelete={noop}
 			onSelectAnnotation={noop}
 			selectedAnnotationId={selection === "annotation" ? "annotation-a" : null}
-			audioRegions={[
-				{
-					id: "audio-a",
-					startMs: 0,
-					endMs: 6000,
-					audioPath: `${location.origin}/tests/ui/fixtures/preview.mp4`,
-					volume: 0.8,
-				},
-			]}
+			audioRegions={
+				selection === "empty"
+					? []
+					: [
+							{
+								id: "audio-a",
+								startMs: 0,
+								endMs: 6000,
+								audioPath: `${location.origin}/tests/ui/fixtures/preview.mp4`,
+								volume: 0.8,
+							},
+						]
+			}
 			onAudioAdded={noop}
 			onAudioSpanChange={noop}
 			onAudioDelete={noop}
 			onSelectAudio={noop}
 			selectedAudioId={selection === "audio" ? "audio-a" : null}
-			captionRegions={[
-				{ id: "caption-a", startMs: 100, endMs: 2000, text: "Welcome to Recordly" },
-				{ id: "caption-b", startMs: 2900, endMs: 5200, text: "Create something clear." },
-			]}
+			captionRegions={
+				selection === "empty"
+					? []
+					: [
+							{
+								id: "caption-a",
+								startMs: 100,
+								endMs: 2000,
+								text: "Welcome to Recordly",
+							},
+							{
+								id: "caption-b",
+								startMs: 2900,
+								endMs: 5200,
+								text: "Create something clear.",
+							},
+						]
+			}
 			captionsEnabled
 			captionQuickAddEnabled
 			onCaptionAdded={noop}

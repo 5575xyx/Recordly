@@ -20,7 +20,7 @@ export function ChoiceGroup({
 }) {
 	return (
 		<TagGroup
-			size="md"
+			size={props.size ?? "md"}
 			aria-label={props["aria-label"]}
 			selectionMode="single"
 			disallowEmptySelection

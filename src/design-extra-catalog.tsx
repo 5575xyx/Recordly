@@ -106,6 +106,7 @@ const modes = [
 	"presets-empty",
 	"presets-saved",
 	"announcement-popup",
+	"announcement-cover",
 	"announcement-banner",
 	"announcement-notification",
 ];

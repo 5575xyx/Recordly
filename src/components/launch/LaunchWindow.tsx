@@ -372,7 +372,7 @@ function LaunchWindowContent() {
 					onOpenProject={openProjectFromLibrary}
 					trigger={
 						<Button
-							aria-label={t("recording.openProject")}
+							aria-hidden="true"
 							tabIndex={-1}
 							variant="ghost"
 							className="absolute size-px min-w-0 p-0 pointer-events-none opacity-0"

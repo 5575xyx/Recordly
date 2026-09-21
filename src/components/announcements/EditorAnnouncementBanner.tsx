@@ -118,7 +118,7 @@ export function EditorAnnouncementBanner() {
 					variant="link"
 					size="sm"
 					onClick={() => void openAction()}
-					className="h-auto shrink-0 gap-1 px-1 py-0 text-xs underline decoration-white/50 underline-offset-2 dark:decoration-black/50"
+					className="text-current h-auto shrink-0 gap-1 px-1 py-0 text-xs underline decoration-white/50 underline-offset-2 dark:decoration-black/50"
 				>
 					{current.action?.label}
 					{current.action?.url ? (
@@ -133,7 +133,7 @@ export function EditorAnnouncementBanner() {
 					variant="ghost"
 					type="button"
 					onClick={dismissCurrent}
-					className="absolute right-4 inline-flex h-6 w-6 items-center justify-center"
+					className="text-current absolute right-4 inline-flex h-6 w-6 items-center justify-center"
 					aria-label={t("announcements.dismiss", "Dismiss")}
 				>
 					<X className="h-3.5 w-3.5" />

@@ -1,4 +1,5 @@
 import { ToggleButton } from "@heroui/react";
+import { cn } from "@/lib/utils";
 import type { ComponentProps } from "react";
 type Props = Omit<ComponentProps<typeof ToggleButton>, "size" | "variant"> & {
 	pressed?: boolean;
@@ -15,7 +16,15 @@ export function Toggle({ pressed, onPressedChange, disabled, size, variant, ...p
 			onChange={onPressedChange}
 			isDisabled={disabled}
 			size={size === "default" ? "md" : size}
-			variant={variant === "outline" ? "default" : "ghost"}
+			variant="ghost"
+			className={(state) =>
+				cn(
+					variant === "outline" && "border border-border bg-transparent",
+					typeof props.className === "function"
+						? props.className(state)
+						: props.className,
+				)
+			}
 		/>
 	);
 }

@@ -1,4 +1,7 @@
 {
+	"library": {
+		"videos": "影片"
+	},
 	"playback": {
 		"play": "播放",
 		"pause": "暫停",

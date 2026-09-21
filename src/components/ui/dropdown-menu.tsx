@@ -31,10 +31,13 @@ export function DropdownMenuContent({
 }
 export function DropdownMenuItem({
 	onSelect,
+	onClick,
+	onAction,
 	disabled,
 	children,
 	...props
-}: Omit<ComponentProps<typeof Dropdown.Item>, "onSelect"> & {
+}: Omit<ComponentProps<typeof Dropdown.Item>, "onSelect" | "onClick"> & {
+	onClick?: () => void;
 	onSelect?: (event: Event) => void;
 	disabled?: boolean;
 }) {
@@ -46,7 +49,11 @@ export function DropdownMenuItem({
 				props.textValue ??
 				(typeof children === "string" ? children : String(props.id ?? "Action"))
 			}
-			onAction={() => onSelect?.(new Event("select"))}
+			onAction={() => {
+				onSelect?.(new Event("select"));
+				onClick?.();
+				onAction?.();
+			}}
 		>
 			{children}
 		</Dropdown.Item>

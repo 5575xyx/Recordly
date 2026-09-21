@@ -1,4 +1,7 @@
 {
+	"library": {
+		"videos": "Видео"
+	},
 	"playback": {
 		"play": "Воспроизвести",
 		"pause": "Пауза",

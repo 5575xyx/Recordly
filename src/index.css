@@ -127,13 +127,15 @@
 	}
 }
 
-/* highlight rings look ugly — keep them transparent; keyboard focus gets an inset underline. */
+/* Visible keyboard focus for HeroUI controls and native focusable elements. */
 :root,
 .dark {
-	--focus: transparent;
+	--focus: var(--foreground);
 }
-[data-focus-visible="true"] {
-	box-shadow: inset 0 -2px 0 color-mix(in oklab, var(--foreground) 45%, transparent);
+[data-focus-visible="true"],
+:focus-visible {
+	outline: 2px solid var(--focus);
+	outline-offset: 2px;
 }
 
 @container (max-width: 110px) {

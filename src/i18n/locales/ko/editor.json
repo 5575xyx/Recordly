@@ -1,4 +1,7 @@
 {
+	"library": {
+		"videos": "동영상"
+	},
 	"playback": {
 		"play": "재생",
 		"pause": "일시 정지",

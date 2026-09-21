@@ -1,43 +1,64 @@
-import { Toast, ToastQueue } from "@heroui/react";
-import type { ReactNode } from "react";
+import { Toast, toast as heroToast } from "@heroui/react";
+import { isValidElement, type ReactNode } from "react";
 
-type ToastContent = {
-	title: ReactNode;
-	description?: ReactNode;
-	variant: "default" | "accent" | "success" | "warning" | "danger";
-	action?: { label: ReactNode; onClick: () => void };
-	closeButton?: boolean;
-};
 type Options = {
 	id?: string | number;
 	description?: ReactNode;
 	duration?: number;
-	closeButton?: boolean;
 	action?: { label: ReactNode; onClick: () => void };
 	onDismiss?: () => void;
 };
-const queue = new ToastQueue<ToastContent>();
+type Variant = "default" | "accent" | "success" | "warning" | "danger";
 const ids = new Map<string | number, string>();
-function notify(
-	title: ReactNode,
-	options: Options = {},
-	variant: ToastContent["variant"] = "default",
-) {
-	const content = {
-		title,
-		description: options.description,
+
+function plainText(value: ReactNode): string {
+	if (typeof value === "string" || typeof value === "number") return String(value);
+	if (Array.isArray(value)) return value.map(plainText).join("");
+	if (isValidElement<{ children?: ReactNode }>(value)) return plainText(value.props.children);
+	return "";
+}
+
+// Keep existing callers compatible while HeroUI owns the queue and presentation.
+function notify(title: ReactNode, options: Options = {}, variant: Variant = "default") {
+	const errorText = [plainText(title), plainText(options.description)]
+		.filter(Boolean)
+		.join("\n\n");
+	const action = options.action;
+	const nativeOptions = {
 		variant,
-		action: options.action,
-		closeButton: options.closeButton,
-	};
-	const timeout = options.duration === Infinity ? 0 : (options.duration ?? 4000);
-	const onClose = () => {
-		if (options.id !== undefined) ids.delete(options.id);
-		options.onDismiss?.();
+		description: options.description,
+		timeout:
+			options.duration === Infinity
+				? 0
+				: (options.duration ?? (variant === "danger" ? 8000 : 4000)),
+		onClose: () => {
+			if (options.id !== undefined) ids.delete(options.id);
+			options.onDismiss?.();
+		},
+		actionProps: action
+			? {
+					children: action.label,
+					onPress: action.onClick,
+				}
+			: variant === "danger" && errorText
+				? {
+						children: "Copy",
+						onPress: () => {
+							void navigator.clipboard.writeText(errorText).then(
+								() => heroToast.success("Error copied"),
+								() =>
+									heroToast.danger("Could not copy error", {
+										description: errorText,
+									}),
+							);
+						},
+					}
+				: undefined,
 	};
 	const previous = options.id === undefined ? undefined : ids.get(options.id);
-	if (previous && queue.update(previous, content, { timeout, onClose })) return previous;
-	const key = queue.add(content, { timeout, onClose });
+	const key = previous
+		? heroToast.update(previous, title, nativeOptions)
+		: heroToast(title, nativeOptions);
 	if (options.id !== undefined) ids.set(options.id, key);
 	return key;
 }
@@ -48,38 +69,11 @@ export const toast = Object.assign(notify, {
 	warning: (message: ReactNode, options?: Options) => notify(message, options, "warning"),
 	dismiss: (id?: string | number) => {
 		if (id === undefined) {
-			queue.clear();
+			heroToast.clear();
 			ids.clear();
-		} else queue.close(ids.get(id) ?? String(id));
+		} else heroToast.close(ids.get(id) ?? String(id));
 	},
 });
 export function Toaster({ className }: { className?: string }) {
-	return (
-		<Toast.Provider queue={queue} placement="bottom end" className={className}>
-			{({ toast: item }) => (
-				<Toast toast={item} variant={item.content.variant}>
-					<Toast.Content>
-						<Toast.Indicator />
-						<div className="min-w-0 flex-1">
-							<Toast.Title>{item.content.title}</Toast.Title>
-							{item.content.description && (
-								<Toast.Description>{item.content.description}</Toast.Description>
-							)}
-						</div>
-						{item.content.action && (
-							<Toast.ActionButton
-								onPress={() => {
-									item.content.action?.onClick();
-									queue.close(item.key);
-								}}
-							>
-								{item.content.action.label}
-							</Toast.ActionButton>
-						)}
-						{item.content.closeButton !== false && <Toast.CloseButton />}
-					</Toast.Content>
-				</Toast>
-			)}
-		</Toast.Provider>
-	);
+	return <Toast.Provider placement="bottom end" className={className} />;
 }

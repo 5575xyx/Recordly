@@ -1,25 +1,29 @@
 import { expect, test } from "@playwright/test";
-import { installDesktopBridge } from "./bridge";
+import { installDesktopBridge, installDesktopBridgeOverrides } from "./bridge";
 
 for (const savedRoundness of [undefined, 69]) {
 	test(`new recording webcam uses ${savedRoundness === undefined ? "100% by default" : "saved roundness"}`, async ({
 		page,
 	}) => {
 		await installDesktopBridge(page);
-		await page.addInitScript((roundness) => {
-			if (roundness !== undefined) {
-				window.electronAPI.getAppSetting = (key) =>
-					key === "recordly.editor.preferences" ? { webcam: { roundness } } : null;
-			}
-			window.electronAPI.getCurrentRecordingSession = async () => ({
-				success: true,
-				session: {
-					videoPath: `${location.origin}/tests/ui/fixtures/preview.mp4`,
-					webcamPath: `${location.origin}/tests/ui/fixtures/preview.mp4`,
-					timeOffsetMs: 0,
-				},
-			});
-		}, savedRoundness);
+		await installDesktopBridgeOverrides(
+			page,
+			(roundness) => {
+				if (roundness !== undefined) {
+					window.electronAPI.getAppSetting = (key) =>
+						key === "recordly.editor.preferences" ? { webcam: { roundness } } : null;
+				}
+				window.electronAPI.getCurrentRecordingSession = async () => ({
+					success: true,
+					session: {
+						videoPath: `${location.origin}/tests/ui/fixtures/preview.mp4`,
+						webcamPath: `${location.origin}/tests/ui/fixtures/preview.mp4`,
+						timeOffsetMs: 0,
+					},
+				});
+			},
+			savedRoundness,
+		);
 		await page.goto("/?windowType=editor");
 		await page.getByRole("radio", { name: "Webcam", exact: true }).click();
 		const expected = savedRoundness ?? 100;

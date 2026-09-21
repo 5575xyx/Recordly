@@ -488,20 +488,30 @@ export function normalizeProjectEditor(editor: Partial<ProjectEditorState>): Pro
 						: rawStart + 1000;
 					const startMs = Math.max(0, Math.min(rawStart, rawEnd));
 					const endMs = Math.max(startMs + 1, rawEnd);
+					const sourceStartMs = isFiniteNumber(region.sourceStartMs)
+						? Math.max(0, Math.round(region.sourceStartMs))
+						: undefined;
+					let sourceMinMs = isFiniteNumber(region.sourceMinMs)
+						? Math.max(0, Math.round(region.sourceMinMs))
+						: undefined;
+					let sourceMaxMs = isFiniteNumber(region.sourceMaxMs)
+						? Math.max(0, Math.round(region.sourceMaxMs))
+						: undefined;
+					if (
+						sourceMaxMs !== undefined &&
+						sourceMaxMs < Math.max(sourceMinMs ?? 0, sourceStartMs ?? startMs)
+					) {
+						sourceMinMs = undefined;
+						sourceMaxMs = undefined;
+					}
 					return {
 						id: region.id,
 						startMs,
 						endMs,
-						...(isFiniteNumber(region.sourceStartMs)
-							? { sourceStartMs: Math.max(0, Math.round(region.sourceStartMs)) }
-							: {}),
-						...(isFiniteNumber(region.sourceMinMs)
-							? { sourceMinMs: Math.max(0, Math.round(region.sourceMinMs)) }
-							: {}),
-						...(isFiniteNumber(region.sourceMaxMs)
-							? { sourceMaxMs: Math.max(0, Math.round(region.sourceMaxMs)) }
-							: {}),
-						speed: isFiniteNumber(region.speed) ? region.speed : 1,
+						sourceStartMs,
+						sourceMinMs,
+						sourceMaxMs,
+						speed: isFiniteNumber(region.speed) && region.speed > 0 ? region.speed : 1,
 						muted: typeof region.muted === "boolean" ? region.muted : false,
 						showSourceAudio:
 							typeof region.showSourceAudio === "boolean"

@@ -34,14 +34,22 @@ export function ClipFilmstrip({
 	}, []);
 	const start = Math.max(span.start, range.start);
 	const end = Math.min(span.end, range.end);
+	const [windowRange, setWindowRange] = useState({ start, end, count });
+	useEffect(() => {
+		const timer = setTimeout(() => setWindowRange({ start, end, count }), 150);
+		return () => clearTimeout(timer);
+	}, [start, end, count]);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: clear stale thumbnails when their source or clip bounds change.
+	useEffect(() => {
+		setFrames([]);
+	}, [path, span.start, span.end, sourceSpan.start, sourceSpan.end]);
 	useEffect(() => {
 		const controller = new AbortController();
-		setFrames([]);
 		const times = filmstripSampleTimes(
 			{ start: span.start, end: span.end },
 			{ start: sourceSpan.start, end: sourceSpan.end },
-			{ start, end },
-			count,
+			windowRange,
+			windowRange.count,
 		);
 		setLoading(times.length > 0);
 		if (times.length) {
@@ -57,7 +65,7 @@ export function ClipFilmstrip({
 				});
 		}
 		return () => controller.abort();
-	}, [path, span.start, span.end, sourceSpan.start, sourceSpan.end, start, end, count]);
+	}, [path, span.start, span.end, sourceSpan.start, sourceSpan.end, windowRange]);
 	return (
 		<div
 			ref={ref}
@@ -65,7 +73,7 @@ export function ClipFilmstrip({
 			className="pointer-events-none absolute inset-0 flex overflow-hidden rounded-[inherit]"
 			aria-hidden="true"
 		>
-			{loading && <Skeleton className="h-full w-full rounded-none" />}
+			{loading && frames.length === 0 && <Skeleton className="h-full w-full rounded-none" />}
 			{frames.map((frame, index) => (
 				<img
 					key={index}

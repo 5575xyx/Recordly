@@ -48,7 +48,7 @@ export default function Row({
 					? {
 							position: "absolute" as const,
 							insetInline: 0,
-							...(caption ? { top: -20 } : { bottom: 7 }),
+							...(caption ? { top: 36 } : { bottom: 7 }),
 							zIndex: 15,
 							pointerEvents: "none" as const,
 						}

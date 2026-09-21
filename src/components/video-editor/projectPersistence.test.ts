@@ -211,12 +211,10 @@ describe("loaded clip sequence migration", () => {
 });
 
 it("reopens persisted local media URLs using the current server port", async () => {
-	const getLocalMediaUrl = vi
-		.fn()
-		.mockResolvedValue({
-			success: true,
-			url: "http://127.0.0.1:9999/video?path=%2Ftmp%2Fclip.mp4",
-		});
+	const getLocalMediaUrl = vi.fn().mockResolvedValue({
+		success: true,
+		url: "http://127.0.0.1:9999/video?path=%2Ftmp%2Fclip.mp4",
+	});
 	vi.stubGlobal("window", { electronAPI: { getLocalMediaUrl } });
 	await expect(
 		resolveVideoUrl("http://127.0.0.1:1234/video?path=%2Ftmp%2Fclip.mp4"),
@@ -224,16 +222,48 @@ it("reopens persisted local media URLs using the current server port", async () 
 	expect(getLocalMediaUrl).toHaveBeenCalledWith("/tmp/clip.mp4");
 });
 
-
 describe("annotations across the canvas and imported webcam ranges", () => {
 	it("preserves annotations outside the recording rectangle and webcam visibility when a project is reopened", () => {
 		const editor = normalizeProjectEditor({
-			annotationRegions: [{ id: "outside", startMs: 0, endMs: 1000, type: "text", position: { x: -12, y: 110 }, size: { width: 140, height: 20 } }] as never,
-			webcam: { sourcePath: "/sequence-webcam.mp4", visibleRanges: [{ startMs: 1200, endMs: 2000 }] } as never,
+			annotationRegions: [
+				{
+					id: "outside",
+					startMs: 0,
+					endMs: 1000,
+					type: "text",
+					position: { x: -12, y: 110 },
+					size: { width: 140, height: 20 },
+				},
+			] as never,
+			webcam: {
+				sourcePath: "/sequence-webcam.mp4",
+				visibleRanges: [{ startMs: 1200, endMs: 2000 }],
+			} as never,
 		});
 		expect(editor.annotationRegions[0].position).toEqual({ x: -12, y: 110 });
 		expect(editor.annotationRegions[0].size.width).toBe(140);
 		expect(normalizeProjectEditor(editor).annotationRegions).toEqual(editor.annotationRegions);
-		expect(normalizeProjectEditor(editor).webcam.visibleRanges).toEqual([{ startMs: 1200, endMs: 2000 }]);
+		expect(normalizeProjectEditor(editor).webcam.visibleRanges).toEqual([
+			{ startMs: 1200, endMs: 2000 },
+		]);
 	});
+});
+
+it("discards inverted saved source bounds while preserving the in-point", () => {
+	const editor = normalizeProjectEditor({
+		clipRegions: [
+			{
+				id: "clip",
+				startMs: 0,
+				endMs: 1000,
+				sourceStartMs: 5000,
+				sourceMinMs: 6000,
+				sourceMaxMs: 4000,
+				speed: 0,
+			},
+		],
+	});
+	expect(editor.clipRegions[0]).toMatchObject({ sourceStartMs: 5000, speed: 1 });
+	expect(editor.clipRegions[0].sourceMinMs).toBeUndefined();
+	expect(editor.clipRegions[0].sourceMaxMs).toBeUndefined();
 });

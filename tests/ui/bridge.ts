@@ -41,6 +41,7 @@ export async function installDesktopBridge(page: Page, videoFixture = "preview.m
 				getWhisperSmallModelStatus: async () => ({ success: true, exists: false }),
 				listProjectFiles: async () => ({ success: true, projects: [], entries: [] }),
 				setCurrentVideoPath: success,
+				finishRecordingImport: success,
 				setCurrentRecordingSession: success,
 				setHasUnsavedChanges: success,
 				onMenuSaveProject: subscribe,
@@ -97,7 +98,19 @@ export async function installDesktopBridge(page: Page, videoFixture = "preview.m
 					document.documentElement.dataset.updateDismissed = "true";
 					return { success: true };
 				},
+				...window.electronAPI,
 			},
 		});
 	}, videoFixture);
+}
+
+/** Overrides can run before or after bridge defaults; Playwright does not order init scripts. */
+export async function installDesktopBridgeOverrides<T = undefined>(
+	page: Page,
+	setup: (arg: T) => void,
+	arg?: T,
+) {
+	await page.addInitScript({
+		content: `window.electronAPI ??= {}; (${setup.toString()})(${JSON.stringify(arg) ?? "undefined"});`,
+	});
 }

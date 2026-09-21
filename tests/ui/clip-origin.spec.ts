@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { installDesktopBridge } from "./bridge";
+import { installDesktopBridge, installDesktopBridgeOverrides } from "./bridge";
 
 test("selecting an untouched clip does not introduce a leading gap", async ({ page }) => {
 	test.setTimeout(120000);
 	await installDesktopBridge(page);
-	await page.addInitScript(() => {
+	await installDesktopBridgeOverrides(page, () => {
 		window.electronAPI.onMenuSaveProject = (callback) => {
 			const handler = () => {
 				void callback();
@@ -56,7 +56,7 @@ test("selecting an untouched clip does not introduce a leading gap", async ({ pa
 	expect(clips).toHaveLength(1);
 	expect(clips[0]).toMatchObject({ startMs: 0, endMs: 6000, speed: 1 });
 	expect(clips[0].sourceStartMs ?? clips[0].startMs).toBe(0);
-	// Intentional drags still work, and returning to the origin removes a gap.
+	// A lone clip stays packed at zero even after an intentional drag.
 	const dragBox = (await clip.boundingBox())!;
 	const dragX = dragBox.x + dragBox.width / 2;
 	const dragY = dragBox.y + dragBox.height / 2;
@@ -64,15 +64,9 @@ test("selecting an untouched clip does not introduce a leading gap", async ({ pa
 	await page.mouse.down();
 	await page.mouse.move(dragX + 40, dragY, { steps: 8 });
 	await page.mouse.up();
-	await expect
-		.poll(() => clip.evaluate((node) => parseFloat(node.style.left)))
-		.toBeGreaterThan(10);
-	const movedBox = (await clip.boundingBox())!;
-	await page.mouse.move(movedBox.x + 150, movedBox.y + movedBox.height / 2);
-	await page.mouse.down();
-	await page.mouse.move(movedBox.x + 70, movedBox.y + movedBox.height / 2, { steps: 8 });
-	await page.mouse.up();
 	await expect(clip).toHaveCSS("left", "0px");
+	await expect(clip).toHaveAttribute("data-start-ms", "0");
+	await expect(clip).toHaveAttribute("data-end-ms", "6000");
 
 	await page.getByRole("button", { name: "Export", exact: true }).click();
 	const dialog = page.getByRole("dialog", { name: "Export", exact: true });

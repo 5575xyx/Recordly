@@ -344,7 +344,7 @@ export async function generateAutoCaptionsFromVideo(options: {
 		(source) => !microphone.includes(source) && !system.includes(source),
 	);
 	if (microphone.length === 0) {
-		return generateCaptionsForSource({ ...options, candidates: [...system, ...candidates] });
+		return generateCaptionsForSource({ ...options, candidates: [...system, ...secondary] });
 	}
 	// Decode independently so simultaneous voices do not confuse recognition. The
 	// sidecar replaces embedded system audio to avoid transcribing it twice.

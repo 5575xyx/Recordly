@@ -17,6 +17,21 @@ export function mergeCaptionSources(
 			systemCues.push(cue);
 			continue;
 		}
+		if (!cue.words?.length) {
+			let spans = [{ startMs: cue.startMs, endMs: cue.endMs }];
+			for (const mic of micSpans) {
+				spans = spans.flatMap((span) => {
+					if (mic.endMs <= span.startMs || mic.startMs >= span.endMs) return [span];
+					return [
+						{ startMs: span.startMs, endMs: Math.min(span.endMs, mic.startMs) },
+						{ startMs: Math.max(span.startMs, mic.endMs), endMs: span.endMs },
+					].filter((part) => part.endMs > part.startMs);
+				});
+			}
+			// SRT has no word boundaries: retain its text during the unopposed portions.
+			systemCues.push(...spans.map((span) => ({ ...cue, ...span })));
+			continue;
+		}
 		// Preserve words outside the conflict, rather than dropping a whole paragraph.
 		let run: CaptionWordPayload[] = [];
 		const flush = () => {

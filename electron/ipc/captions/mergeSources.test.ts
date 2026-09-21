@@ -92,3 +92,26 @@ it("preserves system speech between timed microphone words", () => {
 	);
 	expect(result.map((cue) => cue.text)).toContain("In the gap");
 });
+
+it("retains the unopposed portions of an untimed system cue", () => {
+	const result = mergeCaptionSources(
+		[
+			{
+				id: "mic",
+				startMs: 0,
+				endMs: 3000,
+				text: "Mic",
+				words: [{ text: "Mic", startMs: 1000, endMs: 2000 }],
+			},
+		],
+		[{ id: "system", startMs: 0, endMs: 3000, text: "System paragraph" }],
+	);
+	expect(
+		result
+			.filter((cue) => cue.text === "System paragraph")
+			.map(({ startMs, endMs }) => [startMs, endMs]),
+	).toEqual([
+		[0, 1000],
+		[2000, 3000],
+	]);
+});

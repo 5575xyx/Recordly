@@ -1,9 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
-import { installDesktopBridge } from "./bridge";
+import { installDesktopBridge, installDesktopBridgeOverrides } from "./bridge";
 
 async function setup(page: Page) {
 	await installDesktopBridge(page, "filmstrip.mp4");
-	await page.addInitScript(() => {
+	await installDesktopBridgeOverrides(page, () => {
 		const removed = new Set<string>();
 		const entries = ["first.mp4", "second.mp4"].map((name, i) => ({
 			name,
@@ -127,7 +127,7 @@ test("generating captions leaves the current media session intact and shows the 
 	page,
 }) => {
 	await installDesktopBridge(page, "filmstrip.mp4");
-	await page.addInitScript(() => {
+	await installDesktopBridgeOverrides(page, () => {
 		window.electronAPI.getCurrentVideoPath = async () => ({
 			success: true,
 			path: "/recordings/caption-test.mp4",
@@ -171,7 +171,7 @@ test("generating captions leaves the current media session intact and shows the 
 
 test("preview recovers once when a local video URL fails to load", async ({ page }) => {
 	await installDesktopBridge(page, "filmstrip.mp4");
-	await page.addInitScript(() => {
+	await installDesktopBridgeOverrides(page, () => {
 		let requests = 0;
 		window.electronAPI.getCurrentVideoPath = async () => ({
 			success: true,
@@ -195,7 +195,7 @@ test("preview recovers once when a local video URL fails to load", async ({ page
 test("HUD project list fits its popover and scrolls only vertically", async ({ page }) => {
 	await page.setViewportSize({ width: 980, height: 600 });
 	await installDesktopBridge(page);
-	await page.addInitScript(() => {
+	await installDesktopBridgeOverrides(page, () => {
 		window.electronAPI.listProjectFiles = async () => ({
 			success: true,
 			projects: [],
@@ -228,7 +228,7 @@ test("HUD project list fits its popover and scrolls only vertically", async ({ p
 
 test("HUD source controls have no default gray fill or outline", async ({ page }) => {
 	await installDesktopBridge(page);
-	await page.addInitScript(() => {
+	await installDesktopBridgeOverrides(page, () => {
 		window.electronAPI.getSources = async () => [
 			{ id: "screen:1:0", name: "Built-in Display", thumbnail: "", display_id: "1" },
 			{ id: "window:2:0", name: "Another Window", thumbnail: "", display_id: "" },

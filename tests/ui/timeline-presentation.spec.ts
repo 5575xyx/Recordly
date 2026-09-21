@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { installDesktopBridge } from "./bridge";
+import { installDesktopBridge, installDesktopBridgeOverrides } from "./bridge";
 
 test("editor uses skeletons until media opens", async ({ page }) => {
 	test.setTimeout(60000);
@@ -17,7 +17,7 @@ test("editor uses skeletons until media opens", async ({ page }) => {
 	});
 	await page.exposeFunction("waitForTestMedia", () => pending);
 	await installDesktopBridge(page);
-	await page.addInitScript(() => {
+	await installDesktopBridgeOverrides(page, () => {
 		window.electronAPI.getCurrentVideoPath = async () => {
 			await (
 				window as unknown as { waitForTestMedia: () => Promise<void> }

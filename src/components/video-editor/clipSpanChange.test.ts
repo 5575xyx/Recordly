@@ -40,3 +40,13 @@ it("does not reveal a neighboring recording when extending an imported clip", ()
 	expect(changeClipSpan(clip, -500, 2000, 20000)).toEqual(clip);
 	expect(changeClipSpan(clip, 0, 2500, 20000)).toEqual(clip);
 });
+
+it.each([0, -1, NaN, Infinity])("uses normal speed when resizing corrupt speed %s", (speed) => {
+	const result = changeClipSpan(
+		{ id: "bad", startMs: 0, endMs: 3000, sourceStartMs: 0, speed },
+		1000,
+		3000,
+		5000,
+	);
+	expect(result).toMatchObject({ startMs: 1000, endMs: 3000, sourceStartMs: 1000 });
+});

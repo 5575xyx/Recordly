@@ -2394,7 +2394,7 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 			setRecording(false);
 			window.electronAPI?.setRecordingState(false);
 			void (async () => {
-				await discardActiveNativeCapture();
+				await Promise.allSettled([discardActiveNativeCapture(), stopMicFallbackRecorder()]);
 			})();
 			return;
 		}
@@ -2408,7 +2408,13 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 			setRecording(false);
 			window.electronAPI?.setRecordingState(false);
 		}
-	}, [cleanupCapturedMedia, discardActiveNativeCapture, markRecordingResumed, recording]);
+	}, [
+		cleanupCapturedMedia,
+		discardActiveNativeCapture,
+		markRecordingResumed,
+		recording,
+		stopMicFallbackRecorder,
+	]);
 
 	const toggleRecording = async () => {
 		if (starting || countdownActive || finalizing) {

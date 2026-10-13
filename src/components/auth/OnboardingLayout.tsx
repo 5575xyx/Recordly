@@ -88,21 +88,35 @@ export function OnboardingBody({
 	);
 }
 
-export function OnboardingHeader({ title, description }: { title: string; description: string }) {
+export function OnboardingHeader({
+	title,
+	description,
+	showBrand = true,
+	centered = false,
+}: {
+	title: ReactNode;
+	description: string;
+	showBrand?: boolean;
+	centered?: boolean;
+}) {
 	return (
-		<Modal.Header className="items-start gap-2 p-0 text-left">
-			<div
-				data-onboarding-brand
-				className="mb-3 flex items-center gap-2.5"
-				aria-label="Recordly"
-			>
-				<img
-					src={`${import.meta.env.BASE_URL}app-icons/recordly-128.png`}
-					alt=""
-					className="size-10 rounded-xl"
-				/>
-				<span className="text-lg font-semibold tracking-tight">Recordly</span>
-			</div>
+		<Modal.Header
+			className={`gap-2 p-0 ${centered ? "items-center text-center" : "items-start text-left"}`}
+		>
+			{showBrand && (
+				<div
+					data-onboarding-brand
+					className="mb-3 flex items-center gap-2.5"
+					aria-label="Recordly"
+				>
+					<img
+						src={`${import.meta.env.BASE_URL}app-icons/recordly-128.png`}
+						alt=""
+						className="size-10 rounded-xl"
+					/>
+					<span className="text-lg font-semibold tracking-tight">Recordly</span>
+				</div>
+			)}
 			<Modal.Heading className="text-2xl font-semibold leading-tight tracking-tight sm:text-3xl">
 				{title}
 			</Modal.Heading>

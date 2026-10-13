@@ -223,7 +223,25 @@ export function RecordlySignInDialog({
 					<motion.div {...reveal}>
 						{onboarding ? (
 							<OnboardingHeader
-								title={user ? "Your account" : "Welcome to Recordly"}
+								centered={!user}
+								showBrand={Boolean(user)}
+								title={
+									user ? (
+										"Your account"
+									) : (
+										<>
+											Welcome to{" "}
+											<span className="inline-flex items-center gap-2 whitespace-nowrap align-bottom">
+												<img
+													src={`${import.meta.env.BASE_URL}app-icons/recordly-128.png`}
+													alt=""
+													className="size-7 rounded-lg sm:size-8"
+												/>
+												Recordly
+											</span>
+										</>
+									)
+								}
 								description={
 									user
 										? user.email || "You’re signed in and ready to continue."

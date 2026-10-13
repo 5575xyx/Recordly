@@ -4,7 +4,7 @@ const mocks = vi.hoisted(() => ({
 	list: vi.fn(),
 	pickSourceList: vi.fn(),
 	validate: vi.fn(),
-	remember: vi.fn(),
+
 	selected: vi.fn(),
 	recording: false,
 	currentSource: null as Record<string, unknown> | null,
@@ -27,7 +27,6 @@ vi.mock("../../windows", () => ({
 }));
 vi.mock("../captureSelection", () => ({
 	validateCaptureSource: mocks.validate,
-	rememberCaptureSource: mocks.remember,
 }));
 vi.mock("../capturePickerSources", () => ({ listCapturePickerWindows: mocks.list }));
 vi.mock("../cursor/bounds", () => ({ stopWindowBoundsCapture: vi.fn() }));
@@ -134,7 +133,6 @@ it("rejects a window that disappeared while the picker was open", async () => {
 		message: "That window or screen is no longer available.",
 	});
 	expect(mocks.selected).not.toHaveBeenCalled();
-	expect(mocks.remember).not.toHaveBeenCalled();
 });
 it("surfaces detection failures instead of opening a screen-only overlay", async () => {
 	mocks.list.mockRejectedValue(new Error("Unable to detect windows"));
@@ -146,14 +144,14 @@ it("surfaces detection failures instead of opening a screen-only overlay", async
 	expect(mocks.selected).not.toHaveBeenCalled();
 });
 
-it("reopens the currently selected saved area, without reusing an old area for a window", async () => {
+it("opens a fresh picker even when an area is already selected", async () => {
 	mocks.currentSource = {
 		id: "area:1",
 		display_id: "1",
 		area: { x: 100, y: 200, width: 400, height: 300 },
 	};
 	expect(await call("get-capture-picker-context", mocks.overlay, 1)).toMatchObject({
-		lastArea: mocks.currentSource.area,
+		lastArea: null,
 	});
 	mocks.currentSource = { id: "window:101:0", display_id: "1" };
 	expect(await call("get-capture-picker-context", mocks.overlay, 1)).toMatchObject({

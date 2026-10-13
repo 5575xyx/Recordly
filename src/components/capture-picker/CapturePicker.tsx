@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import {
 	frontmostAt,
@@ -108,27 +109,14 @@ export function CapturePicker() {
 						),
 					}))
 					.filter((entry) => entry.rect.width > 0 && entry.rect.height > 0);
-				const next =
-					context.lastArea && context.allowArea
-						? {
-								kind: "area" as const,
-								rect: normalizeAreaRect(
-									{
-										...context.lastArea,
-										x: context.lastArea.x - origin.current.x,
-										y: context.lastArea.y - origin.current.y,
-									},
-									screenRect(),
-								),
-							}
-						: context.cursor
-							? targetAt(
-									context.cursor.x - origin.current.x,
-									context.cursor.y - origin.current.y,
-								)
-							: null;
+				const next = context.cursor
+					? targetAt(
+							context.cursor.x - origin.current.x,
+							context.cursor.y - origin.current.y,
+						)
+					: null;
 				current.current = next;
-				editingArea.current = next?.kind === "area";
+				editingArea.current = false;
 				setTarget(next);
 				requestAnimationFrame(() =>
 					requestAnimationFrame(() => {
@@ -289,6 +277,29 @@ export function CapturePicker() {
 					>
 						{label} · {Math.round(target.rect.width)} × {Math.round(target.rect.height)}
 					</div>
+				</div>
+			)}
+			{target?.kind === "area" && (
+				<div
+					className="absolute bottom-12 left-1/2 -translate-x-1/2"
+					onPointerDown={(event) => event.stopPropagation()}
+					onPointerUp={(event) => event.stopPropagation()}
+					onKeyDown={(event) => {
+						if (event.key === "Enter" || event.key === " ") event.stopPropagation();
+					}}
+				>
+					<Button
+						variant="secondary"
+						size="sm"
+						onClick={() => {
+							press.current = null;
+							editingArea.current = false;
+							current.current = null;
+							setTarget(null);
+						}}
+					>
+						Choose another source
+					</Button>
 				</div>
 			)}
 			<div className="pointer-events-none absolute inset-x-0 bottom-24 flex justify-center">

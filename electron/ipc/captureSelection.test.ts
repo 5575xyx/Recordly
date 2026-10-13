@@ -22,11 +22,7 @@ vi.mock("./state", () => ({
 	},
 }));
 vi.mock("./utils", () => ({ getScreen: () => ({ getAllDisplays: () => mocks.displays }) }));
-import {
-	rememberCaptureSource,
-	restoreLastCaptureSource,
-	validateCaptureSource,
-} from "./captureSelection";
+import { getSessionCaptureSource, validateCaptureSource } from "./captureSelection";
 const platform = process.platform;
 const source = { id: "window:101:0", name: "Document", windowTitle: "Document", appName: "Notes" };
 beforeEach(() => {
@@ -42,15 +38,16 @@ afterEach(() => {
 	Object.defineProperty(process, "platform", { value: platform });
 	vi.unstubAllEnvs();
 });
-describe("remembered capture selection", () => {
-	it("restores only the same available window", async () => {
-		expect(await restoreLastCaptureSource()).toMatchObject(source);
-		expect(mocks.current).toMatchObject(source);
+describe("session capture selection", () => {
+	it("starts without a capture source even when the previous window is still available", async () => {
+		expect(await getSessionCaptureSource()).toBeNull();
+		expect(mocks.current).toBeNull();
 	});
-	it("rejects closed windows and clears stale saved selection", async () => {
-		mocks.windows.mockResolvedValue([]);
-		expect(await restoreLastCaptureSource()).toBeNull();
-		expect(mocks.write).toHaveBeenCalledWith("recordly.capture.lastSource.v1", null);
+	it("ignores persisted selection without enumerating capture sources on startup", () => {
+		expect(getSessionCaptureSource()).toBeNull();
+		expect(mocks.read).not.toHaveBeenCalled();
+		expect(mocks.windows).not.toHaveBeenCalled();
+		expect(mocks.sources).not.toHaveBeenCalled();
 	});
 	it("rejects a recycled window ID with a different title", async () => {
 		mocks.windows.mockResolvedValue([
@@ -76,25 +73,14 @@ describe("remembered capture selection", () => {
 		await expect(validateCaptureSource(source)).rejects.toThrow("permission denied");
 		expect(mocks.sources).not.toHaveBeenCalled();
 	});
-	it("keeps a newer user selection made during restore", async () => {
-		let resolve!: (value: unknown[]) => void;
-		mocks.windows.mockReturnValue(
-			new Promise((done) => {
-				resolve = done;
-			}),
-		);
-		const pending = restoreLastCaptureSource();
-		const newer = { id: "screen:1:0", name: "Newer" };
-		mocks.current = newer;
-		resolve([]);
-		expect(await pending).toEqual(newer);
+	it("keeps a selection only within the current app session", () => {
+		mocks.current = source;
+		expect(getSessionCaptureSource()).toEqual(source);
+		// A fresh main process initializes its in-memory selection to null.
+		mocks.current = null;
+		expect(getSessionCaptureSource()).toBeNull();
+		expect(mocks.read).not.toHaveBeenCalled();
 		expect(mocks.write).not.toHaveBeenCalled();
-	});
-	it("saves only selection metadata, excluding thumbnails", () => {
-		rememberCaptureSource({ ...source, thumbnail: "private pixels" });
-		const stored = mocks.write.mock.calls[0][1];
-		expect(stored.source).not.toHaveProperty("thumbnail");
-		expect(stored.platform).toBe("darwin");
 	});
 });
 
@@ -124,20 +110,13 @@ describe("Linux selection", () => {
 		mocks.sources.mockResolvedValue([{ ...source, id: "window:102:0" }]);
 		expect(await validateCaptureSource(source)).toBeNull();
 	});
-	for (const saved of [null, { platform: "linux", source }]) {
-		it(`prepares Wayland recording without opening a startup portal (${saved ? "saved X11 window" : "fresh session"})`, async () => {
-			vi.stubEnv("XDG_SESSION_TYPE", "wayland");
-			mocks.read.mockReturnValue(saved);
-			expect(await restoreLastCaptureSource()).toEqual({
-				id: "screen:linux-portal",
-				name: "System picker",
-				sourceType: "screen",
-			});
-			expect(mocks.read).not.toHaveBeenCalled();
-			expect(mocks.sources).not.toHaveBeenCalled();
-			expect(mocks.windows).not.toHaveBeenCalled();
-		});
-	}
+	it("starts Wayland unselected without opening the portal", () => {
+		vi.stubEnv("XDG_SESSION_TYPE", "wayland");
+		expect(getSessionCaptureSource()).toBeNull();
+		expect(mocks.read).not.toHaveBeenCalled();
+		expect(mocks.sources).not.toHaveBeenCalled();
+		expect(mocks.windows).not.toHaveBeenCalled();
+	});
 	it("rejects old X11 IDs on Wayland without enumerating portal sources", async () => {
 		vi.stubEnv("XDG_SESSION_TYPE", "wayland");
 		expect(await validateCaptureSource(source)).toBeNull();

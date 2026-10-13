@@ -1,4 +1,4 @@
-import { rememberCaptureSource, validateCaptureSource } from "../captureSelection";
+import { validateCaptureSource } from "../captureSelection";
 import { listCapturePickerWindows } from "../capturePickerSources";
 import { ipcMain } from "electron";
 import type { SourceListPickResult } from "../../sourceListPicker";
@@ -8,13 +8,8 @@ import {
 	isCapturePickerWebContents,
 } from "../../windows";
 import { stopWindowBoundsCapture } from "../cursor/bounds";
-import { isCursorCaptureActive, selectedSource, setSelectedSource } from "../state";
-import {
-	createAreaSource,
-	createWindowSource,
-	getSourceArea,
-	normalizeCapturePick,
-} from "../sourceArea";
+import { isCursorCaptureActive, setSelectedSource } from "../state";
+import { createAreaSource, createWindowSource, normalizeCapturePick } from "../sourceArea";
 import type { CapturePick, CapturePickerWindow, SelectedSource } from "../types";
 import { getScreen } from "../utils";
 import { getScreenSourceIdForDisplay, isLikelyLinuxWaylandSession } from "./sourceMapping";
@@ -79,7 +74,6 @@ export function registerCapturePickerHandlers({
 				sourceType: "screen" as const,
 			};
 			setSelectedSource(source);
-			rememberCaptureSource(source);
 			broadcastSelectedSourceChange();
 			return {
 				success: true,
@@ -121,7 +115,6 @@ export function registerCapturePickerHandlers({
 		if (isCursorCaptureActive) return { success: false, canceled: true };
 		// Recording brings the selected window forward; selection need not wait for it.
 		setSelectedSource(source);
-		rememberCaptureSource(source);
 		broadcastSelectedSourceChange();
 		stopWindowBoundsCapture();
 		return { success: true, source };
@@ -195,16 +188,10 @@ export function registerCapturePickerHandlers({
 				window.y < y + height &&
 				window.y + window.height > y,
 		);
-		const previous =
-			selectedSource?.display_id === String(display.id)
-				? getSourceArea(selectedSource)
-				: null;
 		return {
 			displayBounds: display.bounds,
 			allowArea: process.platform === "darwin",
-			lastArea: previous
-				? { x: previous.x, y: previous.y, width: previous.width, height: previous.height }
-				: null,
+			lastArea: null,
 			windows,
 			cursor: getScreen().getCursorScreenPoint(),
 		};

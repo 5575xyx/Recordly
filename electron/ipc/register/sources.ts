@@ -1,10 +1,6 @@
 import { createSourceListPicker } from "../../sourceListPicker";
 import { writeAppSetting } from "../../appSettingsStore";
-import {
-	rememberCaptureSource,
-	restoreLastCaptureSource,
-	validateCaptureSource,
-} from "../captureSelection";
+import { getSessionCaptureSource, validateCaptureSource } from "../captureSelection";
 import { createRecordingEditorNavigation } from "../../recordingEditorNavigation";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -435,7 +431,6 @@ export function registerSourceHandlers({
 		if (fromSelector && getSourceSelectorWindow()?.webContents !== event.sender)
 			return selectedSource;
 		setSelectedSource(source);
-		rememberCaptureSource(source);
 		broadcastSelectedSourceChange();
 		if (sourceListPicker.isSender(event.sender)) sourceListPicker.complete(source);
 		stopWindowBoundsCapture();
@@ -632,13 +627,17 @@ body{background:transparent;overflow:hidden;width:100vw;height:100vh}
 	});
 
 	ipcMain.handle("get-selected-source", () => {
-		return restoreLastCaptureSource();
+		return getSessionCaptureSource();
 	});
 
 	ipcMain.handle("open-source-selector", async () => {
 		if (isCursorCaptureActive) return;
 		if (process.platform === "linux" && isLikelyLinuxWaylandSession(process.env)) {
-			await restoreLastCaptureSource();
+			setSelectedSource({
+				id: LINUX_PORTAL_SCREEN_SOURCE_ID,
+				name: "System picker",
+				sourceType: "screen",
+			});
 			broadcastSelectedSourceChange();
 			return;
 		}

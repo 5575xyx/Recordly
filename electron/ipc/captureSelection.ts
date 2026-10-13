@@ -1,4 +1,3 @@
-import { readAppSetting, writeAppSetting } from "../appSettingsStore";
 import { listCapturePickerWindows } from "./capturePickerSources";
 import {
 	createAreaSource,
@@ -6,7 +5,7 @@ import {
 	getSourceArea,
 	normalizeCapturePick,
 } from "./sourceArea";
-import { selectedSource, setSelectedSource } from "./state";
+import { selectedSource } from "./state";
 import type { SelectedSource } from "./types";
 import { getScreen } from "./utils";
 import { getDesktopSources } from "./register/sources";
@@ -14,8 +13,6 @@ import {
 	isLikelyLinuxWaylandSession,
 	LINUX_PORTAL_SCREEN_SOURCE_ID,
 } from "./register/sourceMapping";
-
-const LAST_SOURCE_KEY = "recordly.capture.lastSource.v1";
 
 /** Revalidate identity and geometry; never substitute a broader capture source. */
 export async function validateCaptureSource(candidate: unknown): Promise<SelectedSource | null> {
@@ -95,56 +92,7 @@ export async function validateCaptureSource(candidate: unknown): Promise<Selecte
 		: null;
 }
 
-export function rememberCaptureSource(source: SelectedSource) {
-	try {
-		writeAppSetting(LAST_SOURCE_KEY, {
-			platform: process.platform,
-			source: {
-				id: source.id,
-				name: source.name,
-				display_id: source.display_id,
-				sourceType: source.sourceType,
-				appName: source.appName,
-				windowTitle: source.windowTitle,
-				area: source.area,
-			},
-		});
-	} catch (error) {
-		console.warn("Unable to remember capture source:", error);
-	}
-}
-
-let restoring: Promise<SelectedSource | null> | null = null;
-export async function restoreLastCaptureSource(): Promise<SelectedSource | null> {
-	if (process.platform === "linux" && isLikelyLinuxWaylandSession(process.env)) {
-		const source: SelectedSource = {
-			id: LINUX_PORTAL_SCREEN_SOURCE_ID,
-			name: "System picker",
-			sourceType: "screen",
-		};
-		setSelectedSource(source);
-		return source;
-	}
-	if (selectedSource) return selectedSource;
-	if (!restoring)
-		restoring = (async () => {
-			const saved = readAppSetting(LAST_SOURCE_KEY) as {
-				platform?: unknown;
-				source?: unknown;
-			} | null;
-			if (!saved || saved.platform !== process.platform) return null;
-			try {
-				const restored = await validateCaptureSource(saved.source);
-				// A user selection made while validation runs takes precedence.
-				if (selectedSource) return selectedSource;
-				setSelectedSource(restored);
-				if (!restored) writeAppSetting(LAST_SOURCE_KEY, null);
-				return restored;
-			} catch {
-				return null;
-			}
-		})().finally(() => {
-			restoring = null;
-		});
-	return restoring;
+/** A new main process starts unselected; old saved preferences are never restored. */
+export function getSessionCaptureSource(): SelectedSource | null {
+	return selectedSource;
 }

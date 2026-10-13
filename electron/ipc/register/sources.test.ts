@@ -6,7 +6,6 @@ const mocks = vi.hoisted(() => ({
 	handlers: new Map<string, (...args: unknown[]) => unknown>(),
 	sources: vi.fn(),
 	validate: vi.fn(),
-	remember: vi.fn(),
 	recording: false,
 	selected: null as SelectedSource | null,
 	exec: vi.fn(),
@@ -35,8 +34,7 @@ vi.mock("../recording/ffmpeg", () => ({}));
 vi.mock("../windowsWindowControl", () => ({}));
 vi.mock("../captureSelection", () => ({
 	validateCaptureSource: mocks.validate,
-	rememberCaptureSource: mocks.remember,
-	restoreLastCaptureSource: vi.fn(),
+	getSessionCaptureSource: () => mocks.selected,
 }));
 vi.mock("../state", () => ({
 	get isCursorCaptureActive() {
@@ -146,7 +144,6 @@ it("completes X11 selection even without optional window raising tools", async (
 	const source = { id: "window:101:0", name: "Document" };
 	expect(await picker.select(source)).toEqual(source);
 	expect(await pending).toEqual({ success: true, source });
-	expect(mocks.remember).toHaveBeenCalledWith(source);
 });
 it("leaves the source list pending when a selected window no longer exists", async () => {
 	const picker = pickerFixture();
@@ -156,7 +153,6 @@ it("leaves the source list pending when a selected window no longer exists", asy
 		"no longer available",
 	);
 	expect(mocks.selected).toBeNull();
-	expect(mocks.remember).not.toHaveBeenCalled();
 	picker.win.close();
 	expect(await pending).toEqual({ success: false, canceled: true });
 });
@@ -176,7 +172,6 @@ it("does not apply a selection after the source list is dismissed during validat
 	await selection;
 	expect(await pending).toEqual({ success: false, canceled: true });
 	expect(mocks.selected).toBeNull();
-	expect(mocks.remember).not.toHaveBeenCalled();
 });
 it("does not change sources if recording starts during validation", async () => {
 	const picker = pickerFixture();
@@ -187,7 +182,32 @@ it("does not change sources if recording starts during validation", async () => 
 	});
 	await picker.select({ id: "screen:1:0", name: "Screen" });
 	expect(mocks.selected).toBeNull();
-	expect(mocks.remember).not.toHaveBeenCalled();
 	picker.win.close();
 	expect(await pending).toEqual({ success: false, canceled: true });
+});
+
+for (const platform of ["darwin", "win32", "linux"]) {
+	it(`starts ${platform} with no source and keeps explicit selection within the session`, async () => {
+		Object.defineProperty(process, "platform", { value: platform });
+		pickerFixture();
+		const read = mocks.handlers.get("get-selected-source")!;
+		expect(read()).toBeNull();
+		const source = { id: "screen:1:0", name: "Screen 1", display_id: "1" };
+		mocks.selected = source;
+		expect(read()).toEqual(source);
+	});
+}
+
+it("Wayland starts unselected and prepares its portal only after an explicit picker request", async () => {
+	vi.stubEnv("XDG_SESSION_TYPE", "wayland");
+	const picker = pickerFixture();
+	expect(mocks.handlers.get("get-selected-source")!()).toBeNull();
+	await mocks.handlers.get("open-source-selector")!();
+	expect(mocks.handlers.get("get-selected-source")!()).toEqual({
+		id: "screen:linux-portal",
+		name: "System picker",
+		sourceType: "screen",
+	});
+	expect(picker.create).not.toHaveBeenCalled();
+	expect(mocks.sources).not.toHaveBeenCalled();
 });

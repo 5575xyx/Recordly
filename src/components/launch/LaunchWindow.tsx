@@ -222,7 +222,7 @@ function LaunchWindowContent() {
 			.catch(() => {
 				if (mounted) {
 					setSourceReady(true);
-					toast.error("Unable to restore the previous source. Pick a source again.");
+					toast.error("Unable to load the recording source. Pick a screen again.");
 				}
 			});
 
@@ -284,7 +284,7 @@ function LaunchWindowContent() {
 					{hasSelectedSource ? (
 						<MarqueeText text={selectedSource} />
 					) : (
-						<span>Pick source</span>
+						<span>Pick screen</span>
 					)}
 				</div>
 			</Button>

@@ -1,5 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
-import { installDesktopBridge } from "./bridge";
+import { installDesktopBridge, installDesktopBridgeOverrides } from "./bridge";
 
 // Front to back: Notes overlaps the left part of Safari.
 const windows = [
@@ -27,7 +27,8 @@ const windows = [
 
 async function openPicker(page: Page, allowArea = true, previousArea = false) {
 	await installDesktopBridge(page);
-	await page.addInitScript(
+	await installDesktopBridgeOverrides(
+		page,
 		({ pickerWindows, allowArea, previousArea }) => {
 			const api = (window as unknown as { electronAPI: Record<string, unknown> }).electronAPI;
 			Object.assign(api, {
@@ -133,20 +134,26 @@ for (const { selected, trigger } of [
 		page,
 	}) => {
 		await installDesktopBridge(page);
-		await page.addInitScript((selected) => {
-			Object.assign(window.electronAPI, {
-				getSelectedSource: async () =>
-					selected ? { id: "screen:1:0", name: "Existing screen" } : null,
-				pickCaptureTarget: async () => {
-					const html = document.documentElement;
-					html.dataset.pickerCalls = String(Number(html.dataset.pickerCalls ?? 0) + 1);
-					return {
-						success: true,
-						source: { id: "window:101:0", name: "Selected window" },
-					};
-				},
-			});
-		}, selected);
+		await installDesktopBridgeOverrides(
+			page,
+			(selected) => {
+				Object.assign(window.electronAPI, {
+					getSelectedSource: async () =>
+						selected ? { id: "screen:1:0", name: "Existing screen" } : null,
+					pickCaptureTarget: async () => {
+						const html = document.documentElement;
+						html.dataset.pickerCalls = String(
+							Number(html.dataset.pickerCalls ?? 0) + 1,
+						);
+						return {
+							success: true,
+							source: { id: "window:101:0", name: "Selected window" },
+						};
+					},
+				});
+			},
+			selected,
+		);
 		await page.goto("/?windowType=hud-overlay");
 		const control = page.getByRole("button", { name: "Choose recording source" });
 		await expect(control).toBeEnabled();
@@ -168,7 +175,7 @@ for (const { selected, trigger } of [
 
 test("a newer selected-source event wins over the startup response", async ({ page }) => {
 	await installDesktopBridge(page);
-	await page.addInitScript(() => {
+	await installDesktopBridgeOverrides(page, () => {
 		Object.assign(window.electronAPI, {
 			getSelectedSource: async () => {
 				await new Promise((resolve) => setTimeout(resolve, 100));
@@ -266,7 +273,7 @@ for (const resize of [false, true]) {
 
 test("HUD reports a failed pick and keeps cancellation silent", async ({ page }) => {
 	await installDesktopBridge(page);
-	await page.addInitScript(() => {
+	await installDesktopBridgeOverrides(page, () => {
 		let canceled = false;
 		Object.assign(window.electronAPI, {
 			getSelectedSource: async () => null,
@@ -300,7 +307,7 @@ test("unselected source reads Pick screen once and Record stays disabled while p
 	page,
 }) => {
 	await installDesktopBridge(page);
-	await page.addInitScript(() => {
+	await installDesktopBridgeOverrides(page, () => {
 		Object.assign(window.electronAPI, {
 			getSelectedSource: async () => null,
 			pickCaptureTarget: async () =>
@@ -328,7 +335,7 @@ test("changing source cancels countdown and discards native warm-up before openi
 	page,
 }) => {
 	await installDesktopBridge(page);
-	await page.addInitScript(() => {
+	await installDesktopBridgeOverrides(page, () => {
 		let finishCountdown: (result: { success: boolean; cancelled: boolean }) => void;
 		const events: string[] = [];
 		Object.assign(window.electronAPI, {
@@ -382,7 +389,7 @@ test("changing source cancels countdown and discards native warm-up before openi
 
 test("recording and pause expose no interactive source picker", async ({ page }) => {
 	await installDesktopBridge(page);
-	await page.addInitScript(() => {
+	await installDesktopBridgeOverrides(page, () => {
 		window.electronAPI.onRecordingStateChanged = (callback) => {
 			const listener = (event: Event) => callback((event as CustomEvent).detail);
 			window.addEventListener("test-recording", listener);
@@ -412,7 +419,7 @@ test("recording and pause expose no interactive source picker", async ({ page })
 
 test("changing source also cancels countdown on the browser capture path", async ({ page }) => {
 	await installDesktopBridge(page);
-	await page.addInitScript(() => {
+	await installDesktopBridgeOverrides(page, () => {
 		let finishCountdown: (result: { success: boolean; cancelled: boolean }) => void;
 		Object.assign(window.electronAPI, {
 			getPlatform: async () => "linux",

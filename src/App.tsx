@@ -1,6 +1,8 @@
 import { Card } from "@heroui/react";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useI18n } from "./contexts/I18nContext";
+import { getStartupView } from "./lib/startupView";
+import { HomeLoadingSkeleton } from "./components/video-editor/dashboard/HomeLoadingSkeleton";
 import { EditorLoadingSkeleton } from "./components/video-editor/layout/EditorLoadingSkeleton";
 
 const HudWindow = lazy(() => import("./components/launch/HudWindow"));
@@ -106,7 +108,17 @@ export default function App() {
 	}
 
 	return (
-		<Suspense fallback={windowType === "editor" ? <EditorLoadingSkeleton /> : null}>
+		<Suspense
+			fallback={
+				windowType === "editor" ? (
+					getStartupView() === "home" ? (
+						<HomeLoadingSkeleton />
+					) : (
+						<EditorLoadingSkeleton />
+					)
+				) : null
+			}
+		>
 			{content}
 		</Suspense>
 	);

@@ -1,3 +1,5 @@
+import { resolveEditorStartupView } from "./editorStartupView";
+import { currentProjectPath, currentVideoPath, currentRecordingSession } from "./ipc/state";
 import { isHudInEditorMode } from "./hudEditorMode";
 import fs from "node:fs";
 import { createRequire } from "node:module";
@@ -53,6 +55,18 @@ const UPDATE_TOAST_WIDTH = 420;
 const UPDATE_TOAST_HEIGHT = 172;
 /** Shows a capture picker that never reported ready. */
 const CAPTURE_PICKER_READY_TIMEOUT_MS = 1500;
+
+// Synchronous and metadata-only so the HTML boot shell matches its destination,
+// including reloads of a Home window after a fresh recording finishes.
+ipcMain.on("get-editor-startup-view", (event) => {
+	event.returnValue = resolveEditorStartupView({
+		projectPath: currentProjectPath,
+		videoPath: currentVideoPath,
+		recordingVideoPath: currentRecordingSession?.videoPath,
+		devInput: process.env.RECORDLY_DEV_OPEN_RECORDING_INPUT,
+		smokeExport: process.env.RECORDLY_SMOKE_EXPORT === "1",
+	});
+});
 
 function getEditorWindowQuery(): Record<string, string> {
 	const query: Record<string, string> = {
